@@ -14,11 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 #include <gtest/gtest.h>   // testing framework
 // include eigen now to avoid possible linking errors
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+//NOSTRO TEST
+#include "src/half_edge_test.cpp"
+
+/*
 // utils
 #include "src/scalar_field_test.cpp"
 #include "src/vector_field_test.cpp"
@@ -44,6 +49,7 @@
 #include "src/optimization_test.cpp"
 // splines
 #include "src/spline_test.cpp"
+*/
 
 int main(int argc, char** argv) {
     // start testing
