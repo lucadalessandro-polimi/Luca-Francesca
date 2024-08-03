@@ -20,8 +20,12 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+using namespace Eigen::placeholders;
+
 //NOSTRO TEST
-#include "src/half_edge_test.cpp"
+//#include "src/half_edge_test.cpp"
+
+#include "src/scalar_field_test.cpp"   //prova
 
 /*
 // utils
@@ -50,8 +54,8 @@
 // splines
 #include "src/spline_test.cpp"
 */
-
 int main(int argc, char** argv) {
+
     // start testing
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

@@ -20,6 +20,9 @@
 #include <optional>
 #include <numeric>
 
+#include <Eigen/Dense>
+using namespace Eigen::placeholders;
+
 #include "../linear_algebra/binary_matrix.h"
 #include "../utils/symbols.h"
 #include "hyperplane.h"
@@ -175,7 +178,9 @@ template <int Order_, int EmbedDim_> class Simplex {
             std::iota(idx.begin(), idx.end(), 0);
             std::sort(idx.begin(), idx.end(), [&](int a, int b) { return dst[a] < dst[b]; });
 	    // recurse on Order_ - 1 subsimplex
-            Simplex<Order_ - 1, embed_dim> s(coords_(Eigen::all, std::vector<int>(idx.begin(), idx.end() - 1)));
+           // Simplex<Order_ - 1, embed_dim> s(coords_(Eigen::all(), std::vector<int>(idx.begin(), idx.end() - 1)));
+           Simplex<Order_ - 1, embed_dim> s(coords_.topRows(embed_dim), std::vector<int>(idx.begin(), idx.end() - 1));
+
             return s.nearest(p);
         }
     }
