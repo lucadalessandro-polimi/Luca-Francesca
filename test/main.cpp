@@ -19,6 +19,8 @@
 // include eigen now to avoid possible linking errors
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+//#include "../../eigen/Eigen/Dense"
+//#include "../../eigen/Eigen/Sparse"
 
 using namespace Eigen::placeholders;
 

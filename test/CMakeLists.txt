@@ -6,7 +6,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_WARNINGS_FLAGS "-Wall -Wpedantic -Wextra -Werror")
 set(CMAKE_CXX_FLAGS "-g -O2 -march=x86-64 -std=c++20 ${CMAKE_WARNINGS_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/../ -I${CMAKE_CURRENT_SOURCE_DIR}/../fdaPDE/core/")
 
-set(C_MAKE_PREFIX_PATH "/home/francesca16/eigen-install")
+set(C_MAKE_PREFIX_PATH "/home/../eigen-install")
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 
 include_directories(../src/)
