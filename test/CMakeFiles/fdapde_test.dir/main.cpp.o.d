@@ -1,7 +1,7 @@
 CMakeFiles/fdapde_test.dir/main.cpp.o: \
- /home/francesca16/Luca-Francesca/test/main.cpp \
+ /home/lucadalessandro/Luca-Francesca/test/main.cpp \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/stdc-predef.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/cstddef \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/x86_64-mk-linux/bits/c++config.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/x86_64-mk-linux/bits/os_defines.h \
@@ -267,9 +267,9 @@ CMakeFiles/fdapde_test.dir/main.cpp.o: \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_vector.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_bvector.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/vector.tcc \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-assertion-result.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-message.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-port.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-assertion-result.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-message.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-port.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/stdlib.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/string.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/strings.h \
@@ -282,8 +282,8 @@ CMakeFiles/fdapde_test.dir/main.cpp.o: \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/bits/statx-generic.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/bits/types/struct_statx_timestamp.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/bits/types/struct_statx.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/custom/gtest-port.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-port-arch.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/custom/gtest-port.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-port-arch.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/regex.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/condition_variable \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/chrono \
@@ -305,17 +305,17 @@ CMakeFiles/fdapde_test.dir/main.cpp.o: \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/optional \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/enable_special_members.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/variant \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-death-test.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-death-test-internal.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-matchers.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-death-test.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-death-test-internal.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-matchers.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/functional \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/std_function.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/unordered_map \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/hashtable.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/hashtable_policy.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/unordered_map.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-printers.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-internal.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-printers.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-internal.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/sys/wait.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/signal.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/bits/signum-generic.h \
@@ -342,24 +342,25 @@ CMakeFiles/fdapde_test.dir/main.cpp.o: \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/map \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_map.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_multimap.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-filepath.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-string.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-type-util.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-filepath.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-string.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-type-util.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/cxxabi.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/x86_64-mk-linux/bits/cxxabi_tweaks.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/custom/gtest-printers.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-param-test.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-param-util.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/custom/gtest-printers.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-param-test.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/internal/gtest-param-util.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/cassert \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/assert.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-test-part.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-typed-test.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest_pred_impl.h \
- /home/francesca16/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest_prod.h \
- /home/francesca16/eigen/Eigen/Dense /home/francesca16/eigen/Eigen/Core \
- /home/francesca16/eigen/Eigen/src/Core/util/DisableStupidWarnings.h \
- /home/francesca16/eigen/Eigen/src/Core/util/Macros.h \
- /home/francesca16/eigen/Eigen/src/Core/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-test-part.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest-typed-test.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest_pred_impl.h \
+ /home/lucadalessandro/Luca-Francesca/test/_deps/googletest-src/googletest/include/gtest/gtest_prod.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Dense \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Core \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/DisableStupidWarnings.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/Macros.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/InternalHeaderCheck.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/cmath \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/math.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/bits/math-vector.h \
@@ -384,320 +385,320 @@ CMakeFiles/fdapde_test.dir/main.cpp.o: \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/tr1/poly_hermite.tcc \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/tr1/poly_laguerre.tcc \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/tr1/riemann_zeta.tcc \
- /home/francesca16/eigen/Eigen/src/Core/util/ConfigureVectorization.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/ConfigureVectorization.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/lib/gcc/x86_64-mk-linux/11.2.0/include/mmintrin.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/lib/gcc/x86_64-mk-linux/11.2.0/include/emmintrin.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/lib/gcc/x86_64-mk-linux/11.2.0/include/xmmintrin.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/lib/gcc/x86_64-mk-linux/11.2.0/include/mm_malloc.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/complex \
- /home/francesca16/eigen/Eigen/src/Core/util/MKL_support.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/MKL_support.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/cstring \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/algorithm \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/ranges_algo.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/ranges_util.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/pstl/glue_algorithm_defs.h \
- /home/francesca16/eigen/Eigen/src/Core/util/Constants.h \
- /home/francesca16/eigen/Eigen/src/Core/util/Meta.h \
- /home/francesca16/eigen/Eigen/src/Core/util/Assert.h \
- /home/francesca16/eigen/Eigen/src/Core/util/ForwardDeclarations.h \
- /home/francesca16/eigen/Eigen/src/Core/util/StaticAssert.h \
- /home/francesca16/eigen/Eigen/src/Core/util/XprHelper.h \
- /home/francesca16/eigen/Eigen/src/Core/util/Memory.h \
- /home/francesca16/eigen/Eigen/src/Core/util/IntegralConstant.h \
- /home/francesca16/eigen/Eigen/src/Core/util/Serializer.h \
- /home/francesca16/eigen/Eigen/src/Core/util/SymbolicIndex.h \
- /home/francesca16/eigen/Eigen/src/Core/util/EmulateArray.h \
- /home/francesca16/eigen/Eigen/src/Core/util/MoreMeta.h \
- /home/francesca16/eigen/Eigen/src/Core/NumTraits.h \
- /home/francesca16/eigen/Eigen/src/Core/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Core/MathFunctions.h \
- /home/francesca16/eigen/Eigen/src/Core/RandomImpl.h \
- /home/francesca16/eigen/Eigen/src/Core/GenericPacketMath.h \
- /home/francesca16/eigen/Eigen/src/Core/MathFunctionsImpl.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/Default/ConjHelper.h \
- /home/francesca16/eigen/Eigen/src/Core/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/Default/Half.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/Default/BFloat16.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/Default/GenericPacketMathFunctionsFwd.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/SSE/PacketMath.h \
- /home/francesca16/eigen/Eigen/src/Core/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/SSE/TypeCasting.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/SSE/MathFunctions.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/SSE/Complex.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/Default/Settings.h \
- /home/francesca16/eigen/Eigen/src/Core/arch/Default/GenericPacketMathFunctions.h \
- /home/francesca16/eigen/Eigen/src/Core/functors/TernaryFunctors.h \
- /home/francesca16/eigen/Eigen/src/Core/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Core/functors/BinaryFunctors.h \
- /home/francesca16/eigen/Eigen/src/Core/functors/UnaryFunctors.h \
- /home/francesca16/eigen/Eigen/src/Core/functors/NullaryFunctors.h \
- /home/francesca16/eigen/Eigen/src/Core/functors/StlFunctors.h \
- /home/francesca16/eigen/Eigen/src/Core/functors/AssignmentFunctors.h \
- /home/francesca16/eigen/Eigen/src/Core/util/IndexedViewHelper.h \
- /home/francesca16/eigen/Eigen/src/Core/util/ReshapedHelper.h \
- /home/francesca16/eigen/Eigen/src/Core/ArithmeticSequence.h \
- /home/francesca16/eigen/Eigen/src/Core/IO.h \
- /home/francesca16/eigen/Eigen/src/Core/DenseCoeffsBase.h \
- /home/francesca16/eigen/Eigen/src/Core/DenseBase.h \
- /home/francesca16/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/BlockMethods.inc \
- /home/francesca16/eigen/Eigen/src/plugins/IndexedViewMethods.inc \
- /home/francesca16/eigen/Eigen/src/plugins/ReshapedMethods.inc \
- /home/francesca16/eigen/Eigen/src/plugins/ReshapedMethods.inc \
- /home/francesca16/eigen/Eigen/src/Core/MatrixBase.h \
- /home/francesca16/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.inc \
- /home/francesca16/eigen/Eigen/src/Core/EigenBase.h \
- /home/francesca16/eigen/Eigen/src/Core/Product.h \
- /home/francesca16/eigen/Eigen/src/Core/CoreEvaluators.h \
- /home/francesca16/eigen/Eigen/src/Core/AssignEvaluator.h \
- /home/francesca16/eigen/Eigen/src/Core/Assign.h \
- /home/francesca16/eigen/Eigen/src/Core/ArrayBase.h \
- /home/francesca16/eigen/Eigen/src/plugins/ArrayCwiseUnaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/ArrayCwiseBinaryOps.inc \
- /home/francesca16/eigen/Eigen/src/Core/util/BlasUtil.h \
- /home/francesca16/eigen/Eigen/src/Core/DenseStorage.h \
- /home/francesca16/eigen/Eigen/src/Core/NestByValue.h \
- /home/francesca16/eigen/Eigen/src/Core/ReturnByValue.h \
- /home/francesca16/eigen/Eigen/src/Core/NoAlias.h \
- /home/francesca16/eigen/Eigen/src/Core/PlainObjectBase.h \
- /home/francesca16/eigen/Eigen/src/Core/Matrix.h \
- /home/francesca16/eigen/Eigen/src/Core/Array.h \
- /home/francesca16/eigen/Eigen/src/Core/CwiseTernaryOp.h \
- /home/francesca16/eigen/Eigen/src/Core/CwiseBinaryOp.h \
- /home/francesca16/eigen/Eigen/src/Core/CwiseUnaryOp.h \
- /home/francesca16/eigen/Eigen/src/Core/CwiseNullaryOp.h \
- /home/francesca16/eigen/Eigen/src/Core/CwiseUnaryView.h \
- /home/francesca16/eigen/Eigen/src/Core/SelfCwiseBinaryOp.h \
- /home/francesca16/eigen/Eigen/src/Core/Dot.h \
- /home/francesca16/eigen/Eigen/src/Core/StableNorm.h \
- /home/francesca16/eigen/Eigen/src/Core/Stride.h \
- /home/francesca16/eigen/Eigen/src/Core/MapBase.h \
- /home/francesca16/eigen/Eigen/src/Core/Map.h \
- /home/francesca16/eigen/Eigen/src/Core/Ref.h \
- /home/francesca16/eigen/Eigen/src/Core/Block.h \
- /home/francesca16/eigen/Eigen/src/Core/VectorBlock.h \
- /home/francesca16/eigen/Eigen/src/Core/IndexedView.h \
- /home/francesca16/eigen/Eigen/src/Core/Reshaped.h \
- /home/francesca16/eigen/Eigen/src/Core/Transpose.h \
- /home/francesca16/eigen/Eigen/src/Core/DiagonalMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/Diagonal.h \
- /home/francesca16/eigen/Eigen/src/Core/DiagonalProduct.h \
- /home/francesca16/eigen/Eigen/src/Core/SkewSymmetricMatrix3.h \
- /home/francesca16/eigen/Eigen/src/Core/Redux.h \
- /home/francesca16/eigen/Eigen/src/Core/Visitor.h \
- /home/francesca16/eigen/Eigen/src/Core/Fuzzy.h \
- /home/francesca16/eigen/Eigen/src/Core/Swap.h \
- /home/francesca16/eigen/Eigen/src/Core/CommaInitializer.h \
- /home/francesca16/eigen/Eigen/src/Core/GeneralProduct.h \
- /home/francesca16/eigen/Eigen/src/Core/Solve.h \
- /home/francesca16/eigen/Eigen/src/Core/Inverse.h \
- /home/francesca16/eigen/Eigen/src/Core/SolverBase.h \
- /home/francesca16/eigen/Eigen/src/Core/PermutationMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/Transpositions.h \
- /home/francesca16/eigen/Eigen/src/Core/TriangularMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/SelfAdjointView.h \
- /home/francesca16/eigen/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
- /home/francesca16/eigen/Eigen/src/Core/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Core/DeviceWrapper.h \
- /home/francesca16/eigen/Eigen/src/Core/products/Parallelizer.h \
- /home/francesca16/eigen/Eigen/src/Core/ProductEvaluators.h \
- /home/francesca16/eigen/Eigen/src/Core/products/GeneralMatrixVector.h \
- /home/francesca16/eigen/Eigen/src/Core/products/GeneralMatrixMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/SolveTriangular.h \
- /home/francesca16/eigen/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h \
- /home/francesca16/eigen/Eigen/src/Core/products/SelfadjointMatrixVector.h \
- /home/francesca16/eigen/Eigen/src/Core/products/SelfadjointMatrixMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/products/SelfadjointProduct.h \
- /home/francesca16/eigen/Eigen/src/Core/products/SelfadjointRank2Update.h \
- /home/francesca16/eigen/Eigen/src/Core/products/TriangularMatrixVector.h \
- /home/francesca16/eigen/Eigen/src/Core/products/TriangularMatrixMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/products/TriangularSolverMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/products/TriangularSolverVector.h \
- /home/francesca16/eigen/Eigen/src/Core/BandMatrix.h \
- /home/francesca16/eigen/Eigen/src/Core/CoreIterators.h \
- /home/francesca16/eigen/Eigen/src/Core/ConditionEstimator.h \
- /home/francesca16/eigen/Eigen/src/Core/Select.h \
- /home/francesca16/eigen/Eigen/src/Core/VectorwiseOp.h \
- /home/francesca16/eigen/Eigen/src/Core/PartialReduxEvaluator.h \
- /home/francesca16/eigen/Eigen/src/Core/Random.h \
- /home/francesca16/eigen/Eigen/src/Core/Replicate.h \
- /home/francesca16/eigen/Eigen/src/Core/Reverse.h \
- /home/francesca16/eigen/Eigen/src/Core/ArrayWrapper.h \
- /home/francesca16/eigen/Eigen/src/Core/StlIterators.h \
- /home/francesca16/eigen/Eigen/src/Core/GlobalFunctions.h \
- /home/francesca16/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h \
- /home/francesca16/eigen/Eigen/LU \
- /home/francesca16/eigen/Eigen/src/misc/Kernel.h \
- /home/francesca16/eigen/Eigen/src/misc/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/misc/Image.h \
- /home/francesca16/eigen/Eigen/src/LU/FullPivLU.h \
- /home/francesca16/eigen/Eigen/src/LU/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/LU/PartialPivLU.h \
- /home/francesca16/eigen/Eigen/src/LU/Determinant.h \
- /home/francesca16/eigen/Eigen/src/LU/InverseImpl.h \
- /home/francesca16/eigen/Eigen/src/LU/arch/InverseSize4.h \
- /home/francesca16/eigen/Eigen/src/LU/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/Cholesky \
- /home/francesca16/eigen/Eigen/Jacobi \
- /home/francesca16/eigen/Eigen/src/Jacobi/Jacobi.h \
- /home/francesca16/eigen/Eigen/src/Jacobi/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Cholesky/LLT.h \
- /home/francesca16/eigen/Eigen/src/Cholesky/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Cholesky/LDLT.h \
- /home/francesca16/eigen/Eigen/QR \
- /home/francesca16/eigen/Eigen/Householder \
- /home/francesca16/eigen/Eigen/src/Householder/Householder.h \
- /home/francesca16/eigen/Eigen/src/Householder/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Householder/HouseholderSequence.h \
- /home/francesca16/eigen/Eigen/src/Householder/BlockHouseholder.h \
- /home/francesca16/eigen/Eigen/src/QR/HouseholderQR.h \
- /home/francesca16/eigen/Eigen/src/QR/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/QR/FullPivHouseholderQR.h \
- /home/francesca16/eigen/Eigen/src/QR/ColPivHouseholderQR.h \
- /home/francesca16/eigen/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
- /home/francesca16/eigen/Eigen/SVD \
- /home/francesca16/eigen/Eigen/src/misc/RealSvd2x2.h \
- /home/francesca16/eigen/Eigen/src/SVD/UpperBidiagonalization.h \
- /home/francesca16/eigen/Eigen/src/SVD/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/SVD/SVDBase.h \
- /home/francesca16/eigen/Eigen/src/SVD/JacobiSVD.h \
- /home/francesca16/eigen/Eigen/src/SVD/BDCSVD.h \
- /home/francesca16/eigen/Eigen/Geometry \
- /home/francesca16/eigen/Eigen/src/Geometry/OrthoMethods.h \
- /home/francesca16/eigen/Eigen/src/Geometry/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Geometry/EulerAngles.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Homogeneous.h \
- /home/francesca16/eigen/Eigen/src/Geometry/RotationBase.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Rotation2D.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Quaternion.h \
- /home/francesca16/eigen/Eigen/src/Geometry/AngleAxis.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Transform.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Translation.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Scaling.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Hyperplane.h \
- /home/francesca16/eigen/Eigen/src/Geometry/ParametrizedLine.h \
- /home/francesca16/eigen/Eigen/src/Geometry/AlignedBox.h \
- /home/francesca16/eigen/Eigen/src/Geometry/Umeyama.h \
- /home/francesca16/eigen/Eigen/src/Geometry/arch/Geometry_SIMD.h \
- /home/francesca16/eigen/Eigen/src/Geometry/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/Eigenvalues \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/Tridiagonalization.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/RealSchur.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/EigenSolver.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/RealSchur.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/Tridiagonalization.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/ComplexSchur.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/ComplexSchur.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/RealQZ.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/RealQZ.h \
- /home/francesca16/eigen/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
- /home/francesca16/eigen/Eigen/Sparse \
- /home/francesca16/eigen/Eigen/SparseCore \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/Constants.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/Meta.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/Assert.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/ForwardDeclarations.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/StaticAssert.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/XprHelper.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/Memory.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/IntegralConstant.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/Serializer.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/SymbolicIndex.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/EmulateArray.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/MoreMeta.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/NumTraits.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/MathFunctions.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/RandomImpl.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/GenericPacketMath.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/MathFunctionsImpl.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/Default/ConjHelper.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/Default/Half.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/Default/BFloat16.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/Default/GenericPacketMathFunctionsFwd.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/SSE/PacketMath.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/SSE/TypeCasting.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/SSE/MathFunctions.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/SSE/Complex.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/Default/Settings.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/arch/Default/GenericPacketMathFunctions.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/functors/TernaryFunctors.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/functors/BinaryFunctors.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/functors/UnaryFunctors.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/functors/NullaryFunctors.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/functors/StlFunctors.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/functors/AssignmentFunctors.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/IndexedViewHelper.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/ReshapedHelper.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/ArithmeticSequence.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/IO.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/DenseCoeffsBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/DenseBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/BlockMethods.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/IndexedViewMethods.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/ReshapedMethods.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/ReshapedMethods.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/MatrixBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/EigenBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Product.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CoreEvaluators.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/AssignEvaluator.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Assign.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/ArrayBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/ArrayCwiseUnaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/ArrayCwiseBinaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/BlasUtil.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/DenseStorage.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/NestByValue.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/ReturnByValue.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/NoAlias.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/PlainObjectBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Matrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Array.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CwiseTernaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CwiseBinaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CwiseUnaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CwiseNullaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CwiseUnaryView.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/SelfCwiseBinaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Dot.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/StableNorm.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Stride.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/MapBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Map.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Ref.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Block.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/VectorBlock.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/IndexedView.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Reshaped.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Transpose.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/DiagonalMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Diagonal.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/DiagonalProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/SkewSymmetricMatrix3.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Redux.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Visitor.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Fuzzy.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Swap.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CommaInitializer.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/GeneralProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Solve.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Inverse.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/SolverBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/PermutationMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Transpositions.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/TriangularMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/SelfAdjointView.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/DeviceWrapper.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/Parallelizer.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/ProductEvaluators.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/GeneralMatrixVector.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/GeneralMatrixMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/SolveTriangular.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/SelfadjointMatrixVector.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/SelfadjointMatrixMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/SelfadjointProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/SelfadjointRank2Update.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/TriangularMatrixVector.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/TriangularMatrixMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/TriangularSolverMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/products/TriangularSolverVector.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/BandMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/CoreIterators.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/ConditionEstimator.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Select.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/VectorwiseOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/PartialReduxEvaluator.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Random.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Replicate.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/Reverse.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/ArrayWrapper.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/StlIterators.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/GlobalFunctions.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Core/util/ReenableStupidWarnings.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/LU \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/misc/Kernel.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/misc/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/misc/Image.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/FullPivLU.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/PartialPivLU.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/Determinant.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/InverseImpl.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/arch/InverseSize4.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/LU/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Cholesky \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Jacobi \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Jacobi/Jacobi.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Jacobi/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Cholesky/LLT.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Cholesky/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Cholesky/LDLT.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/QR \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Householder \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Householder/Householder.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Householder/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Householder/HouseholderSequence.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Householder/BlockHouseholder.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/QR/HouseholderQR.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/QR/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/QR/FullPivHouseholderQR.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/QR/ColPivHouseholderQR.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/SVD \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/misc/RealSvd2x2.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SVD/UpperBidiagonalization.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SVD/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SVD/SVDBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SVD/JacobiSVD.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SVD/BDCSVD.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Geometry \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/OrthoMethods.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/EulerAngles.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Homogeneous.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/RotationBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Rotation2D.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Quaternion.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/AngleAxis.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Transform.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Translation.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Scaling.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Hyperplane.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/ParametrizedLine.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/AlignedBox.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/Umeyama.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/arch/Geometry_SIMD.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Geometry/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Eigenvalues \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/Tridiagonalization.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/RealSchur.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/EigenSolver.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/RealSchur.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/Tridiagonalization.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/ComplexSchur.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/ComplexSchur.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/RealQZ.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/RealQZ.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Sparse \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/SparseCore \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/numeric \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_numeric.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/pstl/glue_numeric_defs.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseUtil.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseMatrixBase.h \
- /home/francesca16/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.inc \
- /home/francesca16/eigen/Eigen/src/plugins/BlockMethods.inc \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseAssign.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/CompressedStorage.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/AmbiVector.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseCompressedBase.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseMatrix.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseMap.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseVector.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseRef.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseCwiseUnaryOp.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseCwiseBinaryOp.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseTranspose.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseBlock.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseDot.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseRedux.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseView.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseDiagonalProduct.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseSparseProductWithPruning.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseProduct.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseDenseProduct.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseSelfAdjointView.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseTriangularView.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/TriangularSolver.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparsePermutation.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseFuzzy.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseSolverBase.h \
- /home/francesca16/eigen/Eigen/OrderingMethods \
- /home/francesca16/eigen/Eigen/src/OrderingMethods/Amd.h \
- /home/francesca16/eigen/Eigen/src/OrderingMethods/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/OrderingMethods/Ordering.h \
- /home/francesca16/eigen/Eigen/src/OrderingMethods/Eigen_Colamd.h \
- /home/francesca16/eigen/Eigen/SparseCholesky \
- /home/francesca16/eigen/Eigen/src/SparseCholesky/SimplicialCholesky.h \
- /home/francesca16/eigen/Eigen/src/SparseCholesky/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h \
- /home/francesca16/eigen/Eigen/SparseLU \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_Structs.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLUImpl.h \
- /home/francesca16/eigen/Eigen/src/SparseCore/SparseColEtree.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_Memory.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_relax_snode.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_pivotL.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_panel_dfs.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_kernel_bmod.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_panel_bmod.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_column_dfs.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_column_bmod.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_pruneL.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU_Utils.h \
- /home/francesca16/eigen/Eigen/src/SparseLU/SparseLU.h \
- /home/francesca16/eigen/Eigen/SparseQR \
- /home/francesca16/eigen/Eigen/src/SparseQR/SparseQR.h \
- /home/francesca16/eigen/Eigen/src/SparseQR/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/IterativeLinearSolvers \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/SolveWithGuess.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/InternalHeaderCheck.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/LeastSquareConjugateGradient.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
- /home/francesca16/eigen/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseUtil.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseMatrixBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/CommonCwiseUnaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/CommonCwiseBinaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/MatrixCwiseUnaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/MatrixCwiseBinaryOps.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/plugins/BlockMethods.inc \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseAssign.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/CompressedStorage.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/AmbiVector.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseCompressedBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseMap.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseVector.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseRef.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseCwiseUnaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseCwiseBinaryOp.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseTranspose.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseBlock.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseDot.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseRedux.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseView.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseDiagonalProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseSparseProductWithPruning.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseDenseProduct.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseSelfAdjointView.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseTriangularView.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/TriangularSolver.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparsePermutation.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseFuzzy.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseSolverBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/OrderingMethods \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/OrderingMethods/Amd.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/OrderingMethods/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/OrderingMethods/Ordering.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/OrderingMethods/Eigen_Colamd.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/SparseCholesky \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCholesky/SimplicialCholesky.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCholesky/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/SparseLU \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_Structs.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLUImpl.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseCore/SparseColEtree.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_Memory.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_relax_snode.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_pivotL.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_panel_dfs.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_kernel_bmod.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_panel_bmod.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_column_dfs.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_column_bmod.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_pruneL.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU_Utils.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseLU/SparseLU.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/SparseQR \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseQR/SparseQR.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/SparseQR/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/IterativeLinearSolvers \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/SolveWithGuess.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/InternalHeaderCheck.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/LeastSquareConjugateGradient.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/list \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_list.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/list.tcc \
- /home/francesca16/Luca-Francesca/test/src/scalar_field_test.cpp \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/symbols.h \
- /home/francesca16/eigen/Eigen/Core \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/traits.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/assert.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/compile_time.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/traits.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/type_erasure.h \
+ /home/lucadalessandro/Luca-Francesca/test/src/scalar_field_test.cpp \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/eigen/Eigen/Core \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/traits.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/assert.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/compile_time.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/traits.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/type_erasure.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/typeindex \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/assert.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/combinatorics.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/compile_time.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/data_structures/binary_tree.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/assert.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/combinatorics.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/compile_time.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/data_structures/binary_tree.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/queue \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/deque \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_deque.h \
@@ -705,69 +706,69 @@ CMakeFiles/fdapde_test.dir/main.cpp.o: \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_queue.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/stack \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/stl_stack.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/data_structures/../concepts.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/data_structures/block_frame.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/data_structures/../concepts.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/data_structures/block_frame.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/random \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/random.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/x86_64-mk-linux/bits/opt_random.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/random.tcc \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/unordered_set \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/unordered_set.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/data_structures/../symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/data_structures/../traits.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/data_structures/block_vector.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/integrator.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/triangulation.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../linear_algebra/binary_matrix.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../linear_algebra/../utils/assert.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../linear_algebra/../utils/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/data_structures/../symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/data_structures/../traits.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/data_structures/block_vector.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/integrator.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/triangulation.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../linear_algebra/binary_matrix.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../linear_algebra/../utils/assert.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../linear_algebra/../utils/symbols.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bitset \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/combinatorics.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/triangle.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/simplex.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/hyperplane.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/assert.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/utils.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/tetrahedron.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/tree_search.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/kd_tree.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/data_structures/binary_tree.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/interval.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/segment.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../fields/scalar_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../fields/../utils/symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../compile_time.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/integrator_tables.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/../splines/spline_symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/../finite_elements/fem_symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/../utils/traits.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/integration/integrator_tables.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/utils/IO/csv_reader.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/combinatorics.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/triangle.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/simplex.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/hyperplane.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/assert.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/utils.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/tetrahedron.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/tree_search.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/kd_tree.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/../utils/data_structures/binary_tree.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/interval.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../geometry/segment.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../fields/scalar_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../fields/../utils/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../compile_time.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/integrator_tables.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/../splines/spline_symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/../finite_elements/fem_symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/../../pde/../utils/traits.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/integration/integrator_tables.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/utils/IO/csv_reader.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/fstream \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/x86_64-mk-linux/bits/basic_file.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/x86_64-mk-linux/bits/c++io.h \
  /u/sw/toolchains/gcc-glibc/11.2.0/prefix/include/c++/11.2.0/bits/fstream.tcc \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/differentiable_field.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/../utils/symbols.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/scalar_field.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/scalar_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/dot_product.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/../utils/traits.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/field_derivatives.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/field_ptrs.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/matrix_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/vector_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/../utils/assert.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/matrix_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/matrix_field.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/vector_field.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/dot_product.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/scalar_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/scalar_field.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/vector_expressions.h \
- /home/francesca16/Luca-Francesca/test/../fdaPDE/fields/vector_field.h \
- /home/francesca16/Luca-Francesca/test/src/utils/constants.h
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/differentiable_field.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/../utils/symbols.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/scalar_field.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/scalar_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/dot_product.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/../utils/traits.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/field_derivatives.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/field_ptrs.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/matrix_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/vector_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/../utils/assert.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/matrix_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/matrix_field.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/vector_field.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/dot_product.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/scalar_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/scalar_field.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/vector_expressions.h \
+ /home/lucadalessandro/Luca-Francesca/test/../fdaPDE/fields/vector_field.h \
+ /home/lucadalessandro/Luca-Francesca/test/src/utils/constants.h

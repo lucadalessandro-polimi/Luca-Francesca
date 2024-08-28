@@ -1,69 +1,131 @@
+#include <Eigen/Dense>
 #include <iostream>
-#include "../../../eigen/Eigen/Dense"   
 
-class Vertex;
+template <typename T>
 class HalfEdge;
-class Edge;
 
-class Vertex{
+template <typename T>
+class Vertex {
 private:
-          Eigen::Vector3d p;
-          HalfEdge* e;
+    T p;
+    HalfEdge<T>* e;
 public:
-          Vertex(const Eigen::Vector3d& point): p(point), e(nullptr){};
-          void setPoint(Eigen::Vector3d point){p=point;};
-          void setEdge(HalfEdge* ed){e=ed;};
-
-          //destructor
+    Vertex(const T& point) : p(point), e(nullptr) {}
+    void setPoint(const T& point) { p = point; }
+    void setHalfEdge(HalfEdge<T>* edge) { e = edge; }
+    T getPoint() const { return p; }
+    HalfEdge<T>* getHalfEdge() const { return e; }
 };
 
-class HalfEdge{
+template <typename T>
+class HalfEdge {
 private:
-          Vertex v;
-          HalfEdge* twin;
-          HalfEdge* next;
-          HalfEdge* prec;
+    Vertex<T>* v;
+    HalfEdge<T>* twin;
+    HalfEdge<T>* next;
+    HalfEdge<T>* prev;
 public:
-          HalfEdge(const Eigen::Vector3d& ver): v(ver), twin(nullptr), next(nullptr), prec(nullptr){}; 
-          HalfEdge();        
+    HalfEdge(Vertex<T>* vert = nullptr)
+        : v(vert), twin(nullptr), next(nullptr), prev(nullptr) {}
 
-          void setVertex(Vertex ver){v=ver;};
-          void setTwin(HalfEdge* tw){twin=tw;};
-          void setNext(HalfEdge* ne){next=ne;};
-          void setPrec(HalfEdge* pr){prec=pr;};
+    // Move constructor
+    HalfEdge(HalfEdge&& other) noexcept 
+        : v(other.v), twin(other.twin), next(other.next), prev(other.prev) {
+        other.v = nullptr;
+        other.twin = nullptr;
+        other.next = nullptr;
+        other.prev = nullptr;
+    }
 
-          //destructor
-          
+    // Move assignment operator
+    HalfEdge& operator=(HalfEdge&& other) noexcept {
+        if (this != &other) {
+            v = other.v;
+            twin = other.twin;
+            next = other.next;
+            prev = other.prev;
+            other.v = nullptr;
+            other.twin = nullptr;
+            other.next = nullptr;
+            other.prev = nullptr;
+        }
+        return *this;
+    }
+
+    void setVertex(Vertex<T>* vert) { v = vert; }
+    void setTwin(HalfEdge<T>* tw) { twin = tw; }
+    void setNext(HalfEdge<T>* ne) { next = ne; }
+    void setPrev(HalfEdge<T>* pr) { prev = pr; }
+
+    Vertex<T>* getVertex() const { return v; }
+    HalfEdge<T>* getTwin() const { return twin; }
+    HalfEdge<T>* getNext() const { return next; }
+    HalfEdge<T>* getPrev() const { return prev; }
+
+    // Prevent copying to avoid accidental shallow copies
+    HalfEdge(const HalfEdge&) = delete;
+    HalfEdge& operator=(const HalfEdge&) = delete;
 };
 
-
-class Edge{
+template <typename T>
+class Edge {
 private:
-          HalfEdge *e1, *e2;
+    HalfEdge<T>* e1;
+    HalfEdge<T>* e2;
 public:
-          Edge(const Eigen::Vector3d& ver1, const Eigen::Vector3d& ver2): //BOH CON TUTTI I PUNTATORI NON CAPISCO
-          {
-                    e1->setVertex(ver1); 
-                    e2->setVertex(ver2);
-          };
+    Edge(Vertex<T>* v1, Vertex<T>* v2) {
+        e1 = new HalfEdge<T>(v1);
+        e2 = new HalfEdge<T>(v2);
+        e1->setTwin(e2);
+        e2->setTwin(e1);
+    }
 
-//CAPIRE SE PUO ANDARE BENE
-//SERVE UNA PARENTELA?
-          Edge() {
-                    e1 = new HalfEdge();
-                    e2 = new HalfEdge();
-                    e1->setTwin(e2);
-                    e2->setTwin(e1);
-          }
+    // Move constructor
+    Edge(Edge&& other) noexcept 
+        : e1(other.e1), e2(other.e2) {
+        other.e1 = nullptr;
+        other.e2 = nullptr;
+    }
 
-          void setEdge1(HalfEdge* ed1){e1=ed1;};
-          void setEdge2(HalfEdge* ed2){e2=ed2;};
-          ~Edge() {
-                    delete e1;
-                    delete e2;
-          }
+    // Move assignment operator
+    Edge& operator=(Edge&& other) noexcept {
+        if (this != &other) {
+            delete e1;
+            delete e2;
+            e1 = other.e1;
+            e2 = other.e2;
+            other.e1 = nullptr;
+            other.e2 = nullptr;
+        }
+        return *this;
+    }
 
+    ~Edge() {
+        delete e1;
+        delete e2;
+    }
+
+    HalfEdge<T>* getEdge1() const { return e1; }
+    HalfEdge<T>* getEdge2() const { return e2; }
+
+    // Prevent copying to avoid accidental shallow copies
+    Edge(const Edge&) = delete;
+    Edge& operator=(const Edge&) = delete;
 };
 
+// Funzione per controllare i collegamenti del HalfEdge
+template <typename T>
+void checkHalfEdgeConnections(const HalfEdge<T>* edge) {
+    std::cout << "Twin: " << (edge->getTwin() ? "Corretto" : "Incorretto") << std::endl;
+    std::cout << "Next: " << (edge->getNext() ? "Corretto" : "Non presente") << std::endl;
+    std::cout << "Prev: " << (edge->getPrev() ? "Corretto" : "Non presente") << std::endl;
+}
 
-//FARE TEST SU PARENTELE TWIN, PREC NEXT PER CAPIRE SE VA BENE
+
+
+
+
+
+
+
+
