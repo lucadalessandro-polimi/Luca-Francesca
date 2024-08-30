@@ -7,17 +7,17 @@ using namespace Eigen;
 
 int main() {
     // Definizione dei punti
-    Vector3d v1(1.0, 2.0, 3.0);
-    Vector3d v2(4.0, 5.0, 6.0);
-    Vector3d v3(7.0, 8.0, 9.0);
+    Vector2d v1(1.0, 2.0);
+    Vector2d v2(4.0, 5.0);
+    Vector2d v3(4.0, 1.0);
 
     // Creazione dei Vertex
-    Vertex<Vector3d> vertex1(v1);
-    Vertex<Vector3d> vertex2(v2);
-    Vertex<Vector3d> vertex3(v3);
+    Vertex<Vector2d> vertex1(v1);
+    Vertex<Vector2d> vertex2(v2);
+    Vertex<Vector2d> vertex3(v3);
 
     // Creazione degli HalfEdge
-    HalfEdge<Vector3d> he1, he2, he3;
+    HalfEdge<Vector2d> he1, he2, he3;
 
     // Impostare i Vertex per gli HalfEdge
     he1.setVertex(&vertex1);
@@ -40,8 +40,8 @@ int main() {
     he3.setPrev(&he2);
 
     // Creazione delle liste
-    std::list<Vertex<Vector3d>> vertexList;
-    std::list<HalfEdge<Vector3d>> halfEdgeList;
+    std::list<Vertex<Vector2d>> vertexList;
+    std::list<HalfEdge<Vector2d>> halfEdgeList;
 
     // Aggiunta di Vertex alla lista
     vertexList.push_back(vertex1);
@@ -58,9 +58,10 @@ int main() {
     for (const auto& vertex : vertexList) {
         std::cout << "Vertex Point: " << vertex.getPoint().transpose() << std::endl;
     }
+    std::cout<< std::endl;
 
     // Funzione per stampare i collegamenti degli HalfEdge
-    auto printHalfEdgeConnections = [](const HalfEdge<Vector3d>& he) {
+    auto printHalfEdgeConnections = [](const HalfEdge<Vector2d>& he) {
         std::cout << "HalfEdge Vertex: " << he.getVertex()->getPoint().transpose() << std::endl;
         if (he.getTwin()) {
             std::cout << "HalfEdge Twin Vertex: " << he.getTwin()->getVertex()->getPoint().transpose() << std::endl;
@@ -78,6 +79,11 @@ int main() {
     for (const auto& halfEdge : halfEdgeList) {
         printHalfEdgeConnections(halfEdge);
     }
+
+    std::cout << "Twin of twin:" << std::endl;
+    //he1.getTwin()->getTwin()->getVertex()->getPoint().transpose()<<std::endl;
+
+
 
     return 0;
 }

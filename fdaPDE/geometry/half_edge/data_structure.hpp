@@ -25,8 +25,25 @@ private:
     HalfEdge<T>* next;
     HalfEdge<T>* prev;
 public:
+
+    //HalfEdge()= default;
+
     HalfEdge(Vertex<T>* vert = nullptr)
         : v(vert), twin(nullptr), next(nullptr), prev(nullptr) {}
+
+    // Copy constructor
+    HalfEdge(const HalfEdge& other) : v(other.v), twin(other.twin), next(other.next), prev(other.prev) {}
+
+    // Copy assignment operator
+    HalfEdge& operator=(const HalfEdge& other) {
+        if (this != &other) {
+            v = other.v;
+            twin = other.twin;
+            next = other.next;
+            prev = other.prev;
+        }
+        return *this;
+    }
 
     // Move constructor
     HalfEdge(HalfEdge&& other) noexcept 
@@ -63,8 +80,8 @@ public:
     HalfEdge<T>* getPrev() const { return prev; }
 
     // Prevent copying to avoid accidental shallow copies
-    HalfEdge(const HalfEdge&) = delete;
-    HalfEdge& operator=(const HalfEdge&) = delete;
+    //HalfEdge(const HalfEdge&) = delete;
+    //HalfEdge& operator=(const HalfEdge&) = delete;
 };
 
 template <typename T>
@@ -73,6 +90,9 @@ private:
     HalfEdge<T>* e1;
     HalfEdge<T>* e2;
 public:
+
+    Edge()= default;
+
     Edge(Vertex<T>* v1, Vertex<T>* v2) {
         e1 = new HalfEdge<T>(v1);
         e2 = new HalfEdge<T>(v2);
@@ -116,9 +136,9 @@ public:
 // Funzione per controllare i collegamenti del HalfEdge
 template <typename T>
 void checkHalfEdgeConnections(const HalfEdge<T>* edge) {
-    std::cout << "Twin: " << (edge->getTwin() ? "Corretto" : "Incorretto") << std::endl;
-    std::cout << "Next: " << (edge->getNext() ? "Corretto" : "Non presente") << std::endl;
-    std::cout << "Prev: " << (edge->getPrev() ? "Corretto" : "Non presente") << std::endl;
+    std::cout << "Twin: " << (edge->getTwin() ? "Correct" : "Incorrect") << std::endl;
+    std::cout << "Next: " << (edge->getNext() ? "Correct" : "Not present") << std::endl;
+    std::cout << "Prev: " << (edge->getPrev() ? "Correct" : "Not present") << std::endl;
 }
 
 
