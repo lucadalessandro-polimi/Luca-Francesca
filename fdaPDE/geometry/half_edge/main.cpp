@@ -1,89 +1,72 @@
 #include <iostream>
-#include <list>
-#include <Eigen/Dense>
-#include "data_structure.hpp"
+#include "data_structure.h"
 
-using namespace Eigen;
+// Funzioni di debug per controllare le connessioni degli HalfEdge
+template <int LocalDim, int EmbedDim>
+void check_twin(const HalfEdge<LocalDim, EmbedDim>& edge) {
+    if (edge.twin() == nullptr) {
+        std::cout << "HalfEdge doesn't have a twin." << std::endl;
+    } else if (edge.twin()->twin() != &edge) {
+        std::cout << "HalfEdge's twin is not correct." << std::endl;
+    } else {
+        std::cout << "Twin: Correct" << std::endl;
+    }
+}
+
+template <int LocalDim, int EmbedDim>
+void check_next(const HalfEdge<LocalDim, EmbedDim>& edge) {
+    if (edge.next() == nullptr) {
+        std::cout << "HalfEdge doesn't have a next." << std::endl;
+    } else if (edge.next()->prev() != &edge) {
+        std::cout << "The next HalfEdge's prev is not correct." << std::endl;
+    } else {
+        std::cout << "Next: Correct" << std::endl;
+    }
+}
+
+template <int LocalDim, int EmbedDim>
+void check_prev(const HalfEdge<LocalDim, EmbedDim>& edge) {
+    if (edge.prev() == nullptr) {
+        std::cout << "HalfEdge doesn't have a prev." << std::endl;
+    } else if (edge.prev()->next() != &edge) {
+        std::cout << "The previous HalfEdge's next is not correct." << std::endl;
+    } else {
+        std::cout << "Prev: Correct" << std::endl;
+    }
+}
 
 int main() {
-    // Definizione dei punti
-    Vector2d v1(1.0, 2.0);
-    Vector2d v2(4.0, 5.0);
-    Vector2d v3(4.0, 1.0);
-
-    // Creazione dei Vertex
-    Vertex<Vector2d> vertex1(v1);
-    Vertex<Vector2d> vertex2(v2);
-    Vertex<Vector2d> vertex3(v3);
+    // Creazione dei nodi (ex-vertici) e degli half-edge per la mesh
+    Node<2, 2> node1(1.0, 2.0);
+    Node<2, 2> node2(3.0, 4.0);
+    Node<2, 2> node3(5.0, 6.0);
 
     // Creazione degli HalfEdge
-    HalfEdge<Vector2d> he1, he2, he3;
+    HalfEdge<2, 2> he1(node1);
+    HalfEdge<2, 2> he2(node2);
+    HalfEdge<2, 2> he3(node3);
 
-    // Impostare i Vertex per gli HalfEdge
-    he1.setVertex(&vertex1);
-    he2.setVertex(&vertex2);
-    he3.setVertex(&vertex3);
+    // Impostazione delle connessioni twin
+    he1.set_twin(&he2);
+    he2.set_twin(&he1);
 
-    // Collegamenti twin
-    he1.setTwin(&he2);
-    he2.setTwin(&he1);
-    he2.setTwin(&he3);
-    he3.setTwin(&he2);
+    // Impostazione delle connessioni next e prev
+    he1.set_next(&he2);
+    he2.set_next(&he3);
+    he3.set_next(&he1);
 
-    // Collegamenti next e prev per formare un ciclo
-    he1.setNext(&he2);
-    he2.setNext(&he3);
-    he3.setNext(&he1);
+    he1.set_prev(&he3);
+    he2.set_prev(&he1);
+    he3.set_prev(&he2);
 
-    he1.setPrev(&he3);
-    he2.setPrev(&he1);
-    he3.setPrev(&he2);
+    // Esecuzione delle funzioni di debug per controllare le connessioni
+    check_twin(he1);
+    check_next(he1);
+    check_prev(he1);
 
-    // Creazione delle liste
-    std::list<Vertex<Vector2d>> vertexList;
-    std::list<HalfEdge<Vector2d>> halfEdgeList;
-
-    // Aggiunta di Vertex alla lista
-    vertexList.push_back(vertex1);
-    vertexList.push_back(vertex2);
-    vertexList.push_back(vertex3);
-
-    // Aggiunta di HalfEdge alla lista
-    halfEdgeList.push_back(he1);
-    halfEdgeList.push_back(he2);
-    halfEdgeList.push_back(he3);
-
-    // Stampa dei Vertex
-    std::cout << "Vertex List:" << std::endl;
-    for (const auto& vertex : vertexList) {
-        std::cout << "Vertex Point: " << vertex.getPoint().transpose() << std::endl;
-    }
-    std::cout<< std::endl;
-
-    // Funzione per stampare i collegamenti degli HalfEdge
-    auto printHalfEdgeConnections = [](const HalfEdge<Vector2d>& he) {
-        std::cout << "HalfEdge Vertex: " << he.getVertex()->getPoint().transpose() << std::endl;
-        if (he.getTwin()) {
-            std::cout << "HalfEdge Twin Vertex: " << he.getTwin()->getVertex()->getPoint().transpose() << std::endl;
-        }
-        if (he.getNext()) {
-            std::cout << "HalfEdge Next Vertex: " << he.getNext()->getVertex()->getPoint().transpose() << std::endl;
-        }
-        if (he.getPrev()) {
-            std::cout << "HalfEdge Prev Vertex: " << he.getPrev()->getVertex()->getPoint().transpose() << std::endl;
-        }
-    };
-
-    // Stampa degli HalfEdge e le loro connessioni
-    std::cout << "HalfEdge List:" << std::endl;
-    for (const auto& halfEdge : halfEdgeList) {
-        printHalfEdgeConnections(halfEdge);
-    }
-
-    std::cout << "Twin of twin:" << std::endl;
-    //he1.getTwin()->getTwin()->getVertex()->getPoint().transpose()<<std::endl;
-
-
+    check_twin(he2);
+    check_next(he2);
+    check_prev(he2);
 
     return 0;
 }
