@@ -140,7 +140,7 @@ void remove_polygon(const cell_t* cell){
 
     
     halfedge_t* b = cell->on_boundary();
-    if (b) // only remove edges on boundary    DOVREBBE ARRIVARE FINO A CASO b. IN CUI RIMANE SOLO 1 LATO SUL BORDO
+    if (b){ // only remove edges on boundary    DOVREBBE ARRIVARE FINO A CASO b. IN CUI RIMANE SOLO 1 LATO SUL BORDO
       do{
         b = remove_edge(b);
       }while(b->on_boundary())
