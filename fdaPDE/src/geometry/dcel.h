@@ -384,7 +384,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     /////////////////////////////// FINE CODICE DI PROVA//////////////////////////
 
     ////////////////////////////// CODICE DI PROVA //////////////////////////////
-    node_t* adjacent(halfedge_t* edge) {
+    node_t* adjacent(halfedge_t* edge) const {
         return (edge->twin()) ? edge->twin()->prev()->node() : nullptr;  //da controllare
     }
     ////////////////////////////// FINE CODICE DI PROVA //////////////////////////
