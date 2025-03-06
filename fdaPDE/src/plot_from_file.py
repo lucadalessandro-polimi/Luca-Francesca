@@ -1,40 +1,61 @@
-import numpy as np
+import json
 import matplotlib.pyplot as plt
+import networkx as nx
 
-def plot_hexagon_from_file(filename="hexagon.txt"):
-    try:
-        # Carichiamo i dati dal file
-        data = np.loadtxt(filename)
+def plot_dcel(filename):
+    # Carica il file JSON esportato dalla DCEL
+    with open(filename, 'r') as file:
+        data = json.load(file)
 
-        # Aggiungiamo il primo punto alla fine per chiudere il poligono
-        data = np.vstack([data, data[0]])
+    # Estrarre i nodi
+    nodes = {node["id"]: node["coords"] for node in data["nodes"]}
+    boundary_nodes = {node["id"] for node in data["nodes"] if node["boundary"]}
 
-        # Disegniamo l'esagono
-        plt.figure(figsize=(5, 5))
-        plt.plot(data[:, 0], data[:, 1], 'bo-', label="Esagono")
-        plt.fill(data[:, 0], data[:, 1], 'skyblue', alpha=0.3)
-        plt.scatter(data[:-1, 0], data[:-1, 1], color='red', label="Vertici")
+    # Estrarre gli archi
+    edges = [(edge["from"], edge["to"]) for edge in data["edges"]]
 
-        # Etichettiamo i vertici
-        for i, (x, y) in enumerate(data[:-1]):
-            plt.text(x, y, str(i), fontsize=12, ha='right', va='bottom', color='black')
+    # Creare il grafo con NetworkX per una migliore visualizzazione
+    G = nx.Graph()
+    for node_id, (x, y) in nodes.items():
+        G.add_node(node_id, pos=(x, y))
 
-        plt.axhline(0, color='gray', linewidth=0.5)
-        plt.axvline(0, color='gray', linewidth=0.5)
-        plt.xlim(-1.2, 1.2)
-        plt.ylim(-1.2, 1.2)
-        plt.gca().set_aspect('equal')
-        plt.legend()
-        plt.title("Esagono generato da make_polygon")
-        plt.grid(True)
+    for from_id, to_id in edges:
+        G.add_edge(from_id, to_id)
 
-        # Mostriamo la figura
-        plt.savefig("hexagon_plot.png")  # Salva l'immagine in un file
-        print("Grafico salvato come 'hexagon_plot.png'")
+    # Estrarre le celle (facce)
+    faces = []
+    for cell in data["cells"]:
+        face_nodes = [edge_id for edge_id in cell["edges"]]
+        faces.append(face_nodes)
 
+    # Creare il plot
+    plt.figure(figsize=(8, 6))
 
-    except Exception as e:
-        print(f"Errore nella lettura del file: {e}")
+    # Disegna gli archi
+    pos = {node_id: (x, y) for node_id, (x, y) in nodes.items()}
+    nx.draw(G, pos, with_labels=True, node_size=300, node_color='black', edge_color='gray', font_color='red')
+
+    # Disegna i nodi di bordo in blu
+    for node_id in boundary_nodes:
+        x, y = nodes[node_id]
+        plt.scatter(x, y, color='blue', s=100, edgecolors='black', linewidths=1.5)
+
+    # Disegna i triangoli delle celle
+    for cell in data["cells"]:
+        cell_nodes = [nodes[edge] for edge in cell["edges"]]
+        x_values = [coord[0] for coord in cell_nodes] + [cell_nodes[0][0]]
+        y_values = [coord[1] for coord in cell_nodes] + [cell_nodes[0][1]]
+        plt.plot(x_values, y_values, 'g--', linewidth=1)
+
+    # Mostrare la mesh
+    plt.title("DCEL Mesh Visualization")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.grid(True)
+    plt.savefig("dcel_plot.png", dpi=300)  # Salva l'immagine
+    print("Plot salvato come 'dcel_plot.png'")
+
 
 if __name__ == "__main__":
-    plot_hexagon_from_file()
+    plot_dcel("dcel_output.json")
+

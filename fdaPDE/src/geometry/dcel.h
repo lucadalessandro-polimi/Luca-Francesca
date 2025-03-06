@@ -20,8 +20,18 @@
 //#include "header_check.h"
 #include <list>
 #include <Eigen/Dense>
-
 #include <cstdlib>  // Per `abort()`
+#include <fstream>
+#include <nlohmann/json.hpp> // Libreria per gestire JSON
+
+using json = nlohmann::json;
+
+// Evita di includere triangulation.h qui!
+namespace fdapde {
+    template <int LocalDim, int EmbedDim>
+    class Triangulation;  // Forward declaration
+}
+
 
 namespace fdapde {
 namespace internals {
@@ -198,7 +208,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     static DCEL<local_dim, embed_dim> make_polygon(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes) {
         fdapde_assert(nodes.cols() == embed_dim);
         int n_nodes = nodes.rows();
-        int n_halfedges = 2 * (n_nodes + 1);
+        int n_halfedges = 2 * (n_nodes+1);
         DCEL<local_dim, embed_dim> dcel;
         // create polygon cell
         dcel.cells_.push_back(cell_t(0));
@@ -305,6 +315,64 @@ template <int LocalDim, int EmbedDim> class DCEL {
     node_iterator nodes_end() { return nodes_.end(); }
     cell_iterator cells_begin() { return cells_.begin(); }
     cell_iterator cells_end() { return cells_.end(); }
+
+   
+    void export_to_json(const std::string& filename) {
+        json j;
+    
+        // Salva i nodi
+        j["nodes"] = json::array();
+        for (auto it = nodes_begin(); it != nodes_end(); ++it) {
+            json node;
+            node["id"] = it->id();
+            node["coords"] = {it->coords()(0), it->coords()(1)};
+            node["boundary"] = it->on_boundary();
+            j["nodes"].push_back(node);
+        }
+    
+        // Salva gli archi
+        j["edges"] = json::array();
+        for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
+            json edge;
+            edge["id"] = it->id();
+            edge["from"] = it->node()->id();
+            edge["to"] = it->next()->node()->id();
+            edge["twin"] = it->twin() ? it->twin()->id() : -1;  // -1 se non ha twin
+            j["edges"].push_back(edge);
+        }
+    
+    // Salva le celle
+    j["cells"] = json::array();
+    for (auto it = cells_begin(); it != cells_end(); ++it) {
+        json cell;
+        cell["id"] = it->id();
+        cell["edges"] = json::array();
+    
+        auto h = it->halfedge();
+        if (!h) { // Se h è nullptr, saltiamo questa cella per evitare crash
+          std::cerr << "Errore: cella con halfedge nullo!\n";
+          continue;
+        }
+
+    do {
+        if (h) {  // Controllo extra per sicurezza
+            cell["edges"].push_back(h->id());
+        }
+        h = h->next();
+    } while (h && h != it->halfedge());
+
+    j["cells"].push_back(cell);
+    }
+
+    
+        // Scrive su file
+        std::ofstream file(filename);
+        file << j.dump(4); // Indentazione di 4 spazi per leggibilità
+        file.close();
+        
+        std::cout << "DCEL esportata in " << filename << std::endl;
+    }
+    
  
    private:
     // internal utils
@@ -324,7 +392,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
     std::list<cell_t> cells_;
     int n_nodes_, n_halfedges_, n_cells_;
 };
-  
+
+
 }   // namespace fdapde
+
+
 
 #endif // __DCEL_H__

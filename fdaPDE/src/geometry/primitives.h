@@ -142,6 +142,7 @@ constexpr bool point_in_2d_tri(const PointT& a, const PointT& t1, const PointT& 
 }
 
 ////////////////////////////// CODICE DI PROVA /////////////////////////////////////////
+// fare calcolo determinante senza storare la matrice 
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool in_circumcircle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
