@@ -104,35 +104,6 @@ class Delaunay {
    
    private:
     DCEL<local_dim, embed_dim> dcel_;  
-
-    bool is_point_inside_triangle(const node_t& node_P, const node_t& node_A, const node_t& node_B, const node_t& node_C) const{
-        // baricenter test
-        coords_t P= node_P.coords();
-        coords_t A= node_A.coords();
-        coords_t B= node_B.coords();
-        coords_t C= node_C.coords();
-        Eigen::Matrix<double, LocalDim, LocalDim> M;
-        M << (B - A), (C - A); 
-        coords_t lambda = M.inverse() * (P - A);
-        double lambda1 = lambda.x();
-        double lambda2 = lambda.y();
-        double lambda3 = 1 - lambda1 - lambda2;
-        return (lambda1 >= 0 && lambda1<=1 && lambda2 >= 0 && lambda2<=1 && lambda3 >= 0 && lambda3<=1);  
-    }
-    
-    bool in_circle(const node_t& node_A, const node_t& node_B, const node_t& node_C, const node_t& node_D) const{
-        
-        coords_t A= node_A.coords();
-        coords_t B= node_B.coords();
-        coords_t C= node_C.coords();
-        coords_t D= node_D.coords();
-        
-        Eigen::Matrix<double, LocalDim+1, LocalDim+1> M;
-        M << (A-D).x(), (A-D).y(), (A-D).squaredNorm(), (B-D).x(), (B-D).y(), (B-D).squaredNorm(), (C-D).x(), (C-D).y(), (C-D).squaredNorm();
-        double det = M.determinant();
-        // if det is positive, D is inside A-B-C circumcircle
-        return det > 0; 
-    }
 };
   
 }   // namespace fdapde

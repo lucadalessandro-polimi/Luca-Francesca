@@ -141,6 +141,20 @@ constexpr bool point_in_2d_tri(const PointT& a, const PointT& t1, const PointT& 
            (t2[0] - a[0]) * (t3[1] - a[1]) >= (t3[0] - a[0]) * (t2[1] - a[1]);
 }
 
+////////////////////////////// CODICE DI PROVA /////////////////////////////////////////
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr bool in_circumcircle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
+    Eigen::Matrix<double, 3, 3> M;
+    M << (A[0] - D[0]), (A[1] - D[1]), (A[0] - D[0]) * (A[0] - D[0]) + (A[1] - D[1]) * (A[1] - D[1]),
+         (B[0] - D[0]), (B[1] - D[1]), (B[0] - D[0]) * (B[0] - D[0]) + (B[1] - D[1]) * (B[1] - D[1]),
+         (C[0] - D[0]), (C[1] - D[1]), (C[0] - D[0]) * (C[0] - D[0]) + (C[1] - D[1]) * (C[1] - D[1]);
+
+    return M.determinant() > 0;  // Se det > 0, D è dentro il circumcerchio
+}
+
+//////////////////////////// FINE CODICE DI PROVA ////////////////////////////////////////////
+
   // then we can detect if a diagonal is fully contained in a polygon
 
   // 3D geometry
