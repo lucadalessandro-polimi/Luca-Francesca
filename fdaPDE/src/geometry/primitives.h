@@ -142,17 +142,28 @@ constexpr bool point_in_2d_tri(const PointT& a, const PointT& t1, const PointT& 
 }
 
 ////////////////////////////// CODICE DI PROVA /////////////////////////////////////////
-// fare calcolo determinante senza storare la matrice 
+/*    M << (A[0] - D[0]), (A[1] - D[1]), (A[0] - D[0]) * (A[0] - D[0]) + (A[1] - D[1]) * (A[1] - D[1]),
+         (B[0] - D[0]), (B[1] - D[1]), (B[0] - D[0]) * (B[0] - D[0]) + (B[1] - D[1]) * (B[1] - D[1]),
+         (C[0] - D[0]), (C[1] - D[1]), (C[0] - D[0]) * (C[0] - D[0]) + (C[1] - D[1]) * (C[1] - D[1]);*/
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
-constexpr bool in_circumcircle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
-    Eigen::Matrix<double, 3, 3> M;
-    M << (A[0] - D[0]), (A[1] - D[1]), (A[0] - D[0]) * (A[0] - D[0]) + (A[1] - D[1]) * (A[1] - D[1]),
-         (B[0] - D[0]), (B[1] - D[1]), (B[0] - D[0]) * (B[0] - D[0]) + (B[1] - D[1]) * (B[1] - D[1]),
-         (C[0] - D[0]), (C[1] - D[1]), (C[0] - D[0]) * (C[0] - D[0]) + (C[1] - D[1]) * (C[1] - D[1]);
+constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
+    auto ax = A[0] - D[0], ay = A[1] - D[1];
+    auto bx = B[0] - D[0], by = B[1] - D[1];
+    auto cx = C[0] - D[0], cy = C[1] - D[1];
 
-    return M.determinant() > 0;  // Se det > 0, D è dentro il circumcerchio
+    auto a2 = ax * ax + ay * ay;
+    auto b2 = bx * bx + by * by;
+    auto c2 = cx * cx + cy * cy;
+
+    // Calcolo diretto del determinante 3x3
+    double det = ax * (by * c2 - cy * b2)
+               - ay * (bx * c2 - cx * b2)
+               + a2 * (bx * cy - cx * by);
+
+    return det > 0;  // Se det > 0, D è dentro il circumcerchio
 }
+
 
 //////////////////////////// FINE CODICE DI PROVA ////////////////////////////////////////////
 
