@@ -1,6 +1,6 @@
 import json
-import matplotlib.pyplot as plt
 import networkx as nx
+import matplotlib.pyplot as plt
 
 def plot_dcel(filename):
     # Carica il file JSON esportato dalla DCEL
@@ -11,8 +11,20 @@ def plot_dcel(filename):
     nodes = {node["id"]: node["coords"] for node in data["nodes"]}
     boundary_nodes = {node["id"] for node in data["nodes"] if node["boundary"]}
 
-    # Estrarre gli archi
-    edges = [(edge["from"], edge["to"]) for edge in data["edges"]]
+    # Estrarre gli half-edges e creare una mappa halfedge_id -> nodo di partenza
+    halfedge_to_node = {}
+    edges = []
+    edge_labels = {}
+
+    for edge in data["edges"]:
+        from_id = edge["from"]
+        to_id = edge["to"]
+        halfedge_id = edge["id"]
+        twin_id = edge["twin"]
+
+        edges.append((from_id, to_id))
+        edge_labels[(from_id, to_id)] = f"{halfedge_id}/{twin_id}"  # Mostra id/twin_id
+        halfedge_to_node[halfedge_id] = from_id  # Mappa: halfedge_id → nodo di partenza
 
     # Creare il grafo con NetworkX per una migliore visualizzazione
     G = nx.Graph()
@@ -22,12 +34,6 @@ def plot_dcel(filename):
     for from_id, to_id in edges:
         G.add_edge(from_id, to_id)
 
-    # Estrarre le celle (facce)
-    faces = []
-    for cell in data["cells"]:
-        face_nodes = [edge_id for edge_id in cell["edges"]]
-        faces.append(face_nodes)
-
     # Creare il plot
     plt.figure(figsize=(8, 6))
 
@@ -35,14 +41,18 @@ def plot_dcel(filename):
     pos = {node_id: (x, y) for node_id, (x, y) in nodes.items()}
     nx.draw(G, pos, with_labels=True, node_size=300, node_color='black', edge_color='gray', font_color='red')
 
+    # Disegna gli ID degli half-edges sugli archi
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10, font_color='blue')
+
     # Disegna i nodi di bordo in blu
     for node_id in boundary_nodes:
         x, y = nodes[node_id]
         plt.scatter(x, y, color='blue', s=100, edgecolors='black', linewidths=1.5)
 
-    # Disegna i triangoli delle celle
+    print(data['cells'])
+    # Disegna le celle
     for cell in data["cells"]:
-        cell_nodes = [nodes[edge] for edge in cell["edges"]]
+        cell_nodes = [nodes[halfedge_to_node[edge]] for edge in cell["edges"]]
         x_values = [coord[0] for coord in cell_nodes] + [cell_nodes[0][0]]
         y_values = [coord[1] for coord in cell_nodes] + [cell_nodes[0][1]]
         plt.plot(x_values, y_values, 'g--', linewidth=1)
@@ -54,6 +64,7 @@ def plot_dcel(filename):
     plt.grid(True)
     plt.savefig("dcel_plot.png", dpi=300)  # Salva l'immagine
     print("Plot salvato come 'dcel_plot.png'")
+
 
 
 if __name__ == "__main__":
