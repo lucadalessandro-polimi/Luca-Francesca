@@ -258,6 +258,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             return nullptr;
         }
         if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
+            std::cout << "Halfedges consecutivi" << std::endl;
             return v1;   // v1 and v2 are next halfedges
         }
         // get exiting halfedges from n1 and n2
@@ -519,6 +520,61 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
         }
         return next; 
+    }
+
+    halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
+        // update n_halfedges_ and n_cells_
+        // n_nodes_ is already updated by insert_node
+        int nodes_polygon= nodes.rows();
+        cell_t* c= v->cell();
+
+        std::vector<halfedge_t*> ghost_halfedges(nodes_polygon +2 ); //O(n)
+        ghost_halfedges[0] = v;
+        ghost_halfedges[1] = v->next();
+
+        // add nodes and create ghost halfedges
+        for (int i = 0; i < nodes_polygon; ++i) {
+            node_t* n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
+            halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+            halfedge_t* h = std::addressof(halfedges_.back());    //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
+            ghost_halfedges[i+2] = h;
+        }
+        // add edges
+        int count=0;
+        for (int i = 0; i < nodes_polygon+2 ; ++i) {
+            halfedge_t* h1 = ghost_halfedges[i];
+            halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon+2)];  
+            ghost_halfedges[(i + 1) % (nodes_polygon+2)]= insert_edge(h1, h2)->next();  
+            if(!h2->next()) {
+                auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
+                if (it != halfedges_.end()){
+                    halfedges_.erase(it);
+                    count++;
+                } 
+            } 
+        }
+
+        return c->halfedge();
+    }
+
+
+    void remove_polygon(const cell_t* cell){    //PRENDE IN INGRESSO CELLA O HALFEDGE?
+       
+        /*halfedge_t* b = cell->on_boundary();
+        if (b){ // only remove edges on boundary    DOVREBBE ARRIVARE FINO A CASO b. IN CUI RIMANE SOLO 1 LATO SUL BORDO
+        do{
+         b = remove_edge(b);
+        }while(b->on_boundary())
+        return; 
+        }*/
+
+        halfedge_t* h1 = cell->halfedge();
+        halfedge_t* ending = h1->twin()->next();
+        do{
+            h1 = remove_edge(h1);
+        }while(h1!=ending);
+
+    // remove cells --> already done by remove_edge  IN TEORIA, RICONTROLLARE
     }
 
     

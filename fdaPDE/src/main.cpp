@@ -39,6 +39,11 @@ int main() {
               2.0, 2.0,
               0.0, 2.0;
     DCEL<2, 2> dcel = DCEL<2, 2>::make_polygon(points);
+    Eigen::Matrix<double, 3, 2> points_polyg;
+    points_polyg << 1.5, 0.5,
+                    1.0, 1.0,
+                    0.5, 1.5;
+
     // Funzione per trovare un half-edge associato a un nodo specifico
     auto find_halfedge_from_node = [&dcel](int node_id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) 
@@ -52,13 +57,19 @@ int main() {
                 return std::addressof(*it); 
         return nullptr; 
     };
-    
 
-    //TESTA INSERT_NODE
+    dcel.add_polygon(find_halfedge_from_id(4),points_polyg);
+
+    Eigen::Matrix<double, 1, 2> points_triangle;
+    points_triangle << 1.5, 1.5;
+    dcel.add_polygon(find_halfedge_from_id(15),points_triangle);
+    dcel.remove_polygon(find_halfedge_from_id(20)->cell());
+
+    
+    /*
     DCEL<2, 2>::node_t node1(dcel.n_nodes(),nullptr,false,0.5,1.), node2(dcel.n_nodes()+1,nullptr,false,1.5,1.);
     dcel.insert_node(node1);
     dcel.insert_node(node2);
-
     DCEL<2, 2>::halfedge_t h_i1(dcel.n_halfedges()+1000,&node1);
     DCEL<2, 2>::halfedge_t h_i2(dcel.n_halfedges()+1001,&node2);
     h_i1.set_cell(nullptr);
@@ -69,22 +80,21 @@ int main() {
     DCEL<2, 2>::halfedge_t* hi1=&h_i1;
     DCEL<2, 2>::halfedge_t* hi2=&h_i2;
 
+    //TEST insert e remove edge
     DCEL<2, 2>::halfedge_t* h10= dcel.insert_edge(he1, hi1);
     DCEL<2, 2>::halfedge_t* h12= dcel.insert_edge(hi2, he1);
     DCEL<2, 2>::halfedge_t* h3=dcel.insert_edge(h10->twin(), h12);
     dcel.insert_edge(find_halfedge_from_id(3), find_halfedge_from_id(12));
     dcel.insert_edge(find_halfedge_from_id(14), find_halfedge_from_id(4));
     dcel.insert_edge(find_halfedge_from_id(14), find_halfedge_from_id(3));
-    dcel.insert_edge(find_halfedge_from_id(10), find_halfedge_from_id(11));   
-
-    
+    dcel.insert_edge(find_halfedge_from_id(0), find_halfedge_from_id(18));   
     dcel.remove_edge(find_halfedge_from_id(10));
     dcel.remove_edge(find_halfedge_from_id(13));
     dcel.remove_edge(find_halfedge_from_id(18));
     dcel.remove_edge(find_halfedge_from_id(21));
     dcel.remove_edge(find_halfedge_from_id(16));
     dcel.remove_edge(find_halfedge_from_id(14));
-    
+    */
     // Esportiamo la DCEL in un file JSON
     dcel.export_to_json("dcel_output.json");
 
