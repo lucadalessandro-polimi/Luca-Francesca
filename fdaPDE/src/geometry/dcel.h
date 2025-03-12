@@ -68,11 +68,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
     struct node_t;
     struct halfedge_t;
     struct cell_t;
-
+    using coords_t = Eigen::Matrix<double, embed_dim, 1>;
     // internal data structures
     struct node_t {
        private:
-        using coords_t = Eigen::Matrix<double, embed_dim, 1>;
+        //using coords_t = Eigen::Matrix<double, embed_dim, 1>;
         int id_;                  // global node index
         halfedge_t* halfedge_;    // any edge having this node as its origin
         bool boundary_;           // asserted true if node is on boundary
@@ -193,6 +193,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
         int id() const { return id_; }
         // modifiers
         void set_halfedge(halfedge_t* h) { h_ = h; }
+           // Operatore di uguaglianza per confrontare due celle
+        bool operator==(const cell_t& other) const {
+          return id_ == other.id_;  // Confrontiamo solo l'ID, che dovrebbe essere univoco
+        }
 
        private:
         int id_;
@@ -203,6 +207,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
     using halfedge_iterator = std::list<halfedge_t>::iterator;
     using node_iterator = std::list<node_t>::iterator;
     using cell_iterator = std::list<cell_t>::iterator;
+    //per fare le funzioni costanti lavorando con gli iteratori
+    using const_cell_iterator = std::list<cell_t>::const_iterator;
 
     // constructors
     DCEL() : nodes_(), halfedges_(), n_nodes_(0), n_halfedges_(0), n_cells_(0) { }
@@ -239,8 +245,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h1->set_next(h2);
             h2->set_prev(h1);
 	        h1->twin()->set_prev(h2->twin());
-            h2->twin()->set_next(h1->twin());
-        }
+            h2->twin()->set_next(h1->twin());}
+             
+         //   c->set_halfedge(dcel.nodes_begin()->halfedge());
+
         return dcel;
     }
  
@@ -348,7 +356,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
     cell_iterator cells_begin() { return cells_.begin(); }
     cell_iterator cells_end() { return cells_.end(); }
 
+
    //////////////////////////////////// FUNZIONI NUOVE DI DCEL /////////////////////////////////////////
+   const_cell_iterator cells_begin() const { return cells_.cbegin(); }
+   const_cell_iterator cells_end() const { return cells_.cend(); }
+   
     void export_to_json(const std::string& filename) {
         json j;  
         // Salva i nodi
@@ -411,6 +423,49 @@ template <int LocalDim, int EmbedDim> class DCEL {
     }
 
 
+
+
+    halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
+        // update n_halfedges_ and n_cells_
+        // n_nodes_ is already updated by insert_node
+        int nodes_polygon= nodes.rows();
+        cell_t* c= v->cell();
+
+        std::vector<halfedge_t*> ghost_halfedges(nodes_polygon +2 ); //O(n)
+        ghost_halfedges[0] = v;
+        ghost_halfedges[1] = v->next();
+
+        // add nodes and create ghost halfedges
+        for (int i = 0; i < nodes_polygon; ++i) {
+           node_t* n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
+       // add nodes and create ghost halfedges
+
+            halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+            halfedge_t* h = std::addressof(halfedges_.back());    //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
+            ghost_halfedges[i+2] = h;
+        }
+        // add edges
+        int count=0;
+        for (int i = 0; i < nodes_polygon+2 ; ++i) {
+            halfedge_t* h1 = ghost_halfedges[i];
+            halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon+2)];  
+            ghost_halfedges[(i + 1) % (nodes_polygon+2)]= insert_edge(h1, h2)->next();  
+            if(!h2->next()) {
+                auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
+                if (it != halfedges_.end()){
+                    halfedges_.erase(it);
+                    count++;
+                } 
+            } 
+        }
+
+        return c->halfedge();
+    }
+
+
+    
+    
+    
     halfedge_t* remove_edge(halfedge_t* v1){
         if(!v1) return nullptr;
         /*
@@ -521,61 +576,78 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         return next; 
     }
-
-    halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
-        // update n_halfedges_ and n_cells_
-        // n_nodes_ is already updated by insert_node
-        int nodes_polygon= nodes.rows();
-        cell_t* c= v->cell();
-
-        std::vector<halfedge_t*> ghost_halfedges(nodes_polygon +2 ); //O(n)
-        ghost_halfedges[0] = v;
-        ghost_halfedges[1] = v->next();
-
-        // add nodes and create ghost halfedges
-        for (int i = 0; i < nodes_polygon; ++i) {
-            node_t* n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
-            halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
-            halfedge_t* h = std::addressof(halfedges_.back());    //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
-            ghost_halfedges[i+2] = h;
-        }
-        // add edges
-        int count=0;
-        for (int i = 0; i < nodes_polygon+2 ; ++i) {
-            halfedge_t* h1 = ghost_halfedges[i];
-            halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon+2)];  
-            ghost_halfedges[(i + 1) % (nodes_polygon+2)]= insert_edge(h1, h2)->next();  
-            if(!h2->next()) {
-                auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
-                if (it != halfedges_.end()){
-                    halfedges_.erase(it);
-                    count++;
-                } 
-            } 
-        }
-
-        return c->halfedge();
-    }
-
-
-    void remove_polygon(const cell_t* cell){    //PRENDE IN INGRESSO CELLA O HALFEDGE?
-       
-        /*halfedge_t* b = cell->on_boundary();
-        if (b){ // only remove edges on boundary    DOVREBBE ARRIVARE FINO A CASO b. IN CUI RIMANE SOLO 1 LATO SUL BORDO
-        do{
-         b = remove_edge(b);
-        }while(b->on_boundary())
-        return; 
-        }*/
-
+    void remove_polygon(const cell_t* cell) {  
+        std::cout << "🛑 Inizio rimozione cella ID: " << cell->id() << std::endl;
+    
+        // Stampiamo gli half-edge associati alla cella prima della rimozione
+        std::cout << "Half-edges della cella prima della rimozione: ";
+        halfedge_t* temp = cell->halfedge();
+        int safety_counter = 0;  // Contatore anti-loop
+        do {
+            std::cout << temp->id() << " ";
+            temp = temp->next();
+            if (++safety_counter > 50) {  // Evitiamo cicli infiniti
+                std::cerr << "⚠️ ERRORE: Loop infinito rilevato nella scansione iniziale della cella " << cell->id() << std::endl;
+                return;
+            }
+        } while (temp != cell->halfedge());
+        std::cout << std::endl;
+    
+        // Rimozione degli half-edge
         halfedge_t* h1 = cell->halfedge();
-        halfedge_t* ending = h1->twin()->next();
-        do{
-            h1 = remove_edge(h1);
-        }while(h1!=ending);
-
-    // remove cells --> already done by remove_edge  IN TEORIA, RICONTROLLARE
+        halfedge_t* ending = h1->twin() ? h1->twin()->next() : nullptr;
+    
+        safety_counter = 0;
+        do {
+            std::cout << "➖ Rimuovendo half-edge ID: " << h1->id() << " (prossimo sarà "
+                      << (h1->next() ? std::to_string(h1->next()->id()) : "nullptr") << ")" << std::endl;
+    
+            halfedge_t* next = remove_edge(h1);
+    
+            if (!next || next == h1) {  // Se il nuovo half-edge è nullo o lo stesso, fermiamo
+                std::cout << "🚨 Rimozione interrotta: il prossimo half-edge è nullo o identico a quello attuale.\n";
+                break;
+            }
+    
+            h1 = next;
+    
+            if (++safety_counter > 50) {
+                std::cerr << "⚠️ ERRORE: Loop infinito rilevato nella rimozione della cella " << cell->id() << std::endl;
+                return;
+            }
+        } while (h1 && h1 != ending);
+    
+        std::cout << "🔍 Dopo la rimozione, la cella " << cell->id() 
+                  << " ha ancora un half-edge? " << (cell->halfedge() ? "Sì" : "No") << std::endl;
+    
+        // Eliminazione della cella se ancora presente
+        auto it = std::find_if(cells_.begin(), cells_.end(), [&](const cell_t& c) {
+            return c.id() == cell->id();
+        });
+    
+        if (it != cells_.end()) {
+            std::cout << "⚠️  La cella " << cell->id() << " è ancora presente! Tentiamo di rimuoverla.\n";
+            cells_.erase(it);
+        } else {
+            std::cout << "✅ La cella " << cell->id() << " è stata rimossa correttamente.\n";
+        }
     }
+        
+        
+        
+    
+
+    node_t* adjacent(halfedge_t* edge) const {
+
+        return (edge->twin()) ? edge->twin()->prev()->node() : nullptr;  
+    }
+
+
+
+    
+
+    
+        
 
     
  //////////////////////////////   FINE FUNZIONI NUOVE DCEL ////////////////////////////////////

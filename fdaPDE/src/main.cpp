@@ -9,29 +9,7 @@ using coords_t = Eigen::Matrix<double, 2, 1>;  // Vettore 2D
 
 int main() {
     using namespace fdapde;
-
-    /*
-    Eigen::Matrix<double, 5, 2> points;
-    points << 0, 0,  2, 0,  2, 2,  1, 1,  0, 2;
-    DCEL<2, 2> dcel = DCEL<2, 2>::make_polygon(points);
-
-    // TESTA INSERT_EDGE
-    // Troviamo gli half-edges associati ai nodi 2 e 4
-    DCEL<2, 2>::halfedge_t* h2 = find_halfedge_from_node(2);
-    DCEL<2, 2>::halfedge_t* h4 = find_halfedge_from_node(4);
-    if (h2 && h4) {
-        auto ok= dcel.insert_edge(h2, h4);
-        if (ok!=nullptr && ok!=h2 && ok!=h4) std::cout << "Edge inserted between node 2 and node 4.\n";
-    } else {
-        std::cerr << "Error: Could not find half-edges for nodes 0 and 3.\n";
-    }
-
-    //TESTA REMOVE_EDGE 
-    DCEL<2, 2>::halfedge_t* h3 = find_halfedge_from_node(3); 
-    auto hr= dcel.remove_edge(h3);
-    std::cout << hr->id() << std::endl;
-    */
-
+/*
     Eigen::Matrix<double, 5, 2> points;
     points << 0.0, 0.0,
               1.0, 0.0,
@@ -44,7 +22,6 @@ int main() {
                     1.0, 1.0,
                     0.5, 1.5;
 
-    // Funzione per trovare un half-edge associato a un nodo specifico
     auto find_halfedge_from_node = [&dcel](int node_id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) 
             if (it->id() == node_id) 
@@ -57,70 +34,105 @@ int main() {
                 return std::addressof(*it); 
         return nullptr; 
     };
-
     dcel.add_polygon(find_halfedge_from_id(4),points_polyg);
 
     Eigen::Matrix<double, 1, 2> points_triangle;
     points_triangle << 1.5, 1.5;
     dcel.add_polygon(find_halfedge_from_id(15),points_triangle);
-    dcel.remove_polygon(find_halfedge_from_id(20)->cell());
+   
+    Eigen::Matrix<double, 1, 2> points_triangle_2;
+    points_triangle_2 << 0.5, 0.5;
+    dcel.add_polygon(find_halfedge_from_id(14),points_triangle_2);
 
-    
-    /*
-    DCEL<2, 2>::node_t node1(dcel.n_nodes(),nullptr,false,0.5,1.), node2(dcel.n_nodes()+1,nullptr,false,1.5,1.);
-    dcel.insert_node(node1);
-    dcel.insert_node(node2);
-    DCEL<2, 2>::halfedge_t h_i1(dcel.n_halfedges()+1000,&node1);
-    DCEL<2, 2>::halfedge_t h_i2(dcel.n_halfedges()+1001,&node2);
-    h_i1.set_cell(nullptr);
-    h_i2.set_cell(nullptr);  //SE NO BISOGNA MODIFICARE IL COSTRUTTORE
-    node1.set_halfedge(&h_i1);
-    node2.set_halfedge(&h_i2);
-    DCEL<2, 2>::halfedge_t* he1 = find_halfedge_from_node(1);
-    DCEL<2, 2>::halfedge_t* hi1=&h_i1;
-    DCEL<2, 2>::halfedge_t* hi2=&h_i2;
+    Eigen::Matrix<double, 1, 2> points_triangle_3;
+    points_triangle_3 << 0.8, 0.5;  
+    dcel.add_polygon(find_halfedge_from_id(25), points_triangle_3);
 
-    //TEST insert e remove edge
-    DCEL<2, 2>::halfedge_t* h10= dcel.insert_edge(he1, hi1);
-    DCEL<2, 2>::halfedge_t* h12= dcel.insert_edge(hi2, he1);
-    DCEL<2, 2>::halfedge_t* h3=dcel.insert_edge(h10->twin(), h12);
-    dcel.insert_edge(find_halfedge_from_id(3), find_halfedge_from_id(12));
-    dcel.insert_edge(find_halfedge_from_id(14), find_halfedge_from_id(4));
-    dcel.insert_edge(find_halfedge_from_id(14), find_halfedge_from_id(3));
-    dcel.insert_edge(find_halfedge_from_id(0), find_halfedge_from_id(18));   
-    dcel.remove_edge(find_halfedge_from_id(10));
-    dcel.remove_edge(find_halfedge_from_id(13));
-    dcel.remove_edge(find_halfedge_from_id(18));
-    dcel.remove_edge(find_halfedge_from_id(21));
+    Eigen::Matrix<double, 1, 2> points_triangle_4;
+    points_triangle_4 << 0.1, 0.1;  
+    dcel.add_polygon(find_halfedge_from_id(23), points_triangle_4);
+
+    Eigen::Matrix<double, 1, 2> points_triangle_5;
+    points_triangle_5 << 1.4, 0.5;  
+    dcel.add_polygon(find_halfedge_from_id(29), points_triangle_5);
+
+    Eigen::Matrix<double, 1, 2> points_triangle_6;
+    points_triangle_6 << 0.3, 0.01;  
+    dcel.add_polygon(find_halfedge_from_id(27), points_triangle_6);
+
     dcel.remove_edge(find_halfedge_from_id(16));
-    dcel.remove_edge(find_halfedge_from_id(14));
-    */
-    // Esportiamo la DCEL in un file JSON
-    dcel.export_to_json("dcel_output.json");
+    dcel.remove_edge(find_halfedge_from_id(10));
+    dcel.remove_edge(find_halfedge_from_id(12));
+   
+    Delaunay<2,2> triangulation(dcel);
+   
+
+    // Punto da inserire
+    coords_t new_point;
+    new_point << 0.75, 1.0;
+
+    // Troviamo il triangolo contenente il punto
+    const DCEL<2,2>::cell_t* triangle = triangulation.find_triangle(new_point);
+  
+    //iangulation.remove_triangle(triangle);
+    
+
+    if (triangle) {
+        triangulation.insert_vertex(new_point, triangle);
+        std::cout << "Punto inserito con successo!\n";
+    } else {
+        std::cout << "Errore: il punto non è contenuto in nessun triangolo!\n";
+    }
+
+    // Esportiamo per visualizzare la nuova mesh
+    triangulation.dcel().export_to_json("dcel_output.json");
+
+  
+  
+    //bool inside = triangulation.in_circle(Eigen::Vector2d(0.75, 1.0), Eigen::Vector2d(0.5, 0.5), Eigen::Vector2d(0.8, 0.5), Eigen::Vector2d(0.3, 0.01));
+    //std::cout << "Punto D è dentro il circumcerchio? " << (inside ? "SI" : "NO") << std::endl;
+*/
+
+
 
     
-    // Creiamo un oggetto Delaunay
-    Delaunay<> triangulation;
+    // Definiamo il bordo del dominio
+    Eigen::Matrix<double, 5, 2> boundary;
+    boundary << 0.0, 0.0,
+                2.0, 0.0,
+                2.0, 2.0,
+             //   1.0, 1.0, posta delle lettere
+                0.0, 2.0,
+                0.0, 0.0;  // Chiudiamo il poligono
 
-    Delaunay<>::node_t A(0, false, coords_t(0.0, 0.0));
-    Delaunay<>::node_t B(1, false, coords_t(1.0, 0.0));
-    Delaunay<>::node_t C(2, false, coords_t(0.0, 1.0));
-    Delaunay<>::node_t D_inside(3, false, coords_t(0.2, 0.2));
-    Delaunay<>::node_t D_outside(4, false, coords_t(2.0, 2.0));
+    // Definiamo alcuni punti interni strategici
+    Eigen::Matrix<double, 4, 2> internal;
+    internal << 0.5, 0.5,
+                1.5, 0.5,
+                1.0, 1.2,
+                1.0, 1.8;
+
+    // Creiamo l'oggetto Delaunay con il dominio
+    Delaunay<2, 2> delaunay(boundary, internal);
+
+    auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
+        for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
+            if (it->id() == id) 
+                return std::addressof(*it); 
+        return nullptr; 
+    };
+
+    Eigen::Matrix<double, 1, 2> points_triangle_;
+    points_triangle_ << 2.0, 2.0; 
     
+    delaunay.dcel().add_polygon(find_halfedge_from_id(0),points_triangle_);
+    //delaunay.dcel().add_polygon(find_halfedge_from_id(0),delaunay.dcel().adjacent(find_halfedge_from_id(0))->coords());
+    //delaunay.initialize_triangulation();
+    //delaunay.build_triangulation();
+    // Esportiamo la DCEL per visualizzazione
+    delaunay.dcel().export_to_json("dcel_output.json");
 
-    // Test `in_circle`
-    std::cout << "D_inside è dentro il circumcerchio? " 
-              << (triangulation.in_circle(A, B, C, D_inside) ? "Sì" : "No") << std::endl;
 
-    std::cout << "D_outside è dentro il circumcerchio? " 
-              << (triangulation.in_circle(A, B, C, D_outside) ? "Sì" : "No") << std::endl;
-
-    // Test `is_point_inside_triangle`
-    std::cout << "D_inside è dentro il triangolo ABC? " 
-              << (triangulation.is_point_inside_triangle(D_inside, A, B, C) ? "Sì" : "No") << std::endl;
-
-    std::cout << "D_outside è dentro il triangolo ABC? " 
-              << (triangulation.is_point_inside_triangle(D_outside, A, B, C) ? "Sì" : "No") << std::endl;    
+ 
     return 0;
 }
