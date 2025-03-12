@@ -91,10 +91,6 @@ class Delaunay {
         return nullptr;
     }
 
-    void remove_triangle(const cell_t* triangle) {
-        dcel_.remove_polygon(triangle);  // Riutilizziamo remove_polygon
-    }
-
 
     void dig_cavity(const coords_t& u, halfedge_t* vw) { 
         node_t* x = dcel_.adjacent(vw);
@@ -119,10 +115,10 @@ class Delaunay {
             dig_cavity(u, vx);
             dig_cavity(u, xw);
 
-            remove_triangle(vw->twin()->cell());
+            dcel_.remove_polygon(vw->twin()->cell());
         } else {
             std::cout << "Punto " << x->id() << " NON è dentro il circumcerchio. Aggiungo nuovo triangolo.\n";
-            dcel_.add_triangle(vw->node()->coords(),vw->next()->node()->coords(),u);
+            //dcel_.add_polygon(vw,u);
             return;
         } 
     }
@@ -144,14 +140,14 @@ class Delaunay {
         dig_cavity(u, xv);
 
         // Rimuoviamo il triangolo attuale
-        remove_triangle(triangle);
+        dcel_.remove_polygon(triangle);
         std::cout << "Triangolo rimosso correttamente.\n";
     }
 
     void build_triangulation() {
         std::cout << "🔷 Inizio costruzione della triangolazione...\n";
         
-        for (int i = 0; i < internal_points_.rows(); ++i) {
+        for (int i = 1; i < internal_points_.rows(); ++i) {
             coords_t u = internal_points_.row(i);
             std::cout << "🔍 Inserimento del punto interno: " << u.transpose() << std::endl;
             
@@ -167,23 +163,70 @@ class Delaunay {
         
         std::cout << "✅ Triangolazione completata con successo!\n";
     }
-    
+
     void initialize_triangulation() {
-        std::cout << "🔷 Inizializzazione triangolazione...\n";
+        std::cout << "🔷 Inizializzazione della triangolazione...\n";
     
-        int n = boundary_points_.rows();
-        if (n < 3) {
-            std::cerr << "❌ Errore: Non ci sono abbastanza punti per formare un triangolo!\n";
+        if (internal_points_.rows() == 0) {
+            std::cerr << "❌ Errore: Nessun punto interno disponibile per inizializzare la triangolazione!\n";
             return;
         }
-    
-        // Creiamo una prima triangolazione con i punti al bordo
-        for (int i = 1; i < n - 1; ++i) {
-            dcel_.add_triangle(boundary_points_.row(0), boundary_points_.row(i), boundary_points_.row(i + 1));
+        Eigen::Matrix<double, 1, embed_dim> first_internal = internal_points_.row(0);
+        auto it = dcel_.halfedges_begin();
+        int count = dcel_.n_nodes();
+
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            dcel_.add_polygon(he, first_internal);
         }
     
         std::cout << "✅ Triangolazione iniziale completata!\n";
     }
+    
+    void print_dcel() {
+        std::cout << "==============================" << std::endl;
+        std::cout << "📌 STATO ATTUALE DELLA DCEL 📌" << std::endl;
+        std::cout << "==============================" << std::endl;
+    
+        // 📍 Stampa tutti i nodi
+        std::cout << "\n🟢 NODI: \n";
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                      << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+        }
+    
+        // 🔗 Stampa tutti gli Half-Edges
+        std::cout << "\n🔵 HALF-EDGES: \n";
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            std::cout << "ID: " << it->id()
+                      << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                      << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                      << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                      << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                      << std::endl;
+        }
+    
+        // 🔳 Stampa tutte le Celle
+        std::cout << "\n🟠 CELLE: \n";
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                      << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+            if (it->halfedge()) {
+                halfedge_t* h = it->halfedge();
+                std::cout << "  🔗 Half-edges nella cella: ";
+                halfedge_t* start = h;
+                do {
+                    std::cout << h->id() << " ";
+                    h = h->next();
+                } while (h && h != start);
+                std::cout << std::endl;
+            }
+        }
+    
+        std::cout << "==============================\n" << std::endl;
+    }
+    
+
 
    private:
     DCEL<local_dim, embed_dim> dcel_;  

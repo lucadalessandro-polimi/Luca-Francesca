@@ -97,18 +97,17 @@ int main() {
 
     
     // Definiamo il bordo del dominio
-    Eigen::Matrix<double, 5, 2> boundary;
+    Eigen::Matrix<double, 4, 2> boundary;
     boundary << 0.0, 0.0,
                 2.0, 0.0,
                 2.0, 2.0,
-             //   1.0, 1.0, posta delle lettere
-                0.0, 2.0,
-                0.0, 0.0;  // Chiudiamo il poligono
+             //   1.0, 1.0, 
+                0.0, 2.0;
 
     // Definiamo alcuni punti interni strategici
     Eigen::Matrix<double, 4, 2> internal;
-    internal << 0.5, 0.5,
-                1.5, 0.5,
+    internal << 1.5, 0.5,
+                0.5, 0.5,
                 1.0, 1.2,
                 1.0, 1.8;
 
@@ -122,12 +121,22 @@ int main() {
         return nullptr; 
     };
 
-    Eigen::Matrix<double, 1, 2> points_triangle_;
-    points_triangle_ << 2.0, 2.0; 
-    
-    delaunay.dcel().add_polygon(find_halfedge_from_id(0),points_triangle_);
-    //delaunay.dcel().add_polygon(find_halfedge_from_id(0),delaunay.dcel().adjacent(find_halfedge_from_id(0))->coords());
+
+   // delaunay.print_dcel();
+    delaunay.dcel().add_polygon(find_halfedge_from_id(0),internal.row(0));
+    delaunay.dcel().add_polygon(find_halfedge_from_id(1),internal.row(0));
+    //delaunay.print_dcel();
+    delaunay.dcel().add_polygon(find_halfedge_from_id(2),internal.row(0));
+    //delaunay.print_dcel();
+    delaunay.dcel().add_polygon(find_halfedge_from_id(3),internal.row(0));
+  
     //delaunay.initialize_triangulation();
+    //DCEL<2,2>::coords_t u = internal.row(1);
+    //std::cout << "🔍 Inserimento del punto interno: " << u.transpose()<< std::endl;
+    
+    //const DCEL<2,2>::cell_t* triangle = delaunay.find_triangle(u);
+    //std::cout<<triangle->id()<<std::endl;
+    //delaunay.insert_vertex(u,triangle);
     //delaunay.build_triangulation();
     // Esportiamo la DCEL per visualizzazione
     delaunay.dcel().export_to_json("dcel_output.json");

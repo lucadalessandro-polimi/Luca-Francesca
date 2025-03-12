@@ -588,3 +588,121 @@ void add_triangle(const coords_t& p1, const coords_t& p2, const coords_t& p3) {
     if (n2) n2->set_halfedge(h2);
     if (n3) n3->set_halfedge(h3);
 }
+
+
+
+
+void remove_triangle(const cell_t* triangle) {
+    dcel_.remove_polygon(triangle);  // Riutilizziamo remove_polygon
+}
+
+
+halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
+    // update n_halfedges_ and n_cells_
+    // n_nodes_ is already updated by insert_node
+    int nodes_polygon= nodes.rows();
+    cell_t* c= v->cell();
+
+    std::vector<halfedge_t*> ghost_halfedges(nodes_polygon +2 ); //O(n)
+    ghost_halfedges[0] = v;
+    ghost_halfedges[1] = v->next();
+
+    // add nodes and create ghost halfedges
+   for (int i = 0; i < nodes_polygon; ++i) {
+       node_t* n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
+   // add nodes and create ghost halfedges
+
+        halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+        halfedge_t* h = std::addressof(halfedges_.back());    //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
+        ghost_halfedges[i+2] = h;
+    }
+    // add edges
+    int count=0;
+    for (int i = 0; i < nodes_polygon+2 ; ++i) {
+        halfedge_t* h1 = ghost_halfedges[i];
+        halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon+2)];  
+        ghost_halfedges[(i + 1) % (nodes_polygon+2)]= insert_edge(h1, h2)->next();  
+        if(!h2->next()) {
+            auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
+            if (it != halfedges_.end()){
+                halfedges_.erase(it);
+                count++;
+            } 
+        } 
+    }
+
+    return c->halfedge();
+}
+
+ /*   halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
+        // AGGIUNGO CONTROLLO ULTERIORE  DENTRO ALL'IF per essere sicura che v1,v2 e v2->next() non siano null
+        if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
+            std::cout << "Errore: i due half-edge appartengono a celle diverse. Non è possibile inserire un edge tra i due" << std::endl;
+            return nullptr;
+        }
+        if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
+            std::cout << "Halfedges consecutivi" << std::endl;
+            return v1;   // v1 and v2 are next halfedges
+        }
+        // get exiting halfedges from n1 and n2
+        node_t* n1 = v1->node();
+        node_t* n2 = v2->node();
+        // create a pair of twin half-edges
+        halfedge_t* h1 = emplace_halfedge_(n1);
+        halfedge_t* h2 = emplace_halfedge_(n2);
+        h1->set_twin(h2);
+        h2->set_twin(h1);
+	    // insert halfedge h1 between v1 and v1->prev
+        h2->set_next(v1);
+        // AGGIUNGO CONTROLLO SU v1->prev()
+        if (v1->prev()){
+            v1->prev()->set_next(h2->twin());
+	        h2->twin()->set_prev(v1->prev());
+            v1->set_prev(h2);
+        }
+        else{
+            h1->set_prev(h2);
+            h2->set_next(h1);
+        }
+        h2->next()->set_prev(h2);
+        h2->set_node(n2);
+	    // insert halfedge h2 between v2 and v2->prev
+        h1->set_next(v2);
+        // AGGIUNGO CONTROLLO SU v2->prev()
+        if (v2->prev()) {
+            v2->prev()->set_next(h1->twin());
+	        h1->twin()->set_prev(v2->prev());
+            v2->set_prev(h1);
+        }
+        else{
+            h2->set_prev(h1);
+            h1->set_next(h2);
+        }
+        h1->next()->set_prev(h1);
+        h1->set_node(n1);
+	    // set cell pointers
+        // create new cell
+        // SOLO SE L'EDGE NUOVO HA PREV E NEXT DIVERSI DA Sè STESSO
+        if(h1->next() != h2 && h1->prev() != h2){
+            //h1->set_cell(v1->cell());  //POTENZIALI PROBLEMI
+            h1->set_cell(h1->prev()->cell());
+            h1->cell()->set_halfedge(h1);
+            cells_.push_back(cell_t(n_cells_++));
+            cell_t* c1 = std::addressof(cells_.back());
+            c1->set_halfedge(h2);
+            halfedge_t* end = h2;
+            do {         
+              h2->set_cell(c1);   
+              h2 = h2->next();
+            } while (h2 != end );
+        }
+        else {
+            if(h1->next()!=h2)
+                h1->set_cell(h1->next()->cell());
+            else
+                h1->set_cell(h1->prev()->cell());
+            h2->set_cell(h1->cell());
+        }
+	    return h1;
+    }
+    */
