@@ -125,10 +125,10 @@ int main() {
    // delaunay.print_dcel();
     delaunay.dcel().add_polygon(find_halfedge_from_id(0),internal.row(0));
     delaunay.dcel().add_polygon(find_halfedge_from_id(1),internal.row(0));
+    delaunay.print_dcel();
+    //delaunay.dcel().add_polygon(find_halfedge_from_id(2),internal.row(0));
     //delaunay.print_dcel();
-    delaunay.dcel().add_polygon(find_halfedge_from_id(2),internal.row(0));
-    //delaunay.print_dcel();
-    delaunay.dcel().add_polygon(find_halfedge_from_id(3),internal.row(0));
+    //delaunay.dcel().add_polygon(find_halfedge_from_id(3),internal.row(0));
   
     //delaunay.initialize_triangulation();
     //DCEL<2,2>::coords_t u = internal.row(1);
