@@ -149,6 +149,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         void set_twin(halfedge_t* twin) { twin_ = twin; }
         void set_node(node_t* node) { node_ = node; }
         void set_cell(cell_t* cell) { cell_ = cell; }
+        void set_id(int id) {id_=id;}
 
         // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
         struct circulator {
@@ -191,6 +192,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // observers
         halfedge_t* halfedge() const { return h_; }
         int id() const { return id_; }
+        void set_id(int id) {id_=id;}
         // modifiers
         void set_halfedge(halfedge_t* h) { h_ = h; }
            // Operatore di uguaglianza per confrontare due celle
@@ -246,8 +248,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h2->set_prev(h1);
 	        h1->twin()->set_prev(h2->twin());
             h2->twin()->set_next(h1->twin());}
-             
-         //   c->set_halfedge(dcel.nodes_begin()->halfedge());
 
         return dcel;
     }
@@ -270,6 +270,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     int n_cells() const { return n_cells_; }
     int n_edges() const { return n_halfedges_ / 2; }
 
+    //non li facciamo funzionare quindi accedere con size !!!
 
 
     // iterators
@@ -423,7 +424,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         v2->prev()->set_next(v1->next());
         v1->next()->set_prev(v2->prev());
         // remove v2's cell
-        n_cells_--;
+        //n_cells_--;
         cell_t* c2=v2->cell();
         if (c2) {
             //auto it = std::find(cells_begin(), cells_end(), v2->cell());
@@ -439,7 +440,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         // remove v1 and v2
         halfedge_t* next= v1->next();
-        n_halfedges_ -= 2;
+        //n_halfedges_ -= 2;
         if (v1 && v2) {
             //auto it1 = std::find(halfedges_begin(), halfedges_end(), v1);
             //auto it2 = std::find(halfedges_begin(), halfedges_end(), v2);
@@ -545,19 +546,22 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
         // add nodes and create ghost halfedges
        for (int i = 0; i < nodes_polygon; ++i) {
-
         node_t* n;
         if(find_node(nodes.row(i))==nullptr){
            n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
         }
         else {
-           n = find_node(nodes.row(i));}
+            n = find_node(nodes.row(i));}
+        halfedge_t* h = nullptr;
        // add nodes and create ghost halfedges
-    
-            halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
-            halfedge_t* h = std::addressof(halfedges_.back());    //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
-         //   n->set_halfedge(h); NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
-            ghost_halfedges[i+2] = h;
+
+        if(find_halfedge(n,c)){
+                h = find_halfedge(n,c);}
+        else{
+                halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+                h = std::addressof(halfedges_.back());  }  //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
+         //NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
+        ghost_halfedges[i+2] = h;
         }
         // add edges
 
@@ -565,21 +569,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = ghost_halfedges[i];
             halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon + 2)];
-         //   std::cout<<"PECHINOOOOOOOOOOOO   "<<h1->id()<<"    "<<h2->id()<<"   EXPRESSSSSSSSSSSS"<<std::endl;
 
-         //   halfedge_t* existing_edge = find_halfedge(h1->node(), h2->node());
-        
-
-         //   if (existing_edge) {
-        //        ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = existing_edge->next(); 
-
-      //  }
-       //     else {
                 
 
    
                 ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
-         //   }
+         
                if(!h2->next()) {
                 auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
                 if (it != halfedges_.end()){
@@ -600,26 +595,23 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         return nullptr;
     }
+ 
+ halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
 
-    halfedge_t* find_halfedge(node_t* n1, node_t* n2) {
+    int SAFE_ID_THRESHOLD = 500;  // Ignoriamo gli ID troppo alti
 
-        int SAFE_ID_THRESHOLD = 500;  // Ignoriamo gli ID troppo alti
-    
-        for (auto& h : halfedges_) {
-            if (h.id() > SAFE_ID_THRESHOLD) {
-        //        std::cout<<h.id()<<"   "<<h.twin()->node()->id()<<std::endl;
-        //     std::cout<<h.id()<<"   "<<std::endl;
-                continue;
-            }
-    
-
-            if ((h.node() == n1 && h.twin()->node() == n2) || (h.node() == n2 && h.twin()->node() == n1)) {
-                return &h;
-            }
+    for (auto& h : halfedges_) {
+        if (h.id() > SAFE_ID_THRESHOLD) {
+          continue;
         }
-        return nullptr;
+
+
+        if (h.cell() == cell && h.node() == n) {
+            return &h;
+        }
     }
-    
+    return nullptr;
+}
 
 
     halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
@@ -629,40 +621,30 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 return nullptr;
             }
             if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-                std::cout << "Halfedges consecutivi" << std::endl;
+                //std::cout << "Halfedges consecutivi" << std::endl;
                 return v1;   // v1 and v2 are next halfedges
             }
-            std::cout <<"nodo v1 "<<v1->node()->id()<<std::endl;
-            std::cout <<"nodo v2 "<<v2->node()->id()<<std::endl;
-            std::cout <<"v1: "<<v1->id()<<std::endl;
-            std::cout <<"v2: "<<v2->id()<<std::endl;
+
 
             // get exiting halfedges from n1 and n2
             node_t* n1 = v1->node();
             node_t* n2 = v2->node();
-            //PERCHE V2 è 1012 E NON 9???
+          
          
             // create a pair of twin half-edges
             halfedge_t* h1 = emplace_halfedge_(n1);
             halfedge_t* h2 = emplace_halfedge_(n2);
             h1->set_twin(h2);
             h2->set_twin(h1);
-            std::cout<<"NUOVI LATI   "<<h1->id()<<"    "<<h2->id()<<std::endl;
-            //std::cout<<h1->node()->id()<<std::endl;
-            // insert halfedge h1 between v1 and v1->prev
+ 
             h2->set_next(v1);
-            //std::cout<<h2->next()->id()<<std::endl;
-        halfedge_t* v22 = nullptr;
-        halfedge_t* v22_prev = nullptr;
+
             // AGGIUNGO CONTROLLO SU v1->prev()
             if (v1->prev()){
                 v1->prev()->set_next(h2->twin());
        
-            //    std::cout<<v1->prev()->next()->id()<<std::endl;
                 h2->twin()->set_prev(v1->prev());
-       
-            v22 = v1->prev()->prev();
-            v22_prev = v1->prev()->prev()->prev();
+
                 v1->set_prev(h2);
             }
             else{
@@ -671,32 +653,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
             h2->next()->set_prev(h2);
             h2->set_node(n2);
-            // insert halfedge h2 between v2 and v2->prev
-            //std::cout<<"SONO QUI"<<std::endl;
-            //std::cout<<n2->halfedge()->id()<<"CIAO"<<std::endl;
-         //   std::cout<<v2->id()<<std::endl;
-        //    std::cout<<n2->halfedge()->id()<<std::endl;  QUESTO NON LO PRENDE EVIDE. NON SETTIAMO MAI L'HALFEDE PER IL NODO 
-         //   std::cout<<v22->id()<<std::endl;
             h1->set_next(v2);
-            // AGGIUNGO CONTROLLO SU v2->prev()
-            //std::cout<<"CIAOOOOOOOOOOO   "<<v22_prev->id()<<std::endl;
 
-            /*
-            halfedge_t* h = nullptr;
-            if(v2->id() > 500){
-            halfedges_.emplace_back(n_halfedges_+ 1000000, n1);
-            halfedge_t* h = std::addressof(halfedges_.back());
-            v2->set_prev(h);
-            h ->set_next(v2);}
-            else h = v2->prev();
-            if (h) {
-                //if (v22_prev) {
-                h->set_next(h1->twin());
-              //  v22_prev->set_next(h2);
-             //   h2->set_prev(v22_prev);
-                h1->twin()->set_prev(h);
-                v2->set_prev(h1);
-            }*/  
+
   
             if (v2->prev()) {
                 v2->prev()->set_next(h1->twin());
@@ -712,11 +671,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
             h1->next()->set_prev(h1);
             h1->set_node(n1);
-            // set cell pointers
-            // create new cell
-            // SOLO SE L'EDGE NUOVO HA PREV E NEXT DIVERSI DA Sè STESSO
-
-
 
             if(h1->next() != h2 && h1->prev() != h2){
                 //h1->set_cell(v1->cell());  //POTENZIALI PROBLEMI
@@ -741,6 +695,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             
             return h1;
         }
+        
 
  
  //////////////////////////////   FINE FUNZIONI NUOVE DCEL ////////////////////////////////////

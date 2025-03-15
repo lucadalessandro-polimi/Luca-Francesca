@@ -706,3 +706,35 @@ halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynami
 	    return h1;
     }
     */
+
+
+    /*
+   // delaunay.print_dcel();
+    delaunay.dcel().add_polygon(find_halfedge_from_id(0),internal.row(0));
+    
+    delaunay.dcel().add_polygon(find_halfedge_from_id(1),internal.row(0));
+    //delaunay.print_dcel();
+    delaunay.dcel().add_polygon(find_halfedge_from_id(2),internal.row(0));
+    //delaunay.print_dcel();
+    delaunay.dcel().add_polygon(find_halfedge_from_id(3),internal.row(0));
+
+    Eigen::Matrix<double, 2, 2> prova;
+    prova << 1.5, 0.5,
+             0.5, 0.5;
+    delaunay.dcel().add_polygon(find_halfedge_from_id(3),prova);
+  
+    delaunay.print_dcel();*/
+
+        /*DCEL<2,2>::coords_t u = internal.row(1);
+    std::cout << "🔍 Inserimento del punto interno: " << u.transpose()<< std::endl;
+    
+    const DCEL<2,2>::cell_t* triangle = delaunay.find_triangle(u);
+    
+    delaunay.insert_vertex(u,triangle);
+
+    DCEL<2,2>::coords_t u_ = internal.row(2);
+    std::cout << "🔍 Inserimento del punto interno: " << u_.transpose()<< std::endl;
+    
+    const DCEL<2,2>::cell_t* triangle_ = delaunay.find_triangle(u_);
+    
+    delaunay.insert_vertex(u_,triangle_);*/

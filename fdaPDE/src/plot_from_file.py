@@ -59,6 +59,7 @@ def plot_dcel(filename):
 
     # Mostrare la mesh
     plt.title("DCEL Mesh Visualization")
+    plt.axis('equal')
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid(True)

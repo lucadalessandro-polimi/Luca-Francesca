@@ -93,6 +93,12 @@ class Delaunay {
 
 
     void dig_cavity(const coords_t& u, halfedge_t* vw) { 
+        if(vw->on_boundary()){
+            std::cout<<"SONO AL BRODO CON : "<<vw->id()<<std::endl;
+            dcel_.add_polygon(vw,u.transpose());
+            return;
+        }
+
         node_t* x = dcel_.adjacent(vw);
         if (!x) {
             std::cout << "Half-edge " << vw->id() << " non ha un nodo adiacente.\n";
@@ -102,8 +108,8 @@ class Delaunay {
         
         std::cout << "Controllo in_circle su nodo " << x->id() << " rispetto al punto inserito " << u.transpose() << std::endl;
         
-        if (in_circle(u, vw->node()->coords(), vw->next()->node()->coords(), x->coords())) {  
-            std::cout << "Punto " << x->id() << " è dentro il circumcerchio. Rimuovo triangolo e continuo.\n";
+        if (in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords())) {  
+            std::cout << "Punto " << x->id() << " è dentro il circumcerchio";
             
             halfedge_t* wv = vw->twin();
             halfedge_t* vx = vw->twin()->next();
@@ -112,13 +118,16 @@ class Delaunay {
             std::cout << "Half-edges del triangolo: " << std::endl;
             std::cout << " - wv: " << wv->id() << " | vx: " << vx->id() << " | xw: " << xw->id() << std::endl;
     
+            dcel_.remove_edge(vw);
             dig_cavity(u, vx);
             dig_cavity(u, xw);
-
-            dcel_.remove_polygon(vw->twin()->cell());
+           
+            std::cout<<"REMOVE: "<<vw->twin()->id()<<std::endl;
+            //dcel_.remove_polygon(vw->twin()->cell());
+            //dcel_.remove_edge(vw);
         } else {
             std::cout << "Punto " << x->id() << " NON è dentro il circumcerchio. Aggiungo nuovo triangolo.\n";
-            //dcel_.add_polygon(vw,u);
+            dcel_.add_polygon(vw,u.transpose());
             return;
         } 
     }
@@ -140,8 +149,8 @@ class Delaunay {
         dig_cavity(u, xv);
 
         // Rimuoviamo il triangolo attuale
-        dcel_.remove_polygon(triangle);
-        std::cout << "Triangolo rimosso correttamente.\n";
+        //dcel_.remove_polygon(triangle);
+    
     }
 
     void build_triangulation() {
@@ -160,7 +169,18 @@ class Delaunay {
             
             insert_vertex(u, triangle);
         }
-        
+        int cont = 0;
+        for(auto it = dcel_.cells_begin();it!=dcel_.cells_end();++it){
+            it->set_id(cont);
+            cont++;
+        }
+
+        int cont_h = 0;
+        for(auto it = dcel_.halfedges_begin();it!=dcel_.halfedges_end();++it){
+            it->set_id(cont_h);
+            cont_h++;
+        }
+       
         std::cout << "✅ Triangolazione completata con successo!\n";
     }
 
@@ -225,7 +245,7 @@ class Delaunay {
     
         std::cout << "==============================\n" << std::endl;
     }
-    
+
 
 
    private:
