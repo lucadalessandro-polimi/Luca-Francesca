@@ -34,3 +34,4 @@ experiments/test_RSVD/performances.csv
 
 #some test directories
 experiments/
+.qodo

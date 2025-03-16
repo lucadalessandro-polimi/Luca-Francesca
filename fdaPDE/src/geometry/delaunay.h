@@ -245,8 +245,26 @@ class Delaunay {
     
         std::cout << "==============================\n" << std::endl;
     }
-
-
+    
+    
+    //DA USARE QUELLA IN primitives.h   
+    bool do_segments_intersect(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
+        // Funzione di orientazione: restituisce il segno dell'area del parallelogramma formato dai tre punti
+        auto orientation = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> double {
+            return (Q.x() - P.x()) * (R.y() - P.y()) - (Q.y() - P.y()) * (R.x() - P.x());
+        };
+    
+        double o1 = orientation(A, B, C);
+        double o2 = orientation(A, B, D);
+        double o3 = orientation(C, D, A);
+        double o4 = orientation(C, D, B);
+    
+        // Caso generale: se i due segmenti si intersecano propriamente
+        if ((o1 * o2 < 0) && (o3 * o4 < 0)) {
+            return true;
+        }
+    }
+    
 
    private:
     DCEL<local_dim, embed_dim> dcel_;  
@@ -254,6 +272,6 @@ class Delaunay {
     Eigen::Matrix<double, Eigen::Dynamic, embed_dim> internal_points_;
 };
   
-}   // namespace fdapde
+}  // namespace fdapde
 
 #endif // __DELAUNAY_H__

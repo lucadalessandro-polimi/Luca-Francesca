@@ -529,7 +529,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
 
     node_t* adjacent(halfedge_t* edge) const {
-
         return (edge->twin()) ? edge->twin()->prev()->node() : nullptr;  
     }
 
@@ -553,8 +552,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         else {
             n = find_node(nodes.row(i));}
         halfedge_t* h = nullptr;
-       // add nodes and create ghost halfedges
-
+        // add nodes and create ghost halfedges
         if(find_halfedge(n,c)){
                 h = find_halfedge(n,c);}
         else{
@@ -564,23 +562,38 @@ template <int LocalDim, int EmbedDim> class DCEL {
         ghost_halfedges[i+2] = h;
         }
         // add edges
-
         int count=0;
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = ghost_halfedges[i];
             halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon + 2)];
 
-                
-
-   
-                ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
-         
-               if(!h2->next()) {
+            // Controllo intersezione con gli edges del bordo
+            coords_t A = h1->node()->coords();
+            coords_t B = h2->node()->coords();
+            std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
+            bool flag=false;
+            if(!(h1->node()->on_boundary() && h2->node()->on_boundary())){
+                std::cerr << "Errore: L'edge NON è interamente sul bordo!" << std::endl;
+                std::cout << h1->node()->id() << " " << h2->node()->id() << " " << std::endl;
+            for (const auto& edge : boundary_edges) {
+              if(A!=edge.first && A!=edge.second && B!=edge.first && B!=edge.second){
+              if (do_segments_intersect(A, B, edge.first, edge.second)) {
+                std::cerr << "Errore: L'edge interseca il bordo!" << std::endl;
+                std::cout << A << " " << B << " " << std::endl;
+                flag=true;
+                break;
+              }}
+            }
+            }
+            if(!flag){
+            ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
+            if(!h2->next()) {
                 auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
                 if (it != halfedges_.end()){
                     halfedges_.erase(it);
                     count++;
                 } 
+            }
             } 
         }
 
@@ -597,15 +610,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
     }
  
  halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
-
     int SAFE_ID_THRESHOLD = 500;  // Ignoriamo gli ID troppo alti
-
     for (auto& h : halfedges_) {
         if (h.id() > SAFE_ID_THRESHOLD) {
           continue;
         }
-
-
         if (h.cell() == cell && h.node() == n) {
             return &h;
         }
@@ -624,19 +633,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 //std::cout << "Halfedges consecutivi" << std::endl;
                 return v1;   // v1 and v2 are next halfedges
             }
-
-
             // get exiting halfedges from n1 and n2
             node_t* n1 = v1->node();
             node_t* n2 = v2->node();
           
-         
             // create a pair of twin half-edges
             halfedge_t* h1 = emplace_halfedge_(n1);
             halfedge_t* h2 = emplace_halfedge_(n2);
             h1->set_twin(h2);
             h2->set_twin(h1);
- 
             h2->set_next(v1);
 
             // AGGIUNGO CONTROLLO SU v1->prev()
@@ -655,15 +660,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h2->set_node(n2);
             h1->set_next(v2);
 
-
-  
             if (v2->prev()) {
                 v2->prev()->set_next(h1->twin());
                 h1->twin()->set_prev(v2->prev());
                 v2->set_prev(h1);
             }
-
-
 
             else{
                 h2->set_prev(h1);
@@ -695,6 +696,51 @@ template <int LocalDim, int EmbedDim> class DCEL {
             
             return h1;
         }
+
+
+        bool do_segments_intersect(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
+            // Funzione di orientazione: restituisce il segno dell'area del parallelogramma formato dai tre punti
+            auto orientation = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> double {
+                return (Q.x() - P.x()) * (R.y() - P.y()) - (Q.y() - P.y()) * (R.x() - P.x());
+            };
+        
+            double o1 = orientation(A, B, C);
+            double o2 = orientation(A, B, D);
+            double o3 = orientation(C, D, A);
+            double o4 = orientation(C, D, B);
+        
+            // Caso generale: se i due segmenti si intersecano propriamente
+            if ((o1 * o2 < 0) && (o3 * o4 < 0)) {
+                return true;
+            }
+        
+            // Gestione dei casi degeneri: i punti sono collineari e uno è all'interno dell'altro segmento
+            auto on_segment = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> bool {
+                return (std::min(P.x(), Q.x()) <= R.x() && R.x() <= std::max(P.x(), Q.x()) &&
+                        std::min(P.y(), Q.y()) <= R.y() && R.y() <= std::max(P.y(), Q.y()));
+            };
+        
+            if (o1 == 0 && on_segment(A, B, C)) return true;
+            if (o2 == 0 && on_segment(A, B, D)) return true;
+            if (o3 == 0 && on_segment(C, D, A)) return true;
+            if (o4 == 0 && on_segment(C, D, B)) return true;
+        
+            return false;
+        }
+        
+      
+        // Funzione di supporto per trovare tutti gli edges del bordo
+        std::vector<std::pair<coords_t, coords_t>> get_boundary_edges() const {
+            std::vector<std::pair<coords_t, coords_t>> boundary_edges;
+            for (const auto& h : halfedges_) {
+                if (h.node()->on_boundary() && h.twin()->node()->on_boundary()) {
+                    boundary_edges.emplace_back(h.node()->coords(), h.twin()->node()->coords());
+                }
+            }
+            return boundary_edges;
+        }
+
+
         
 
  
