@@ -28,6 +28,15 @@ class Delaunay {
     internal_points_(internal),
     dcel_(DCEL<local_dim, embed_dim>::make_polygon(boundary)) { }
 
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes)
+   : boundary_points_(boundary),
+     internal_points_(internal),
+     hole_points_(holes),
+     dcel_(holes.empty() ? DCEL<local_dim, embed_dim>::make_polygon(boundary)
+                         : DCEL<local_dim, embed_dim>::make_polygon(boundary, holes)) { }
+
 
 
     // Getter
@@ -102,33 +111,26 @@ class Delaunay {
         if (removed_edge) {
             std::cout << "⚠️ Il punto è su un lato, rimuovo l'edge " << removed_edge->id() << std::endl;
             dcel_.remove_edge(removed_edge);
-
-            // **Scorriamo sugli half-edges della cella e aggiungiamo P con add_polygon**
+            
+            // **Creiamo una lista degli half-edges e iteriamo su di essi**
+            std::vector<halfedge_t*> edges;
             halfedge_t* h = cell->halfedge();
-            halfedge_t* h1 = cell->halfedge()->next();
-            halfedge_t* h2 = cell->halfedge()->next()->next();
-            halfedge_t* h3 = cell->halfedge()->next()->next()->next();
-
-            dcel_.add_polygon(h, P.transpose());
-            dcel_.add_polygon(h1, P.transpose());
-            dcel_.add_polygon(h2, P.transpose());
-            dcel_.add_polygon(h3, P.transpose());
-
-            //dig_cavity(P.transpose(),h);
-            //dig_cavity(P.transpose(),h1);
-            //dig_cavity(P.transpose(),h2);
-            //dig_cavity(P.transpose(),h3);
-        /*    do {
-                std::cout<<"CIAOOOOOOOOOO:"<<h->id()<<std::endl;
-                dcel_.add_polygon(h, P.transpose());  // Collegamento con il nuovo punto
+            do {
+                edges.push_back(h);
                 h = h->next();
-            } while (h != cell->halfedge());*/
+            } while (h != cell->halfedge());
 
-            return nullptr; // Restituiamo la cella dopo l’aggiornamento
+            for (halfedge_t* edge : edges) {
+                dcel_.add_polygon(edge, P.transpose());
+            }
+
+            for (halfedge_t* edge : edges) {
+                dig_cavity(P.transpose(), edge);
+            }
+            return nullptr;
         }
-
-       }
-        return nullptr;
+        }
+    return nullptr;
     }
 
     bool is_point_on_edge(const coords_t& P, const coords_t& A, const coords_t& B, double tol) {
@@ -161,10 +163,19 @@ class Delaunay {
         std::cout << "Nodo adiacente a half-edge " << vw->id() << ": " << x->id() << "\n";
         
         std::cout << "Controllo in_circle su nodo " << x->id() << " rispetto al punto inserito " << u.transpose() << std::endl;
-        std::cout<<"CAZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZO:   "<<vw->id()<<std::endl;
+        std::cout<<"vw:   "<<vw->id()<<std::endl;
         std::cout<<"A: "<<u<<" B: "<<vw->node()->id()<<" C: "<<vw->twin()->node()->id()<<" X: "<<x->id()<<std::endl;
-        if (in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords())) {  
-       // if (in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords())) {  
+
+        bool ccw = is_counterclockwise(u, vw->node()->coords(), vw->twin()->node()->coords());
+    
+        bool inside;
+        if (ccw) {
+            inside = in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
+        } else {
+            inside = in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
+        }
+    
+        if (inside) { 
             std::cout << "Punto " << x->id() << " è dentro il circumcerchio";
             
             halfedge_t* wv = vw->twin();
@@ -301,11 +312,18 @@ class Delaunay {
     
         std::cout << "==============================\n" << std::endl;
     }
+
+    bool is_counterclockwise(const coords_t& a, const coords_t& b, const coords_t& c) {
+        double det = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+        return det > 0;  // true se in ordine anticlockwise
+    }
+    
     
    private:
     DCEL<local_dim, embed_dim> dcel_;  
     Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_points_;
     Eigen::Matrix<double, Eigen::Dynamic, embed_dim> internal_points_;
+    std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> hole_points_;
 };
   
 }  // namespace fdapde
