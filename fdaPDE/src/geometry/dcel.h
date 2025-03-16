@@ -142,7 +142,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         node_t* node() const { return node_; }
         cell_t* cell() const { return cell_; }
         int id() const { return id_; }
-        bool on_boundary() const { return node_->on_boundary() && twin_->node()->on_boundary(); }
+        bool on_boundary() const { return (node_->on_boundary() && twin_->node()->on_boundary() && (cell()==nullptr || twin()->cell()==nullptr)); }
         // modifiers
         void set_prev(halfedge_t* prev) { prev_ = prev; }
         void set_next(halfedge_t* next) { next_ = next; }
@@ -572,17 +572,25 @@ template <int LocalDim, int EmbedDim> class DCEL {
             coords_t B = h2->node()->coords();
             std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
             bool flag=false;
-            if(!(h1->node()->on_boundary() && h2->node()->on_boundary())){
-                std::cerr << "Errore: L'edge NON è interamente sul bordo!" << std::endl;
-                std::cout << h1->node()->id() << " " << h2->node()->id() << " " << std::endl;
+            if(!(h1->on_boundary() && h2->on_boundary())){
+               // std::cerr << "Errore: L'edge NON è interamente sul bordo!" << std::endl;
+               // std::cout << h1->node()->id() << " " << h2->node()->id() << " " << std::endl;
+               int num = 0;
             for (const auto& edge : boundary_edges) {
+                if(num==boundary_edges.size()/2) break;
+                num++;
+
               if(A!=edge.first && A!=edge.second && B!=edge.first && B!=edge.second){
               if (do_segments_intersect(A, B, edge.first, edge.second)) {
-                std::cerr << "Errore: L'edge interseca il bordo!" << std::endl;
-                std::cout << A << " " << B << " " << std::endl;
+                std::cout << "Errore: L'edge interseca il bordo!" << std::endl;
+                std::cout << "A:id " <<h1->node()->id()<< std::endl;
+                std::cout << "B:id " <<h2->node()->id()<< std::endl;
+                std::cout << "haledge id h1: "<<h1->id()<<std::endl;
+                std::cout << "haledge id h2: "<<h2->id()<<std::endl;
+                std::cout << "edge_1:id " <<edge.first<< std::endl;
+                std::cout << "edge_2:id " <<edge.second<< std::endl;
                 flag=true;
-                break;
-              }}
+                }}
             }
             }
             if(!flag){
@@ -595,6 +603,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 } 
             }
             } 
+            else{
+                std::cout<<"SONO QUA"<<std::endl;
+                ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1->prev(), h1->next())->next();
+                if(!h2->next()) {
+                    auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
+                    if (it != halfedges_.end()){
+                        halfedges_.erase(it);
+                        count++;
+                    } 
+                }
+            }
         }
 
         return c->halfedge();
@@ -627,10 +646,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
             // AGGIUNGO CONTROLLO ULTERIORE  DENTRO ALL'IF per essere sicura che v1,v2 e v2->next() non siano null
             if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
                 std::cout << "Errore: i due half-edge appartengono a celle diverse. Non è possibile inserire un edge tra i due" << std::endl;
-                return nullptr;
+                return v1;
             }
             if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-                //std::cout << "Halfedges consecutivi" << std::endl;
+                std::cout << "Halfedges consecutivi" << std::endl;
                 return v1;   // v1 and v2 are next halfedges
             }
             // get exiting halfedges from n1 and n2

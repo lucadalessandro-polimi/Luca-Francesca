@@ -77,6 +77,8 @@ class Delaunay {
     }
 
     const cell_t* find_triangle(const coords_t& P) {
+        double tol = 1e-6; // Tolleranza numerica per gestire il caso in cui il punto è su un lato
+        
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             cell_t* cell = &(*it);  // Ora il tipo corrisponde correttamente
     
@@ -87,9 +89,61 @@ class Delaunay {
             if (is_point_inside_triangle(P, A, B, C)) {
                 return cell;
             }
+        // Se il punto è su un lato, rimuoviamo il lato corrispondente
+        halfedge_t* removed_edge = nullptr;
+        if (is_point_on_edge(P, A, B, tol)) {
+            removed_edge = cell->halfedge();
+        } else if (is_point_on_edge(P, B, C, tol)) {
+            removed_edge = cell->halfedge()->next();
+        } else if (is_point_on_edge(P, C, A, tol)) {
+            removed_edge = cell->halfedge()->prev();
         }
+
+        if (removed_edge) {
+            std::cout << "⚠️ Il punto è su un lato, rimuovo l'edge " << removed_edge->id() << std::endl;
+            dcel_.remove_edge(removed_edge);
+
+            // **Scorriamo sugli half-edges della cella e aggiungiamo P con add_polygon**
+            halfedge_t* h = cell->halfedge();
+            halfedge_t* h1 = cell->halfedge()->next();
+            halfedge_t* h2 = cell->halfedge()->next()->next();
+            halfedge_t* h3 = cell->halfedge()->next()->next()->next();
+
+            dcel_.add_polygon(h, P.transpose());
+            dcel_.add_polygon(h1, P.transpose());
+            dcel_.add_polygon(h2, P.transpose());
+            dcel_.add_polygon(h3, P.transpose());
+
+            //dig_cavity(P.transpose(),h);
+            //dig_cavity(P.transpose(),h1);
+            //dig_cavity(P.transpose(),h2);
+            //dig_cavity(P.transpose(),h3);
+        /*    do {
+                std::cout<<"CIAOOOOOOOOOO:"<<h->id()<<std::endl;
+                dcel_.add_polygon(h, P.transpose());  // Collegamento con il nuovo punto
+                h = h->next();
+            } while (h != cell->halfedge());*/
+
+            return nullptr; // Restituiamo la cella dopo l’aggiornamento
+        }
+
+       }
         return nullptr;
     }
+
+    bool is_point_on_edge(const coords_t& P, const coords_t& A, const coords_t& B, double tol) {
+        double cross = (P.y() - A.y()) * (B.x() - A.x()) - (P.x() - A.x()) * (B.y() - A.y());
+        if (std::abs(cross) > tol) return false; // Non è collineare
+    
+        double dot = (P.x() - A.x()) * (B.x() - A.x()) + (P.y() - A.y()) * (B.y() - A.y());
+        if (dot < 0) return false; // Punto fuori dal segmento
+    
+        double len_sq = (B.x() - A.x()) * (B.x() - A.x()) + (B.y() - A.y()) * (B.y() - A.y());
+        if (dot > len_sq) return false; // Punto fuori dal segmento
+    
+        return true; // Il punto è sul segmento
+    }
+    
 
 
     void dig_cavity(const coords_t& u, halfedge_t* vw) { 
@@ -107,8 +161,10 @@ class Delaunay {
         std::cout << "Nodo adiacente a half-edge " << vw->id() << ": " << x->id() << "\n";
         
         std::cout << "Controllo in_circle su nodo " << x->id() << " rispetto al punto inserito " << u.transpose() << std::endl;
-        
+        std::cout<<"CAZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZO:   "<<vw->id()<<std::endl;
+        std::cout<<"A: "<<u<<" B: "<<vw->node()->id()<<" C: "<<vw->twin()->node()->id()<<" X: "<<x->id()<<std::endl;
         if (in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords())) {  
+       // if (in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords())) {  
             std::cout << "Punto " << x->id() << " è dentro il circumcerchio";
             
             halfedge_t* wv = vw->twin();
@@ -174,13 +230,13 @@ class Delaunay {
             it->set_id(cont);
             cont++;
         }
-
+/*
         int cont_h = 0;
         for(auto it = dcel_.halfedges_begin();it!=dcel_.halfedges_end();++it){
             it->set_id(cont_h);
             cont_h++;
         }
-       
+ */      
         std::cout << "✅ Triangolazione completata con successo!\n";
     }
 
@@ -246,26 +302,6 @@ class Delaunay {
         std::cout << "==============================\n" << std::endl;
     }
     
-    
-    //DA USARE QUELLA IN primitives.h   
-    bool do_segments_intersect(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
-        // Funzione di orientazione: restituisce il segno dell'area del parallelogramma formato dai tre punti
-        auto orientation = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> double {
-            return (Q.x() - P.x()) * (R.y() - P.y()) - (Q.y() - P.y()) * (R.x() - P.x());
-        };
-    
-        double o1 = orientation(A, B, C);
-        double o2 = orientation(A, B, D);
-        double o3 = orientation(C, D, A);
-        double o4 = orientation(C, D, B);
-    
-        // Caso generale: se i due segmenti si intersecano propriamente
-        if ((o1 * o2 < 0) && (o3 * o4 < 0)) {
-            return true;
-        }
-    }
-    
-
    private:
     DCEL<local_dim, embed_dim> dcel_;  
     Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_points_;
