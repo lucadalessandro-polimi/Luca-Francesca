@@ -250,7 +250,7 @@ class Delaunay {
  */      
         std::cout << "✅ Triangolazione completata con successo!\n";
     }
-
+/*
     void initialize_triangulation() {
         std::cout << "🔷 Inizializzazione della triangolazione...\n";
     
@@ -266,9 +266,57 @@ class Delaunay {
             halfedge_t* he = &(*it);
             dcel_.add_polygon(he, first_internal);
         }
+
     
         std::cout << "✅ Triangolazione iniziale completata!\n";
+    }*/
+
+    void initialize_triangulation() {
+        std::cout << "🔷 Inizializzazione della triangolazione...\n";
+    
+        if (internal_points_.rows() == 0) {
+            std::cerr << "❌ Errore: Nessun punto interno disponibile per inizializzare la triangolazione!\n";
+            return;
+        }
+    
+        Eigen::Matrix<double, 1, embed_dim> first_internal = internal_points_.row(0);
+    
+        
+        auto it = dcel_.halfedges_begin();
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            dcel_.add_polygon(he, first_internal);
+        }
+   
+    int node_offset = boundary_points_.rows(); // I nodi dei buchi partono dopo il bordo
+    for (const auto& hole : hole_points_) {
+        if (hole.rows() == 0) continue; // Se il buco è vuoto, saltiamo
+
+      
+        node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
+    //    std::cout<<"PRIMO NODO DEL BUCO: "<<first_hole_node->id()<<std::endl;
+        halfedge_t* first_hole_he = first_hole_node->halfedge();
+    //    std::cout<<"PRIMO halfedge DEL BUCO: "<<first_hole_he->id()<<std::endl;
+
+      
+        std::vector<halfedge_t*> hole_edges;
+        halfedge_t* he = first_hole_he;
+        do {
+            hole_edges.push_back(he);
+            he = he->next();
+        } while (he != first_hole_he);  // Terminiamo quando torniamo all'inizio
+
+        
+        for (halfedge_t* he : hole_edges) {
+            dcel_.add_polygon(he, first_internal);
+        }
+
+        node_offset += hole.rows(); // Aggiorna l'offset per il prossimo buco
     }
+
+    std::cout << "✅ Triangolazione iniziale completata!\n";
+}
+
     
     void print_dcel() {
         std::cout << "==============================" << std::endl;

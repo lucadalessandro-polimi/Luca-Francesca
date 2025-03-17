@@ -230,6 +230,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             halfedge_t* h = dcel.emplace_halfedge_(n);
             n->set_halfedge(h);
 	        h->set_cell(c);
+      
         }
         // create twin edges
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
@@ -259,7 +260,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         fdapde_assert(boundary.cols() == embed_dim);
         DCEL<local_dim, embed_dim> dcel;
     
-        // Creazione del bordo esterno (come nel codice originale)
+        // Creazione del bordo esterno
         int n_nodes = boundary.rows();
         dcel.cells_.push_back(cell_t(0)); // Cella principale
         cell_t* c = std::addressof(dcel.cells_.back());
@@ -267,11 +268,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
         // Aggiunta dei nodi e creazione degli half-edge per il bordo esterno
         for (int i = 0; i < n_nodes; ++i) {
-            node_t* n = dcel.insert_node(node_t(i, /* boundary = */ true, boundary.row(i)));
+            node_t* n = dcel.insert_node(node_t(i, true, boundary.row(i)));
             halfedge_t* h = dcel.emplace_halfedge_(n);
             n->set_halfedge(h);
             h->set_cell(c);
         }
+
+        c->set_halfedge(dcel.nodes_begin()->halfedge());
     
         // Creazione delle twin edges per il bordo esterno
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
@@ -283,6 +286,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h2->set_twin(h1);
             h1->set_twin(h2);
         }
+
+
     
         // Impostiamo next e prev per il bordo esterno
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
@@ -294,36 +299,52 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h2->twin()->set_next(h1->twin());
         }
     
-        // 🆕 Aggiunta dei buchi
+        // Aggiunta dei buchi
+        int node_offset = n_nodes; // Indice iniziale per i nodi dei buchi
         int hole_index = 1;
+    
         for (const auto& hole : holes) {
             int hole_nodes = hole.rows();
-            dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
-            cell_t* hole_cell = std::addressof(dcel.cells_.back());
+            //dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
+           // cell_t* hole_cell = std::addressof(dcel.cells_.back());
     
-            std::vector<node_t*> hole_nodes_list;
-            std::vector<halfedge_t*> hole_edges;
-    
+            // Creazione dei nodi e degli half-edge per il buco
             for (int i = 0; i < hole_nodes; ++i) {
-                node_t* n = dcel.insert_node(node_t(n_nodes + i, /* boundary = */ true, hole.row(i)));
+                node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
                 halfedge_t* h = dcel.emplace_halfedge_(n);
                 n->set_halfedge(h);
-                h->set_cell(hole_cell);
-                hole_nodes_list.push_back(n);
-                hole_edges.push_back(h);
+                h->set_cell(c);
+               // std::cout << "HALF CHE STO CREANDO: " << h->id() << " ASSEGNATO A CELLA: " << h->cell()->id() << std::endl;
+            }
+    
+            // Creazione delle twin edges per il buco
+            for (int i = 0; i < hole_nodes; ++i) {
+                node_t* n1 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + i)));
+                node_t* n2 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)));
+                halfedge_t* h1 = n1->halfedge();
+                halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
+    
+                h2->set_twin(h1);
+                h1->set_twin(h2);
             }
     
             // Collegare i nodi del buco
-            for (size_t i = 0; i < hole_edges.size(); ++i) {
-                halfedge_t* h1 = hole_edges[i];
-                halfedge_t* h2 = hole_edges[(i + 1) % hole_edges.size()];
+            for (int i = 0; i < hole_nodes; ++i) {
+                halfedge_t* h1 = std::next(dcel.nodes_begin(), node_offset + i)->halfedge();
+                halfedge_t* h2 = std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)->halfedge();
                 h1->set_next(h2);
                 h2->set_prev(h1);
+                h1->twin()->set_prev(h2->twin());
+                h2->twin()->set_next(h1->twin());
             }
+    
+            node_offset += hole_nodes; // Aggiorna l'offset per il prossimo buco
         }
     
         return dcel;
     }
+    
+    
     
  
     // modifiers
@@ -645,12 +666,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
             coords_t A = h1->node()->coords();
             coords_t B = h2->node()->coords();
             std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
+         /*   for (const auto& edge : boundary_edges) {
+                std::cout << "  (" << edge.first.transpose() << ") --> (" << edge.second.transpose() << ")\n";
+            }*/
+
             bool flag=false;
             if(!(h1->on_boundary() && h2->on_boundary())){
                // std::cerr << "Errore: L'edge NON è interamente sul bordo!" << std::endl;
                // std::cout << h1->node()->id() << " " << h2->node()->id() << " " << std::endl;
                int num = 0;
             for (const auto& edge : boundary_edges) {
+      
                 if(num==boundary_edges.size()/2) break;
                 num++;
 
@@ -828,6 +854,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             for (const auto& h : halfedges_) {
                 if (h.node()->on_boundary() && h.twin()->node()->on_boundary()) {
                     boundary_edges.emplace_back(h.node()->coords(), h.twin()->node()->coords());
+                    
                 }
             }
             return boundary_edges;
