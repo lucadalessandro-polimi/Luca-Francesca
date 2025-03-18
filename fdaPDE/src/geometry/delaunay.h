@@ -41,7 +41,6 @@ class Delaunay {
 
     // Getter
     const DCEL<local_dim, embed_dim>& dcel() const { return dcel_; }
-    // OVERLOAD NON CONSTANTE PER LAVORARE NEL MAIN 
     DCEL<local_dim, embed_dim>& dcel() { return dcel_; }
     
     const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_points() const { return boundary_points_; }
@@ -86,10 +85,10 @@ class Delaunay {
     }
 
     const cell_t* find_triangle(const coords_t& P) {
-        double tol = 1e-6; // Tolleranza numerica per gestire il caso in cui il punto è su un lato
+        double tol = 1e-6; 
         
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* cell = &(*it);  // Ora il tipo corrisponde correttamente
+            cell_t* cell = &(*it);  
     
             const coords_t& A = cell->halfedge()->node()->coords();
             const coords_t& B = cell->halfedge()->next()->node()->coords();
@@ -112,7 +111,7 @@ class Delaunay {
             std::cout << "⚠️ Il punto è su un lato, rimuovo l'edge " << removed_edge->id() << std::endl;
             dcel_.remove_edge(removed_edge);
             
-            // **Creiamo una lista degli half-edges e iteriamo su di essi**
+        
             std::vector<halfedge_t*> edges;
             halfedge_t* h = cell->halfedge();
             do {
@@ -143,14 +142,14 @@ class Delaunay {
         double len_sq = (B.x() - A.x()) * (B.x() - A.x()) + (B.y() - A.y()) * (B.y() - A.y());
         if (dot > len_sq) return false; // Punto fuori dal segmento
     
-        return true; // Il punto è sul segmento
+        return true; 
     }
     
 
 
     void dig_cavity(const coords_t& u, halfedge_t* vw) { 
         if(vw->on_boundary()){
-            std::cout<<"SONO AL BRODO CON : "<<vw->id()<<std::endl;
+            std::cout<<"SONO AL BORDO CON : "<<vw->id()<<std::endl;
             dcel_.add_polygon(vw,u.transpose());
             return;
         }
@@ -162,10 +161,6 @@ class Delaunay {
         }
         std::cout << "Nodo adiacente a half-edge " << vw->id() << ": " << x->id() << "\n";
         
-        std::cout << "Controllo in_circle su nodo " << x->id() << " rispetto al punto inserito " << u.transpose() << std::endl;
-        std::cout<<"vw:   "<<vw->id()<<std::endl;
-        std::cout<<"A: "<<u<<" B: "<<vw->node()->id()<<" C: "<<vw->twin()->node()->id()<<" X: "<<x->id()<<std::endl;
-
         bool ccw = is_counterclockwise(u, vw->node()->coords(), vw->twin()->node()->coords());
     
         bool inside;
@@ -190,8 +185,6 @@ class Delaunay {
             dig_cavity(u, xw);
            
             std::cout<<"REMOVE: "<<vw->twin()->id()<<std::endl;
-            //dcel_.remove_polygon(vw->twin()->cell());
-            //dcel_.remove_edge(vw);
         } else {
             std::cout << "Punto " << x->id() << " NON è dentro il circumcerchio. Aggiungo nuovo triangolo.\n";
             dcel_.add_polygon(vw,u.transpose());
@@ -214,10 +207,6 @@ class Delaunay {
         dig_cavity(u, vw);
         dig_cavity(u, wx);
         dig_cavity(u, xv);
-
-        // Rimuoviamo il triangolo attuale
-        //dcel_.remove_polygon(triangle);
-    
     }
 
     void build_triangulation() {
@@ -241,35 +230,15 @@ class Delaunay {
             it->set_id(cont);
             cont++;
         }
-/*
+
         int cont_h = 0;
         for(auto it = dcel_.halfedges_begin();it!=dcel_.halfedges_end();++it){
             it->set_id(cont_h);
             cont_h++;
         }
- */      
+       
         std::cout << "✅ Triangolazione completata con successo!\n";
     }
-/*
-    void initialize_triangulation() {
-        std::cout << "🔷 Inizializzazione della triangolazione...\n";
-    
-        if (internal_points_.rows() == 0) {
-            std::cerr << "❌ Errore: Nessun punto interno disponibile per inizializzare la triangolazione!\n";
-            return;
-        }
-        Eigen::Matrix<double, 1, embed_dim> first_internal = internal_points_.row(0);
-        auto it = dcel_.halfedges_begin();
-        int count = dcel_.n_nodes();
-
-        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
-            halfedge_t* he = &(*it);
-            dcel_.add_polygon(he, first_internal);
-        }
-
-    
-        std::cout << "✅ Triangolazione iniziale completata!\n";
-    }*/
 
     void initialize_triangulation() {
         std::cout << "🔷 Inizializzazione della triangolazione...\n";
@@ -280,38 +249,32 @@ class Delaunay {
         }
     
         Eigen::Matrix<double, 1, embed_dim> first_internal = internal_points_.row(0);
-    
-        
         auto it = dcel_.halfedges_begin();
         for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
             halfedge_t* he = &(*it);
             dcel_.add_polygon(he, first_internal);
         }
    
-    int node_offset = boundary_points_.rows(); // I nodi dei buchi partono dopo il bordo
+    int node_offset = boundary_points_.rows(); 
     for (const auto& hole : hole_points_) {
-        if (hole.rows() == 0) continue; // Se il buco è vuoto, saltiamo
-
-      
+        if (hole.rows() == 0) continue; 
+        
         node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
-    //    std::cout<<"PRIMO NODO DEL BUCO: "<<first_hole_node->id()<<std::endl;
         halfedge_t* first_hole_he = first_hole_node->halfedge();
-    //    std::cout<<"PRIMO halfedge DEL BUCO: "<<first_hole_he->id()<<std::endl;
-
-      
+        
         std::vector<halfedge_t*> hole_edges;
         halfedge_t* he = first_hole_he;
         do {
             hole_edges.push_back(he);
             he = he->next();
-        } while (he != first_hole_he);  // Terminiamo quando torniamo all'inizio
+        } while (he != first_hole_he);  
 
         
         for (halfedge_t* he : hole_edges) {
             dcel_.add_polygon(he, first_internal);
         }
 
-        node_offset += hole.rows(); // Aggiorna l'offset per il prossimo buco
+        node_offset += hole.rows(); 
     }
 
     std::cout << "✅ Triangolazione iniziale completata!\n";

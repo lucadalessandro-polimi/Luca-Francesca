@@ -26,21 +26,22 @@ int main() {
                 1.0, 1.0,  //casella delle lettere
                 0.0, 2.0;
 */
-/*
+
 // Definizione del bordo della stella (10 vertici)
 Eigen::Matrix<double, 10, 2> boundary;
 boundary << 1.0, 2.0,  // Punto superiore
             2.0, 2.0,  // Incavo in alto a destra
             2.0, 1.3,  // Punta destra
             2.0, 0.3,  // Incavo in basso a destra
-            1.7, 0.3,  // Punta inferiore destra
+            1.7, 0.0,  // Punta inferiore destra
             1.0, 0.7,  // Incavo inferiore
             0.3, 0.3,  // Punta inferiore sinistra
             0.5, 1.0,  // Incavo in basso a sinistra
             0.0, 1.3,  // Punta sinistra
-            0.0, 2.0;  // Incavo in alto a sinistra*/
+            0.0, 2.0;  // Incavo in alto a sinistra
 
 // **Creazione del bordo esterno (antiorario)**
+/*
 Eigen::Matrix<double, N, 2> boundary;
 for (int i = 0; i < N; ++i) {
     double theta = 2.0 * M_PI * i / N;
@@ -58,12 +59,12 @@ for (int i = 0; i < M; ++i) {
 
     // **Mettiamo il buco in un vettore di buchi**
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
-
+*/
 
     // Definiamo alcuni punti interni strategici
-    Eigen::Matrix<double, 1, 2> internal;
-    internal << 1.0, 1.5;
-              //  1.5, 1.5;
+    Eigen::Matrix<double, 2, 2> internal;
+    internal << 0.6, 0.6,
+                1.4, 1.2;
              //   1.0, 0.2;
                // 1.0, 0.8;
             //    0.2, 1.5;
@@ -71,8 +72,8 @@ for (int i = 0; i < M; ++i) {
 
     // Creiamo l'oggetto Delaunay con il dominio
     //CONVENZIONE : ANTIORARIA PER BORDO E ORARIA PER BUCHI, GESTITA MANUALMENTE ALL'INGRESSO CON LE MATRICI DALLO USER 
-    Delaunay<2, 2> delaunay(boundary, internal, holes);
-    //Delaunay<2, 2> delaunay(boundary, internal);
+    //Delaunay<2, 2> delaunay(boundary, internal, holes);
+    Delaunay<2, 2> delaunay(boundary, internal);
 
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -83,9 +84,9 @@ for (int i = 0; i < M; ++i) {
 
    // delaunay.dcel().add_polygon(find_halfedge_from_id(0),internal);
 
-    //delaunay.initialize_triangulation();
+    delaunay.initialize_triangulation();
    // delaunay.dcel().remove_edge(find_halfedge_from_id(20));
-    //delaunay.build_triangulation();
+    delaunay.build_triangulation();
     // Esportiamo la DCEL per visualizzazione
 
     delaunay.print_dcel();

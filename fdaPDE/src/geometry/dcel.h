@@ -232,6 +232,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
 	        h->set_cell(c);
       
         }
+
+        c->set_halfedge(dcel.nodes_begin()->halfedge());
         // create twin edges
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
             node_t* n1 = std::addressof(*it);
