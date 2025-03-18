@@ -517,8 +517,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
         for (const auto& hole : holes) {
             int hole_nodes = hole.rows();
-            //dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
-           // cell_t* hole_cell = std::addressof(dcel.cells_.back());
+        //    dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
+        //    cell_t* hole_cell = std::addressof(dcel.cells_.back());
     
             // Creazione dei nodi e degli half-edge per il buco
             for (int i = 0; i < hole_nodes; ++i) {
@@ -528,6 +528,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h->set_cell(c);
                // std::cout << "HALF CHE STO CREANDO: " << h->id() << " ASSEGNATO A CELLA: " << h->cell()->id() << std::endl;
             }
+
+           // hole_cell->set_halfedge(std::next(dcel.nodes_begin(), node_offset)->halfedge());
     
             // Creazione delle twin edges per il buco
             for (int i = 0; i < hole_nodes; ++i) {
@@ -549,6 +551,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h1->twin()->set_prev(h2->twin());
                 h2->twin()->set_next(h1->twin());
             }
+
+            
+
             node_offset += hole_nodes; // Aggiorna l'offset per il prossimo buco
         }
     
@@ -708,7 +713,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
         }
 
-        c->set_halfedge() = v;
+        c->set_halfedge(v);
 
         return c->halfedge();
     }
