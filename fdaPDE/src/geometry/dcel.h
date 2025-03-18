@@ -255,100 +255,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return dcel;
     }
 
-    static DCEL<local_dim, embed_dim> make_polygon(
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
     
-        fdapde_assert(boundary.cols() == embed_dim);
-        DCEL<local_dim, embed_dim> dcel;
-    
-        // Creazione del bordo esterno
-        int n_nodes = boundary.rows();
-        dcel.cells_.push_back(cell_t(0)); // Cella principale
-        cell_t* c = std::addressof(dcel.cells_.back());
-        dcel.n_cells_ = 1;
-    
-        // Aggiunta dei nodi e creazione degli half-edge per il bordo esterno
-        for (int i = 0; i < n_nodes; ++i) {
-            node_t* n = dcel.insert_node(node_t(i, true, boundary.row(i)));
-            halfedge_t* h = dcel.emplace_halfedge_(n);
-            n->set_halfedge(h);
-            h->set_cell(c);
-        }
-
-        c->set_halfedge(dcel.nodes_begin()->halfedge());
-    
-        // Creazione delle twin edges per il bordo esterno
-        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
-            node_t* n1 = std::addressof(*it);
-            node_t* n2 = std::addressof(*((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1)));
-            halfedge_t* h1 = n1->halfedge();
-            halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
-    
-            h2->set_twin(h1);
-            h1->set_twin(h2);
-        }
-
-
-    
-        // Impostiamo next e prev per il bordo esterno
-        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
-            halfedge_t* h1 = it->halfedge();
-            halfedge_t* h2 = ((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1))->halfedge();
-            h1->set_next(h2);
-            h2->set_prev(h1);
-            h1->twin()->set_prev(h2->twin());
-            h2->twin()->set_next(h1->twin());
-        }
-    
-        // Aggiunta dei buchi
-        int node_offset = n_nodes; // Indice iniziale per i nodi dei buchi
-        int hole_index = 1;
-    
-        for (const auto& hole : holes) {
-            int hole_nodes = hole.rows();
-            //dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
-           // cell_t* hole_cell = std::addressof(dcel.cells_.back());
-    
-            // Creazione dei nodi e degli half-edge per il buco
-            for (int i = 0; i < hole_nodes; ++i) {
-                node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
-                halfedge_t* h = dcel.emplace_halfedge_(n);
-                n->set_halfedge(h);
-                h->set_cell(c);
-               // std::cout << "HALF CHE STO CREANDO: " << h->id() << " ASSEGNATO A CELLA: " << h->cell()->id() << std::endl;
-            }
-    
-            // Creazione delle twin edges per il buco
-            for (int i = 0; i < hole_nodes; ++i) {
-                node_t* n1 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + i)));
-                node_t* n2 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)));
-                halfedge_t* h1 = n1->halfedge();
-                halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
-    
-                h2->set_twin(h1);
-                h1->set_twin(h2);
-            }
-    
-            // Collegare i nodi del buco
-            for (int i = 0; i < hole_nodes; ++i) {
-                halfedge_t* h1 = std::next(dcel.nodes_begin(), node_offset + i)->halfedge();
-                halfedge_t* h2 = std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)->halfedge();
-                h1->set_next(h2);
-                h2->set_prev(h1);
-                h1->twin()->set_prev(h2->twin());
-                h2->twin()->set_next(h1->twin());
-            }
-    
-            node_offset += hole_nodes; // Aggiorna l'offset per il prossimo buco
-        }
-    
-        return dcel;
-    }
-    
-    
-    
- 
     // modifiers
     node_t* insert_node(const node_t& node) {
         nodes_.push_back(node);
@@ -448,62 +355,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
         std::cout << "DCEL esportata in " << filename << std::endl;
     }
 
-
-
-
-
- 
     
     halfedge_t* remove_edge(halfedge_t* v1){
         if(!v1) return nullptr;
-        /*
-        if (v1->on_boundary()) { // v1 is on the boundary
-        //2 cases: 
-        //a. v1 and its next/prev are on boundary --> elongate v1->next or prev (SE NO NON PERMETTERE)
-        if(v1->next()->on_boundary() || v1->prev()->on_boundary()){
-            v1->next()->set_prev(v1->prev());
-            v1->prev()->set_next(v1->next());
-            v1->next()->set_node(v1->node());     
-            halfedge_t* v2= v1->twin();
-            v2->next()->set_prev(v2->prev());
-            v2->prev()->set_next(v2->next());
-            v2->next()->set_node(v2->node());
-            // remove edges, cell is the same so it doesn't need to be removed
-            halfedge_t* next= v1->next();
-            n_halfedges_ -= 2;
-            auto it1 = std::find(halfedges_begin(), halfedges_end(), v1);
-            auto it2 = std::find(halfedges_begin(), halfedges_end(), v2);
-            halfedges_.erase(it1);
-            halfedges_.erase(it2); 
-            return next;
+        if(v1->on_boundary() || v1->twin()->on_boundary()){
+            std::cout << "Edge on boundary. Removing is not allowed" << std::endl;
+            return nullptr;
         }
-        //b. only v1 is on boundary and its next/prev isn't
-        else{
-            halfedge_t* v2= v1->twin();
-            v1->next()->set_prev(v2->prev());
-            v2->prev()->set_next(v1->next());    
-            v1->prev()->set_next(v2->next());
-            v2->next()->set_prev(v1->prev());
-            // remove edges and cell
-            n_cells_--;
-            auto it = std::find(cells_begin(), cells_end(), v1->cell());
-            halfedge_t* end = v1;
-            halfedge_t* begin = v1->next();
-            do {
-               begin->set_cell(nullptr);
-               begin->node()->set_on_boundary(true);
-               begin = begin->next();
-            } while (begin!=end);
-            cells_.erase(it);
-            halfedge_t* next= v1->next();
-            n_halfedges_ -= 2;
-            auto it1 = std::find(halfedges_begin(), halfedges_end(), v1);
-            auto it2 = std::find(halfedges_begin(), halfedges_end(), v2);
-            halfedges_.erase(it1);
-            halfedges_.erase(it2); 
-            return next; 
-        }
-        } */
         halfedge_t* v2 = v1->twin();
         // insert halfedges in v1's cell
         halfedge_t* end = v2;
@@ -529,7 +387,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             cell_iterator it = cells_.begin();
             while (it != cells_.end()) {
                 if (it->id() == c2->id()) 
-                    break;  // Fermiamo il loop se troviamo la cella
+                    break;  
                 ++it;
             }
             if (it != cells_.end()) 
@@ -564,18 +422,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         return next; 
     }
+
     void remove_polygon(const cell_t* cell) {  
-        std::cout << "🛑 Inizio rimozione cella ID: " << cell->id() << std::endl;
-    
-        // Stampiamo gli half-edge associati alla cella prima della rimozione
-        std::cout << "Half-edges della cella prima della rimozione: ";
+        if (!cell) return;
+        
         halfedge_t* temp = cell->halfedge();
-        int safety_counter = 0;  // Contatore anti-loop
+        int safety_counter = 0; 
         do {
             std::cout << temp->id() << " ";
             temp = temp->next();
-            if (++safety_counter > 50) {  // Evitiamo cicli infiniti
-                std::cerr << "⚠️ ERRORE: Loop infinito rilevato nella scansione iniziale della cella " << cell->id() << std::endl;
+            if (++safety_counter > 500) {    //USEFUL?
+                std::cerr << "ERROR: infinite loop in the initial scan of cell " << cell->id() << std::endl;
                 return;
             }
         } while (temp != cell->halfedge());
@@ -587,52 +444,191 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
         safety_counter = 0;
         do {
-            std::cout << "➖ Rimuovendo half-edge ID: " << h1->id() << " (prossimo sarà "
+            std::cout << "Removing half-edge ID: " << h1->id() << " (next will be "
                       << (h1->next() ? std::to_string(h1->next()->id()) : "nullptr") << ")" << std::endl;
-    
             halfedge_t* next = remove_edge(h1);
-    
-            if (!next || next == h1) {  // Se il nuovo half-edge è nullo o lo stesso, fermiamo
-                std::cout << "🚨 Rimozione interrotta: il prossimo half-edge è nullo o identico a quello attuale.\n";
+            if (!next || next == h1) {        //USEFUL?
+                std::cout << "Interrupt the removing: next halfedge is null or identical to the current one.\n";
                 break;
             }
-    
-            h1 = next;
-    
-            if (++safety_counter > 50) {
-                std::cerr << "⚠️ ERRORE: Loop infinito rilevato nella rimozione della cella " << cell->id() << std::endl;
+            h1 = next; 
+            if (++safety_counter > 500) {
+                std::cerr << "ERROR: infinite loop while removing cell " << cell->id() << std::endl;
                 return;
             }
         } while (h1 && h1 != ending);
     
-        std::cout << "🔍 Dopo la rimozione, la cella " << cell->id() 
-                  << " ha ancora un half-edge? " << (cell->halfedge() ? "Sì" : "No") << std::endl;
-    
-        // Eliminazione della cella se ancora presente
         auto it = std::find_if(cells_.begin(), cells_.end(), [&](const cell_t& c) {
             return c.id() == cell->id();
         });
     
-        if (it != cells_.end()) {
-            std::cout << "⚠️  La cella " << cell->id() << " è ancora presente! Tentiamo di rimuoverla.\n";
+        if (it != cells_.end()) 
             cells_.erase(it);
-        } else {
-            std::cout << "✅ La cella " << cell->id() << " è stata rimossa correttamente.\n";
-        }
     }
-        
-        
-        
+
+
+    static DCEL<local_dim, embed_dim> make_polygon(
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
     
+        fdapde_assert(boundary.cols() == embed_dim);
+        DCEL<local_dim, embed_dim> dcel;
+    
+        // Creazione del bordo esterno
+        int n_nodes = boundary.rows();
+        dcel.cells_.push_back(cell_t(0)); // Cella principale
+        cell_t* c = std::addressof(dcel.cells_.back());
+        dcel.n_cells_ = 1;
+    
+        // Aggiunta dei nodi e creazione degli half-edge per il bordo esterno
+        for (int i = 0; i < n_nodes; ++i) {
+            node_t* n = dcel.insert_node(node_t(i, true, boundary.row(i)));
+            halfedge_t* h = dcel.emplace_halfedge_(n);
+            n->set_halfedge(h);
+            h->set_cell(c);
+        }
 
-    node_t* adjacent(halfedge_t* edge) const {
-        return (edge->twin()) ? edge->twin()->prev()->node() : nullptr;  
+        c->set_halfedge(dcel.nodes_begin()->halfedge());
+    
+        // Creazione delle twin edges per il bordo esterno
+        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+            node_t* n1 = std::addressof(*it);
+            node_t* n2 = std::addressof(*((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1)));
+            halfedge_t* h1 = n1->halfedge();
+            halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
+    
+            h2->set_twin(h1);
+            h1->set_twin(h2);
+        }
+    
+        // Impostiamo next e prev per il bordo esterno
+        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+            halfedge_t* h1 = it->halfedge();
+            halfedge_t* h2 = ((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1))->halfedge();
+            h1->set_next(h2);
+            h2->set_prev(h1);
+            h1->twin()->set_prev(h2->twin());
+            h2->twin()->set_next(h1->twin());
+        }
+    
+        // Aggiunta dei buchi
+        int node_offset = n_nodes; // Indice iniziale per i nodi dei buchi
+        int hole_index = 1;
+    
+        for (const auto& hole : holes) {
+            int hole_nodes = hole.rows();
+            //dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
+           // cell_t* hole_cell = std::addressof(dcel.cells_.back());
+    
+            // Creazione dei nodi e degli half-edge per il buco
+            for (int i = 0; i < hole_nodes; ++i) {
+                node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
+                halfedge_t* h = dcel.emplace_halfedge_(n);
+                n->set_halfedge(h);
+                h->set_cell(c);
+               // std::cout << "HALF CHE STO CREANDO: " << h->id() << " ASSEGNATO A CELLA: " << h->cell()->id() << std::endl;
+            }
+    
+            // Creazione delle twin edges per il buco
+            for (int i = 0; i < hole_nodes; ++i) {
+                node_t* n1 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + i)));
+                node_t* n2 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)));
+                halfedge_t* h1 = n1->halfedge();
+                halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
+    
+                h2->set_twin(h1);
+                h1->set_twin(h2);
+            }
+    
+            // Collegare i nodi del buco
+            for (int i = 0; i < hole_nodes; ++i) {
+                halfedge_t* h1 = std::next(dcel.nodes_begin(), node_offset + i)->halfedge();
+                halfedge_t* h2 = std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)->halfedge();
+                h1->set_next(h2);
+                h2->set_prev(h1);
+                h1->twin()->set_prev(h2->twin());
+                h2->twin()->set_next(h1->twin());
+            }
+            node_offset += hole_nodes; // Aggiorna l'offset per il prossimo buco
+        }
+    
+        return dcel;
+    }
+        
+
+    node_t* adjacent(halfedge_t* edge) const {return (edge->twin()) ? edge->twin()->prev()->node() : nullptr;  }
+
+    halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
+        if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
+            std::cout << "Error: the two halfedges belong to different cells. It's not allowed to insert an edge in between them" << std::endl;
+            return v1;
+        }
+        if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
+            std::cout << "Consecutive halfedges" << std::endl;
+            return v1;   
+        }
+        // get exiting halfedges from n1 and n2
+        node_t* n1 = v1->node();
+        node_t* n2 = v2->node();
+      
+        // create a pair of twin half-edges
+        halfedge_t* h1 = emplace_halfedge_(n1);
+        halfedge_t* h2 = emplace_halfedge_(n2);
+        h1->set_twin(h2);
+        h2->set_twin(h1);
+        h2->set_next(v1);
+
+        if (v1->prev()){
+            v1->prev()->set_next(h2->twin());
+            h2->twin()->set_prev(v1->prev());
+            v1->set_prev(h2);
+        }
+        else{
+            h1->set_prev(h2);
+            h2->set_next(h1);
+        }
+        h2->next()->set_prev(h2);
+        h2->set_node(n2);
+        h1->set_next(v2);
+
+        if (v2->prev()) {
+            v2->prev()->set_next(h1->twin());
+            h1->twin()->set_prev(v2->prev());
+            v2->set_prev(h1);
+        }
+        else{
+            h2->set_prev(h1);
+            h1->set_next(h2);
+        }
+        h1->next()->set_prev(h1);
+        h1->set_node(n1);
+
+        if(h1->next() != h2 && h1->prev() != h2){
+            //h1->set_cell(v1->cell());  //POTENZIALI PROBLEMI
+            h1->set_cell(h1->prev()->cell());
+            h1->cell()->set_halfedge(h1);
+            cells_.push_back(cell_t(n_cells_++));
+            cell_t* c1 = std::addressof(cells_.back());
+            c1->set_halfedge(h2);
+            halfedge_t* end = h2;
+            do {         
+              h2->set_cell(c1);   
+              h2 = h2->next();
+            } while (h2 != end );
+        }
+        else {
+            if(h1->next()!=h2)
+                h1->set_cell(h1->next()->cell());
+            else
+                h1->set_cell(h1->prev()->cell());
+            h2->set_cell(h1->cell());
+        }
+        
+        return h1;
     }
 
 
-    halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
-        // update n_halfedges_ and n_cells_
-        // n_nodes_ is already updated by insert_node
+    halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){  //DARE IN INGRESSO ANCHE I BOUNDARY EDGES...
         int nodes_polygon= nodes.rows();
         cell_t* c= v->cell();
     
@@ -642,21 +638,23 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
         // add nodes and create ghost halfedges
        for (int i = 0; i < nodes_polygon; ++i) {
-        node_t* n;
-        if(find_node(nodes.row(i))==nullptr){
-           n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
-        }
-        else {
-            n = find_node(nodes.row(i));}
-        halfedge_t* h = nullptr;
-        // add nodes and create ghost halfedges
-        if(find_halfedge(n,c)){
-                h = find_halfedge(n,c);}
-        else{
-                halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
-                h = std::addressof(halfedges_.back());  }  //NON USARE emplace_halfedge PERCHè INCASINA GLI INDICI, così li posso controllare io!
-         //NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
-        ghost_halfedges[i+2] = h;
+            node_t* n;
+            if(find_node(nodes.row(i))==nullptr){  
+                n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
+            }
+            else {
+                n = find_node(nodes.row(i));  //if node is already a vertex of the mesh
+            }
+            halfedge_t* h = nullptr;
+            
+            if(find_halfedge(n,c)){
+                    h = find_halfedge(n,c);}
+            else{
+                    halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+                    h = std::addressof(halfedges_.back());  
+            }  //NOT using emplace_halfedge cause it messes with  indexes
+            //NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
+            ghost_halfedges[i+2] = h;
         }
         // add edges
         int count=0;
@@ -664,49 +662,41 @@ template <int LocalDim, int EmbedDim> class DCEL {
             halfedge_t* h1 = ghost_halfedges[i];
             halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon + 2)];
 
-            // Controllo intersezione con gli edges del bordo
+            // Check for intersection with boundary edges
             coords_t A = h1->node()->coords();
             coords_t B = h2->node()->coords();
             std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
-         /*   for (const auto& edge : boundary_edges) {
-                std::cout << "  (" << edge.first.transpose() << ") --> (" << edge.second.transpose() << ")\n";
-            }*/
-
             bool flag=false;
-            if(!(h1->on_boundary() && h2->on_boundary())){
-               // std::cerr << "Errore: L'edge NON è interamente sul bordo!" << std::endl;
-               // std::cout << h1->node()->id() << " " << h2->node()->id() << " " << std::endl;
+            if(!(h1->on_boundary() && h2->on_boundary())){  //if the edges are not both on the boundary
                int num = 0;
-            for (const auto& edge : boundary_edges) {
-      
-                if(num==boundary_edges.size()/2) break;
-                num++;
-
-              if(A!=edge.first && A!=edge.second && B!=edge.first && B!=edge.second){
-              if (do_segments_intersect(A, B, edge.first, edge.second)) {
-                std::cout << "Errore: L'edge interseca il bordo!" << std::endl;
-                std::cout << "A:id " <<h1->node()->id()<< std::endl;
-                std::cout << "B:id " <<h2->node()->id()<< std::endl;
-                std::cout << "haledge id h1: "<<h1->id()<<std::endl;
-                std::cout << "haledge id h2: "<<h2->id()<<std::endl;
-                std::cout << "edge_1:id " <<edge.first<< std::endl;
-                std::cout << "edge_2:id " <<edge.second<< std::endl;
-                flag=true;
-                }}
-            }
+                for (const auto& edge : boundary_edges) {
+                    if(num==boundary_edges.size()/2) break;   //DA RIVEDERE IL CHECK DOPO AVER AGGIUNTO COME ATTRIBUTO I BOUNDARY EDGES
+                    num++;
+                    if(A!=edge.first && A!=edge.second && B!=edge.first && B!=edge.second){
+                      if (do_segments_intersect(A, B, edge.first, edge.second)) {
+                        std::cout << "Errore: L'edge interseca il bordo!" << std::endl;
+                        std::cout << "A:id " <<h1->node()->id()<< std::endl;
+                        std::cout << "B:id " <<h2->node()->id()<< std::endl;
+                        std::cout << "haledge id h1: "<<h1->id()<<std::endl;
+                        std::cout << "haledge id h2: "<<h2->id()<<std::endl;
+                        std::cout << "edge_1:id " <<edge.first<< std::endl;
+                        std::cout << "edge_2:id " <<edge.second<< std::endl;
+                        flag=true;
+                      }
+                    }
+                }
             }
             if(!flag){
-            ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
-            if(!h2->next()) {
-                auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
-                if (it != halfedges_.end()){
-                    halfedges_.erase(it);
-                    count++;
-                } 
-            }
+                ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
+                if(!h2->next()) {
+                    auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
+                    if (it != halfedges_.end()){
+                      halfedges_.erase(it);
+                      count++;
+                    } 
+                }
             } 
-            else{
-                std::cout<<"SONO QUA"<<std::endl;
+            else{ //RICONTROLLA TUTTI I CASI
                 ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1->prev(), h1->next())->next();
                 if(!h2->next()) {
                     auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
@@ -718,140 +708,61 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
         }
 
+        c->set_halfedge() = v;
+
         return c->halfedge();
     }
 
     node_t* find_node(const Eigen::Matrix<double, Eigen::Dynamic, 1>& position) {
-        for (auto& n : nodes_) {
-            if (n.coords().isApprox(position, 1e-6)) {
+        for (auto& n : nodes_) 
+            if (n.coords().isApprox(position, 1e-6)) 
                 return &n;
-            }
-        }
         return nullptr;
     }
  
- halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
-    int SAFE_ID_THRESHOLD = 500;  // Ignoriamo gli ID troppo alti
-    for (auto& h : halfedges_) {
-        if (h.id() > SAFE_ID_THRESHOLD) {
-          continue;
+    halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
+        int SAFE_ID_THRESHOLD = 500;  //ignore too high ids 
+        for (auto& h : halfedges_) {
+            if (h.id() > SAFE_ID_THRESHOLD) 
+                continue;
+            if (h.cell() == cell && h.node() == n) 
+                return &h;
         }
-        if (h.cell() == cell && h.node() == n) {
-            return &h;
-        }
+        return nullptr;
     }
-    return nullptr;
-}
 
 
-    halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
-            // AGGIUNGO CONTROLLO ULTERIORE  DENTRO ALL'IF per essere sicura che v1,v2 e v2->next() non siano null
-            if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
-                std::cout << "Errore: i due half-edge appartengono a celle diverse. Non è possibile inserire un edge tra i due" << std::endl;
-                return v1;
-            }
-            if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-                std::cout << "Halfedges consecutivi" << std::endl;
-                return v1;   // v1 and v2 are next halfedges
-            }
-            // get exiting halfedges from n1 and n2
-            node_t* n1 = v1->node();
-            node_t* n2 = v2->node();
-          
-            // create a pair of twin half-edges
-            halfedge_t* h1 = emplace_halfedge_(n1);
-            halfedge_t* h2 = emplace_halfedge_(n2);
-            h1->set_twin(h2);
-            h2->set_twin(h1);
-            h2->set_next(v1);
-
-            // AGGIUNGO CONTROLLO SU v1->prev()
-            if (v1->prev()){
-                v1->prev()->set_next(h2->twin());
-       
-                h2->twin()->set_prev(v1->prev());
-
-                v1->set_prev(h2);
-            }
-            else{
-                h1->set_prev(h2);
-                h2->set_next(h1);
-            }
-            h2->next()->set_prev(h2);
-            h2->set_node(n2);
-            h1->set_next(v2);
-
-            if (v2->prev()) {
-                v2->prev()->set_next(h1->twin());
-                h1->twin()->set_prev(v2->prev());
-                v2->set_prev(h1);
-            }
-
-            else{
-                h2->set_prev(h1);
-                h1->set_next(h2);
-            }
-            h1->next()->set_prev(h1);
-            h1->set_node(n1);
-
-            if(h1->next() != h2 && h1->prev() != h2){
-                //h1->set_cell(v1->cell());  //POTENZIALI PROBLEMI
-                h1->set_cell(h1->prev()->cell());
-                h1->cell()->set_halfedge(h1);
-                cells_.push_back(cell_t(n_cells_++));
-                cell_t* c1 = std::addressof(cells_.back());
-                c1->set_halfedge(h2);
-                halfedge_t* end = h2;
-                do {         
-                  h2->set_cell(c1);   
-                  h2 = h2->next();
-                } while (h2 != end );
-            }
-            else {
-                if(h1->next()!=h2)
-                    h1->set_cell(h1->next()->cell());
-                else
-                    h1->set_cell(h1->prev()->cell());
-                h2->set_cell(h1->cell());
-            }
-            
-            return h1;
-        }
-
-
-        bool do_segments_intersect(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
+    bool do_segments_intersect(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
             // Funzione di orientazione: restituisce il segno dell'area del parallelogramma formato dai tre punti
             auto orientation = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> double {
                 return (Q.x() - P.x()) * (R.y() - P.y()) - (Q.y() - P.y()) * (R.x() - P.x());
             };
-        
+
             double o1 = orientation(A, B, C);
             double o2 = orientation(A, B, D);
             double o3 = orientation(C, D, A);
             double o4 = orientation(C, D, B);
         
-            // Caso generale: se i due segmenti si intersecano propriamente
+            //general case: the 2 segments intersect properly
             if ((o1 * o2 < 0) && (o3 * o4 < 0)) {
                 return true;
             }
-        
-            // Gestione dei casi degeneri: i punti sono collineari e uno è all'interno dell'altro segmento
+            //degenerate cases: points are colinear and one is inside the other segment
             auto on_segment = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> bool {
                 return (std::min(P.x(), Q.x()) <= R.x() && R.x() <= std::max(P.x(), Q.x()) &&
                         std::min(P.y(), Q.y()) <= R.y() && R.y() <= std::max(P.y(), Q.y()));
             };
-        
             if (o1 == 0 && on_segment(A, B, C)) return true;
             if (o2 == 0 && on_segment(A, B, D)) return true;
             if (o3 == 0 && on_segment(C, D, A)) return true;
             if (o4 == 0 && on_segment(C, D, B)) return true;
         
             return false;
-        }
+    }
         
       
-        // Funzione di supporto per trovare tutti gli edges del bordo
-        std::vector<std::pair<coords_t, coords_t>> get_boundary_edges() const {
+    //Boundary edges   // DA TOGLIERE
+    std::vector<std::pair<coords_t, coords_t>> get_boundary_edges() const {
             std::vector<std::pair<coords_t, coords_t>> boundary_edges;
             for (const auto& h : halfedges_) {
                 if (h.node()->on_boundary() && h.twin()->node()->on_boundary()) {
@@ -860,7 +771,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 }
             }
             return boundary_edges;
-        }
+    }
 
 
         

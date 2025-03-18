@@ -738,3 +738,56 @@ halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynami
     const DCEL<2,2>::cell_t* triangle_ = delaunay.find_triangle(u_);
     
     delaunay.insert_vertex(u_,triangle_);*/
+
+
+
+
+    //REMOVE_EDGE  parte in più su boundary
+    /*
+        if (v1->on_boundary()) { // v1 is on the boundary
+        //2 cases: 
+        //a. v1 and its next/prev are on boundary --> elongate v1->next or prev (SE NO NON PERMETTERE)
+        if(v1->next()->on_boundary() || v1->prev()->on_boundary()){
+            v1->next()->set_prev(v1->prev());
+            v1->prev()->set_next(v1->next());
+            v1->next()->set_node(v1->node());     
+            halfedge_t* v2= v1->twin();
+            v2->next()->set_prev(v2->prev());
+            v2->prev()->set_next(v2->next());
+            v2->next()->set_node(v2->node());
+            // remove edges, cell is the same so it doesn't need to be removed
+            halfedge_t* next= v1->next();
+            n_halfedges_ -= 2;
+            auto it1 = std::find(halfedges_begin(), halfedges_end(), v1);
+            auto it2 = std::find(halfedges_begin(), halfedges_end(), v2);
+            halfedges_.erase(it1);
+            halfedges_.erase(it2); 
+            return next;
+        }
+        //b. only v1 is on boundary and its next/prev isn't
+        else{
+            halfedge_t* v2= v1->twin();
+            v1->next()->set_prev(v2->prev());
+            v2->prev()->set_next(v1->next());    
+            v1->prev()->set_next(v2->next());
+            v2->next()->set_prev(v1->prev());
+            // remove edges and cell
+            n_cells_--;
+            auto it = std::find(cells_begin(), cells_end(), v1->cell());
+            halfedge_t* end = v1;
+            halfedge_t* begin = v1->next();
+            do {
+               begin->set_cell(nullptr);
+               begin->node()->set_on_boundary(true);
+               begin = begin->next();
+            } while (begin!=end);
+            cells_.erase(it);
+            halfedge_t* next= v1->next();
+            n_halfedges_ -= 2;
+            auto it1 = std::find(halfedges_begin(), halfedges_end(), v1);
+            auto it2 = std::find(halfedges_begin(), halfedges_end(), v2);
+            halfedges_.erase(it1);
+            halfedges_.erase(it2); 
+            return next; 
+        }
+        } */
