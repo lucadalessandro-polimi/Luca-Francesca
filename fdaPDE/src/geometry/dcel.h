@@ -531,7 +531,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             return v1;
         }
         if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-            std::cout << "Consecutive halfedges" << std::endl;
+           // std::cout << "Consecutive halfedges" << std::endl;
             return v1;   
         }
         // get exiting halfedges from n1 and n2

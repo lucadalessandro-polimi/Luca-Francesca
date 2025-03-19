@@ -32,6 +32,14 @@ class Delaunay {
     void set_boundary_points(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& points) {
         boundary_points_ = points;
     }
+    //if the user wants to impose manually the internal points 
+    void set_internal_points(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& points) {
+        internal_points_.clear();
+        internal_points_.reserve(points.rows());
+        for (int i = 0; i < points.rows(); ++i) {
+            internal_points_.push_back(points.row(i));
+        }
+    }    
 
     const cell_t* find_triangle(const coords_t& P) {
         
@@ -41,20 +49,21 @@ class Delaunay {
             const coords_t& A = cell->halfedge()->node()->coords();
             const coords_t& B = cell->halfedge()->next()->node()->coords();
             const coords_t& C = cell->halfedge()->prev()->node()->coords();
-    
-            if (fdapde::internals::point_in_2d_tri(P, A, B, C)) {
-                return cell;
-            }
+
             // Checking if one point is on the edge
             if (fdapde::internals::contains(P, A, B) || 
             fdapde::internals::contains(P, B, C) || 
             fdapde::internals::contains(P, C, A)) {
-            //i remove from internal_points vector
+            //I remove from internal_points vector
                 auto it = std::remove_if(internal_points_.begin(), internal_points_.end(), 
                 [&](const coords_t& point) { return point.isApprox(P); });
                 internal_points_.erase(it, internal_points_.end());
 
                 return nullptr;
+            }
+    
+            if (fdapde::internals::point_in_2d_tri(P, A, B, C)) {
+                return cell;
             }
         }
 
@@ -150,8 +159,66 @@ class Delaunay {
     
         //inserting fist node in the domain and creating all the triangles from the boundary edges
         coords_t first_internal = internal_points_.front();
-        std::cout<<first_internal<<std::endl;
+        
+        auto it = dcel_.halfedges_begin();
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            dcel_.add_polygon(he, first_internal.transpose());
+        }
 
+        int node_offset = boundary_points_.rows(); 
+        for (const auto& hole : hole_points_) {
+            if (hole.rows() == 0) continue; 
+            
+            node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
+            halfedge_t* first_hole_he = first_hole_node->halfedge();
+            
+            std::vector<halfedge_t*> hole_edges;
+            halfedge_t* he = first_hole_he;
+            do {
+                hole_edges.push_back(he);
+                he = he->next();
+            } while (he != first_hole_he);  
+
+            for (halfedge_t* he : hole_edges) {
+                dcel_.add_polygon(he, first_internal);
+            }
+
+            node_offset += hole.rows(); 
+        }
+    //inserting the num_points-1 inner points in the domain
+        for (size_t i = 1; i < internal_points_.size(); ++i) {
+            coords_t u = internal_points_[i];
+            const cell_t* triangle = find_triangle(u);
+
+            if (!triangle) {
+                continue;
+            }
+            insert_vertex(u, triangle);
+        }
+    //reordering id of cells and halfedges to cover some jumps between ids after removing
+        int cont = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            it->set_id(cont);
+            cont++;
+        }
+
+        int cont_h = 0;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            it->set_id(cont_h);
+            cont_h++;
+        }
+    }
+
+//overloaded one if user wants to impose internal points manually 
+//if one point exceeds the domain find_triangle return nullptr and does not enter in the triangulation
+    void build_triangulation() {
+
+        if (internal_points_.empty()) {
+            return;
+        }
+        //inserting fist node in the domain and creating all the triangles from the boundary edges
+        coords_t first_internal = internal_points_.front();
         auto it = dcel_.halfedges_begin();
         for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
             halfedge_t* he = &(*it);

@@ -42,6 +42,10 @@ int main() {
                 0.0, 1.5,
                 0.0, 1.0,
                 0.0, 0.5;  // Lato sinistro con 3 punti intermedi
+
+    Eigen::Matrix<double, 2, 2> internal;
+    internal << 0.5, 0.5,
+                1.0, 1.0;
     
 /*
 // Definizione del bordo della stella (10 vertici)
@@ -89,8 +93,10 @@ boundary << 1.0, 2.0,  // Punto superiore
    //delaunay.dcel().add_polygon(find_halfedge_from_id(6),internal);
   // delaunay.dcel().add_polygon(find_halfedge_from_id(26),internal);
     
-    delaunay.build_triangulation(10);
-    delaunay.print_dcel();
+    //delaunay.build_triangulation(10);
+    delaunay.set_internal_points(internal);
+    delaunay.build_triangulation();
+    //delaunay.print_dcel();
     delaunay.dcel().export_to_json("dcel_output.json");
 
     return 0;
