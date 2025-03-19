@@ -849,3 +849,144 @@ halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynami
         return true; 
     }
     
+
+     /*  
+    void initialize_triangulation() {
+        std::cout << "🔷 Inizializzazione della triangolazione...\n";
+    
+        if (internal_points_.rows() == 0) {
+            std::cerr << "❌ Errore: Nessun punto interno disponibile per inizializzare la triangolazione!\n";
+            return;
+        }
+    
+        Eigen::Matrix<double, 1, embed_dim> first_internal = internal_points_.row(0);
+        auto it = dcel_.halfedges_begin();
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            dcel_.add_polygon(he, first_internal);
+        }
+   
+    int node_offset = boundary_points_.rows(); 
+    for (const auto& hole : hole_points_) {
+        if (hole.rows() == 0) continue; 
+        
+        node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
+        halfedge_t* first_hole_he = first_hole_node->halfedge();
+        
+        std::vector<halfedge_t*> hole_edges;
+        halfedge_t* he = first_hole_he;
+        do {
+            hole_edges.push_back(he);
+            he = he->next();
+        } while (he != first_hole_he);  
+
+        
+        for (halfedge_t* he : hole_edges) {
+            dcel_.add_polygon(he, first_internal);
+        }
+
+        node_offset += hole.rows(); 
+    }
+
+    std::cout << "✅ Triangolazione iniziale completata!\n";
+}
+
+*/
+
+
+/*
+    void build_triangulation() {
+        std::cout << "🔷 Inizio costruzione della triangolazione...\n";
+        
+        for (int i = 1; i < internal_points_.rows(); ++i) {
+            coords_t u = internal_points_.row(i);
+            std::cout << "🔍 Inserimento del punto interno: " << u.transpose() << std::endl;
+            
+            const cell_t* triangle = find_triangle(u);
+            
+            if (!triangle) {
+                std::cerr << "❌ Errore: Nessun triangolo trovato per il punto " << u.transpose() << "!" << std::endl;
+                continue;
+            }
+            
+            insert_vertex(u, triangle);
+        }
+        int cont = 0;
+        for(auto it = dcel_.cells_begin();it!=dcel_.cells_end();++it){
+            it->set_id(cont);
+            cont++;
+        }
+
+        int cont_h = 0;
+        for(auto it = dcel_.halfedges_begin();it!=dcel_.halfedges_end();++it){
+            it->set_id(cont_h);
+            cont_h++;
+        }
+       
+        std::cout << "✅ Triangolazione completata con successo!\n";
+    }
+*/
+
+
+
+void insert_vertex(const coords_t& u, const cell_t* triangle) {
+        
+    halfedge_t* vw = triangle->halfedge();
+    halfedge_t* wx = vw->next();
+    halfedge_t* xv = vw->prev();
+
+    std::cout << "Half-edges del triangolo: " << std::endl;
+    std::cout << " - vw: " << vw->id() << " | wx: " << wx->id() << " | xv: " << xv->id() << std::endl;
+    
+    // expanding cavity
+    dig_cavity(u, vw);
+    dig_cavity(u, wx);
+    dig_cavity(u, xv);
+}
+
+
+
+void dig_cavity(const coords_t& u, halfedge_t* vw) { 
+    if(vw->on_boundary()){
+        std::cout<<"SONO AL BORDO CON : "<<vw->id()<<std::endl;
+        dcel_.add_polygon(vw,u.transpose());
+        return;
+    }
+
+    node_t* x = dcel_.adjacent(vw);
+    if (!x) {
+        std::cout << "Half-edge " << vw->id() << " non ha un nodo adiacente.\n";
+        return;
+    }
+    std::cout << "Nodo adiacente a half-edge " << vw->id() << ": " << x->id() << "\n";
+    
+    bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u, vw->node()->coords(), vw->twin()->node()->coords());
+
+    bool inside;
+    if (ccw) {
+        inside = fdapde::internals::in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
+    } else {
+        inside = fdapde::internals::in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
+    }
+
+    if (inside) { 
+        std::cout << "Punto " << x->id() << " è dentro il circumcerchio";
+        
+        halfedge_t* wv = vw->twin();
+        halfedge_t* vx = vw->twin()->next();
+        halfedge_t* xw = vw->twin()->prev(); 
+
+        std::cout << "Half-edges del triangolo: " << std::endl;
+        std::cout << " - wv: " << wv->id() << " | vx: " << vx->id() << " | xw: " << xw->id() << std::endl;
+
+        dcel_.remove_edge(vw);
+        dig_cavity(u, vx);
+        dig_cavity(u, xw);
+       
+        std::cout<<"REMOVE: "<<vw->twin()->id()<<std::endl;
+    } else {
+        std::cout << "Punto " << x->id() << " NON è dentro il circumcerchio. Aggiungo nuovo triangolo.\n";
+        dcel_.add_polygon(vw,u.transpose());
+        return;
+    } 
+}

@@ -159,6 +159,26 @@ constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, cons
     return det > 0;  // D is inside the circumcircle if determinant is positive
 }
 
+//new function to detect if a point is inside the polygon or not (used for the insertion of points in concave domains)
+template <typename Derived, typename PointT>
+constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p) {
+
+    const int n = polygon.rows();
+    bool inside = false;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+        if (((polygon(i, 1) > p[1]) != (polygon(j, 1) > p[1])) &&
+            (p[0] < (polygon(j, 0) - polygon(i, 0)) * (p[1] - polygon(i, 1)) /
+                      (polygon(j, 1) - polygon(i, 1)) +
+                   polygon(i, 0))) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+
+
+
 // then we can detect if a diagonal is fully contained in a polygon
 
   // 3D geometry

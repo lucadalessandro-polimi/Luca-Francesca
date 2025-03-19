@@ -22,14 +22,27 @@ constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con 
 int main() {
     using namespace fdapde;
 
-    // Definiamo il bordo del dominio
-    Eigen::Matrix<double,4 , 2> boundary;
+    Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
+                1.0, 0.0,
                 2.0, 0.0,
+                3.0, 0.0,
+                4.0, 0.0,  // Lato inferiore con 4 punti intermedi
+    
+                4.0, 0.5,
+                4.0, 1.0,
+                4.0, 1.5,
+                4.0, 2.0,  // Lato destro con 3 punti intermedi
+    
+                3.0, 2.0,
                 2.0, 2.0,
-              // 1.0, 1.0,  //casella delle lettere
-                0.0, 2.0;
-
+                1.0, 2.0,
+                0.0, 2.0,  // Lato superiore con 4 punti intermedi
+    
+                0.0, 1.5,
+                0.0, 1.0,
+                0.0, 0.5;  // Lato sinistro con 3 punti intermedi
+    
 /*
 // Definizione del bordo della stella (10 vertici)
 Eigen::Matrix<double, 10, 2> boundary;
@@ -76,11 +89,9 @@ boundary << 1.0, 2.0,  // Punto superiore
    //delaunay.dcel().add_polygon(find_halfedge_from_id(6),internal);
   // delaunay.dcel().add_polygon(find_halfedge_from_id(26),internal);
     
-    //delaunay.build_triangulation(3);
+    delaunay.build_triangulation(10);
     delaunay.print_dcel();
     delaunay.dcel().export_to_json("dcel_output.json");
 
-
- 
     return 0;
 }
