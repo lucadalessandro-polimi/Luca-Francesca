@@ -39,7 +39,27 @@ constexpr int binomial_coefficient(const int n, const int m) {
     return factorial(n) / (factorial(m) * factorial(n - m));
 }
 // linearized binomial_coefficient(n, k) x k matrix of combinations of k elements from a set of n
-constexpr std::vector<int> combinations(int k, int n) {
+/*constexpr std::vector<int> combinations(int k, int n) {
+    std::vector<bool> bitmask(k, 1);
+    bitmask.resize(n, 0);
+    std::vector<int> result(binomial_coefficient(n, k) * k);
+    int j = 0;
+    do {
+        int l = 0;
+        for (int i = 0; i < n; ++i) {
+            if (bitmask[i]) {
+                result[j * k + l] = i;
+                l++;
+            }
+        }
+        j++;
+    } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+    return result;
+}*/
+// Cambia da constexpr a inline normale
+
+//MODIFICA PER COMPILARE CORRETTAMENTE 
+inline std::vector<int> combinations(int k, int n) {
     std::vector<bool> bitmask(k, 1);
     bitmask.resize(n, 0);
     std::vector<int> result(binomial_coefficient(n, k) * k);
@@ -56,6 +76,7 @@ constexpr std::vector<int> combinations(int k, int n) {
     } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
     return result;
 }
+
 
 // unsigned integer division with round up
 constexpr int int_ceil(unsigned int a, unsigned int b) { return a / b + (a % b != 0); }

@@ -1,9 +1,7 @@
 #ifndef __FDAPDE_DELAUNAY_H__
 #define __FDAPDE_DELAUNAY_H__
 
-#include "src/geometry/dcel.h"
-//#include "src/geometry/primitives.h" //finche non risolviamo questione include non usiamo le due fun in primitives.h
-
+#include "header_check.h"
 namespace fdapde {
   
 template <int LocalDim = 2, int EmbedDim = 2>
@@ -17,71 +15,22 @@ class Delaunay {
     using halfedge_t = typename DCEL<local_dim, embed_dim>::halfedge_t;
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
 
-    // Costruttori
-    // Costruttore di default
-    Delaunay() = default;
-    
-    // Costruttore che inizializza la DCEL con il bordo e memorizza i punti interni
     Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal)
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {})
     : boundary_points_(boundary),
-    internal_points_(internal),
-    dcel_(DCEL<local_dim, embed_dim>::make_polygon(boundary)) { }
-
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
-        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes)
-   : boundary_points_(boundary),
-     internal_points_(internal),
-     hole_points_(holes),
-     dcel_(holes.empty() ? DCEL<local_dim, embed_dim>::make_polygon(boundary)
-                         : DCEL<local_dim, embed_dim>::make_polygon(boundary, holes)) { }
-
-
+    hole_points_(holes),
+    dcel_(holes.empty() ? DCEL<local_dim, embed_dim>::make_polygon(boundary)
+                    : DCEL<local_dim, embed_dim>::make_polygon(boundary, holes)) { }
 
     // Getter
     const DCEL<local_dim, embed_dim>& dcel() const { return dcel_; }
     DCEL<local_dim, embed_dim>& dcel() { return dcel_; }
     
     const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_points() const { return boundary_points_; }
-    const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal_points() const { return internal_points_; }
+    const std::vector<coords_t>& internal_points() const { return internal_points_; }
 
     void set_boundary_points(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& points) {
         boundary_points_ = points;
-    }
-
-    void set_internal_points(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& points) {
-        internal_points_ = points;
-    }
-
-
-    bool in_circle(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
-  
-    
-        // Costruzione della matrice 3x3 
-        Eigen::Matrix3d M;
-        M << (A.x() - D.x()), (A.y() - D.y()), (A.x() - D.x()) * (A.x() - D.x()) + (A.y() - D.y()) * (A.y() - D.y()),
-             (B.x() - D.x()), (B.y() - D.y()), (B.x() - D.x()) * (B.x() - D.x()) + (B.y() - D.y()) * (B.y() - D.y()),
-             (C.x() - D.x()), (C.y() - D.y()), (C.x() - D.x()) * (C.x() - D.x()) + (C.y() - D.y()) * (C.y() - D.y());
-    
-        double det = M.determinant();
-        
-        std::cout << "Determinante InCircle: " << det << " -> " << (det > 0 ? "Dentro" : "Fuori") << std::endl;
-        
-        return det > 0;
-    }
-    
-
-    bool is_point_inside_triangle(const coords_t& P, const coords_t& A, const coords_t& B, const coords_t& C) const{
-        // baricenter test
-
-        Eigen::Matrix<double, LocalDim, LocalDim> M;
-        M << (B - A), (C - A); 
-        coords_t lambda = M.inverse() * (P - A);
-        double lambda1 = lambda.x();
-        double lambda2 = lambda.y();
-        double lambda3 = 1 - lambda1 - lambda2;
-        return (lambda1 >= 0 && lambda1<=1 && lambda2 >= 0 && lambda2<=1 && lambda3 >= 0 && lambda3<=1);  
     }
 
     const cell_t* find_triangle(const coords_t& P) {
@@ -94,19 +43,19 @@ class Delaunay {
             const coords_t& B = cell->halfedge()->next()->node()->coords();
             const coords_t& C = cell->halfedge()->prev()->node()->coords();
     
-            if (is_point_inside_triangle(P, A, B, C)) {
+            if (fdapde::internals::point_in_2d_tri(P, A, B, C)) {
                 return cell;
             }
-        // Se il punto è su un lato, rimuoviamo il lato corrispondente
+        // point is on one of the edge of the current triangle
         halfedge_t* removed_edge = nullptr;
-        if (is_point_on_edge(P, A, B, tol)) {
+        if (fdapde::internals::contains(P, A, B)) {
             removed_edge = cell->halfedge();
-        } else if (is_point_on_edge(P, B, C, tol)) {
+        } else if (fdapde::internals::contains(P, B, C)) {
             removed_edge = cell->halfedge()->next();
-        } else if (is_point_on_edge(P, C, A, tol)) {
+        } else if (fdapde::internals::contains(P, C, A)) {
             removed_edge = cell->halfedge()->prev();
         }
-
+        
         if (removed_edge) {
             std::cout << "⚠️ Il punto è su un lato, rimuovo l'edge " << removed_edge->id() << std::endl;
             dcel_.remove_edge(removed_edge);
@@ -132,21 +81,6 @@ class Delaunay {
     return nullptr;
     }
 
-    bool is_point_on_edge(const coords_t& P, const coords_t& A, const coords_t& B, double tol) {
-        double cross = (P.y() - A.y()) * (B.x() - A.x()) - (P.x() - A.x()) * (B.y() - A.y());
-        if (std::abs(cross) > tol) return false; // Non è collineare
-    
-        double dot = (P.x() - A.x()) * (B.x() - A.x()) + (P.y() - A.y()) * (B.y() - A.y());
-        if (dot < 0) return false; // Punto fuori dal segmento
-    
-        double len_sq = (B.x() - A.x()) * (B.x() - A.x()) + (B.y() - A.y()) * (B.y() - A.y());
-        if (dot > len_sq) return false; // Punto fuori dal segmento
-    
-        return true; 
-    }
-    
-
-
     void dig_cavity(const coords_t& u, halfedge_t* vw) { 
         if(vw->on_boundary()){
             std::cout<<"SONO AL BORDO CON : "<<vw->id()<<std::endl;
@@ -161,13 +95,13 @@ class Delaunay {
         }
         std::cout << "Nodo adiacente a half-edge " << vw->id() << ": " << x->id() << "\n";
         
-        bool ccw = is_counterclockwise(u, vw->node()->coords(), vw->twin()->node()->coords());
+        bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u, vw->node()->coords(), vw->twin()->node()->coords());
     
         bool inside;
         if (ccw) {
-            inside = in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
+            inside = fdapde::internals::in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
         } else {
-            inside = in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
+            inside = fdapde::internals::in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
         }
     
         if (inside) { 
@@ -208,7 +142,7 @@ class Delaunay {
         dig_cavity(u, wx);
         dig_cavity(u, xv);
     }
-
+/*
     void build_triangulation() {
         std::cout << "🔷 Inizio costruzione della triangolazione...\n";
         
@@ -239,7 +173,9 @@ class Delaunay {
        
         std::cout << "✅ Triangolazione completata con successo!\n";
     }
-
+*/
+    
+ /*  
     void initialize_triangulation() {
         std::cout << "🔷 Inizializzazione della triangolazione...\n";
     
@@ -279,6 +215,94 @@ class Delaunay {
 
     std::cout << "✅ Triangolazione iniziale completata!\n";
 }
+
+*/
+
+    void build_triangulation(int num_points) {
+    //GESTIONE DELLA CONCAVITà PER IL CAMPIONAMENTO ??
+        double min_x = boundary_points_.col(0).minCoeff();
+        double max_x = boundary_points_.col(0).maxCoeff();
+        double min_y = boundary_points_.col(1).minCoeff();
+        double max_y = boundary_points_.col(1).maxCoeff();
+    
+        //creating the generator of casual points for the internal_points
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+        std::uniform_real_distribution<double> dist_y(min_y, max_y);
+
+        //generating internal_points
+        internal_points_.clear(); 
+        for (int i = 0; i < num_points; ++i) {
+            coords_t u;
+            u << dist_x(gen), dist_y(gen);
+            internal_points_.push_back(u);
+        }
+
+        if (internal_points_.empty()) {
+            return;
+        }
+    //inserting fist node in the domain and creating all the triangles from the boundary edges
+        coords_t first_internal = internal_points_.front();
+
+        auto it = dcel_.halfedges_begin();
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            dcel_.add_polygon(he, first_internal.transpose());
+        }
+
+        int node_offset = boundary_points_.rows(); 
+        for (const auto& hole : hole_points_) {
+            if (hole.rows() == 0) continue; 
+            
+            node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
+            halfedge_t* first_hole_he = first_hole_node->halfedge();
+            
+            std::vector<halfedge_t*> hole_edges;
+            halfedge_t* he = first_hole_he;
+            do {
+                hole_edges.push_back(he);
+                he = he->next();
+            } while (he != first_hole_he);  
+
+            for (halfedge_t* he : hole_edges) {
+                dcel_.add_polygon(he, first_internal);
+            }
+
+            node_offset += hole.rows(); 
+        }
+
+/*
+
+        // 📌 5️⃣ Inserimento degli altri punti interni
+        for (size_t i = 1; i < internal_points_.size(); ++i) {
+            coords_t u = internal_points_[i];
+            std::cout << "🔍 Inserimento del punto interno: " << u.transpose() << std::endl;
+            
+            const cell_t* triangle = find_triangle(u);
+
+            if (!triangle) {
+                std::cerr << "❌ Errore: Nessun triangolo trovato per il punto " << u.transpose() << "!" << std::endl;
+                continue;
+            }
+
+            insert_vertex(u, triangle);
+        }
+
+        // 📌 6️⃣ Riassegna ID ai triangoli e agli half-edges
+        int cont = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            it->set_id(cont);
+            cont++;
+        }
+
+        int cont_h = 0;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            it->set_id(cont_h);
+            cont_h++;
+        }
+*/
+    }
 
     
     void print_dcel() {
@@ -324,16 +348,11 @@ class Delaunay {
         std::cout << "==============================\n" << std::endl;
     }
 
-    bool is_counterclockwise(const coords_t& a, const coords_t& b, const coords_t& c) {
-        double det = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-        return det > 0;  // true se in ordine anticlockwise
-    }
-    
-    
    private:
     DCEL<local_dim, embed_dim> dcel_;  
     Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_points_;
-    Eigen::Matrix<double, Eigen::Dynamic, embed_dim> internal_points_;
+    //Eigen::Matrix<double, Eigen::Dynamic, embed_dim> internal_points_;
+    std::vector<coords_t> internal_points_;
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> hole_points_;
 };
   

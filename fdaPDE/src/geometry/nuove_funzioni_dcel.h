@@ -791,3 +791,61 @@ halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynami
             return next; 
         }
         } */
+
+
+
+            
+
+    bool is_point_inside_triangle(const coords_t& P, const coords_t& A, const coords_t& B, const coords_t& C) const{
+        // baricenter test
+
+        Eigen::Matrix<double, LocalDim, LocalDim> M;
+        M << (B - A), (C - A); 
+        coords_t lambda = M.inverse() * (P - A);
+        double lambda1 = lambda.x();
+        double lambda2 = lambda.y();
+        double lambda3 = 1 - lambda1 - lambda2;
+        return (lambda1 >= 0 && lambda1<=1 && lambda2 >= 0 && lambda2<=1 && lambda3 >= 0 && lambda3<=1);  
+    }
+
+
+
+    bool in_circle(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
+  
+    
+        // Costruzione della matrice 3x3 
+        Eigen::Matrix3d M;
+        M << (A.x() - D.x()), (A.y() - D.y()), (A.x() - D.x()) * (A.x() - D.x()) + (A.y() - D.y()) * (A.y() - D.y()),
+             (B.x() - D.x()), (B.y() - D.y()), (B.x() - D.x()) * (B.x() - D.x()) + (B.y() - D.y()) * (B.y() - D.y()),
+             (C.x() - D.x()), (C.y() - D.y()), (C.x() - D.x()) * (C.x() - D.x()) + (C.y() - D.y()) * (C.y() - D.y());
+    
+        double det = M.determinant();
+        
+        std::cout << "Determinante InCircle: " << det << " -> " << (det > 0 ? "Dentro" : "Fuori") << std::endl;
+        
+        return det > 0;
+    }
+
+
+
+    
+    bool is_counterclockwise(const coords_t& a, const coords_t& b, const coords_t& c) {
+        double det = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+        return det > 0;  // true se in ordine anticlockwise
+    }
+    
+    
+
+    bool is_point_on_edge(const coords_t& P, const coords_t& A, const coords_t& B, double tol) {
+        double cross = (P.y() - A.y()) * (B.x() - A.x()) - (P.x() - A.x()) * (B.y() - A.y());
+        if (std::abs(cross) > tol) return false; // Non è collineare
+    
+        double dot = (P.x() - A.x()) * (B.x() - A.x()) + (P.y() - A.y()) * (B.y() - A.y());
+        if (dot < 0) return false; // Punto fuori dal segmento
+    
+        double len_sq = (B.x() - A.x()) * (B.x() - A.x()) + (B.y() - A.y()) * (B.y() - A.y());
+        if (dot > len_sq) return false; // Punto fuori dal segmento
+    
+        return true; 
+    }
+    

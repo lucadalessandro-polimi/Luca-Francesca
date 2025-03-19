@@ -17,48 +17,10 @@
 #ifndef __FDAPDE_DCEL_H__
 #define __FDAPDE_DCEL_H__
 
-//#include "header_check.h"
-#include <list>
-#include <Eigen/Dense>
-#include <cstdlib>  // Per `abort()`
-#include <fstream>
-#include <nlohmann/json.hpp> // Libreria per gestire JSON
-
-using json = nlohmann::json;
-
-// Evita di includere triangulation.h qui!
-namespace fdapde {
-    template <int LocalDim, int EmbedDim>
-    class Triangulation;  // Forward declaration
-}
-
+#include "header_check.h"
 
 namespace fdapde {
-namespace internals {
 
-    template <typename XprType> struct is_eigen_dense_xpr {
-        static constexpr bool value =
-            std::is_base_of<Eigen::MatrixBase<std::decay_t<XprType>>, std::decay_t<XprType>>::value;
-    };
-        
-    template <typename XprType> constexpr bool is_eigen_dense_xpr_v = is_eigen_dense_xpr<XprType>::value;
-
-    // Definizione di fdapde_assert per evitare problemi con header_check.h
-    inline void fdapde_assert_failed_(const char* str, const char* file, int line) {
-        std::cerr << file << ":" << line << ". Assertion: '" << str << "' failed." << std::endl;
-        abort();
-    }
-
-}  // namespace internals
-
-#ifndef FDAPDE_NO_DEBUG
-#    define fdapde_assert(condition)                                                                                   \
-        if (!(condition)) { fdapde::internals::fdapde_assert_failed_(#condition, __FILE__, __LINE__); }
-#else
-#    define fdapde_assert(condition) (void)0
-#endif
-
-  
 // implementation of the Double Connected Edge List data structure (also known as DCEL or half-edge)
 template <int LocalDim, int EmbedDim> class DCEL {
    public:

@@ -141,33 +141,25 @@ constexpr bool point_in_2d_tri(const PointT& a, const PointT& t1, const PointT& 
            (t2[0] - a[0]) * (t3[1] - a[1]) >= (t3[0] - a[0]) * (t2[1] - a[1]);
 }
 
-////////////////////////////// CODICE DI PROVA /////////////////////////////////////////
-/*    M << (A[0] - D[0]), (A[1] - D[1]), (A[0] - D[0]) * (A[0] - D[0]) + (A[1] - D[1]) * (A[1] - D[1]),
-         (B[0] - D[0]), (B[1] - D[1]), (B[0] - D[0]) * (B[0] - D[0]) + (B[1] - D[1]) * (B[1] - D[1]),
-         (C[0] - D[0]), (C[1] - D[1]), (C[0] - D[0]) * (C[0] - D[0]) + (C[1] - D[1]) * (C[1] - D[1]);*/
+//new function in_circle used for the delaunay trinagulation implementation 
+// 2D point-in-circle test (Delaunay criterion)
+
+// Checks if point D is inside the circumcircle of the triangle (A, B, C)
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
-    auto ax = A[0] - D[0], ay = A[1] - D[1];
-    auto bx = B[0] - D[0], by = B[1] - D[1];
-    auto cx = C[0] - D[0], cy = C[1] - D[1];
+    double Ax = A[0] - D[0], Ay = A[1] - D[1];
+    double Bx = B[0] - D[0], By = B[1] - D[1];
+    double Cx = C[0] - D[0], Cy = C[1] - D[1];
 
-    auto a2 = ax * ax + ay * ay;
-    auto b2 = bx * bx + by * by;
-    auto c2 = cx * cx + cy * cy;
+    double det = Ax * (By * (Cx * Cx + Cy * Cy) - Cy * (Bx * Bx + By * By)) -
+                 Ay * (Bx * (Cx * Cx + Cy * Cy) - Cx * (Bx * Bx + By * By)) +
+                 (Ax * Ax + Ay * Ay) * (Bx * Cy - By * Cx);
 
-    // Calcolo diretto del determinante 3x3
-    double det = ax * (by * c2 - cy * b2)
-               - ay * (bx * c2 - cx * b2)
-               + a2 * (bx * cy - cx * by);
-
-    return det > 0;  // Se det > 0, D è dentro il circumcerchio
+    return det > 0;  // D is inside the circumcircle if determinant is positive
 }
 
-
-//////////////////////////// FINE CODICE DI PROVA ////////////////////////////////////////////
-
-  // then we can detect if a diagonal is fully contained in a polygon
+// then we can detect if a diagonal is fully contained in a polygon
 
   // 3D geometry
 
