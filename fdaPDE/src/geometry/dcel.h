@@ -192,9 +192,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             halfedge_t* h = dcel.emplace_halfedge_(n);
             n->set_halfedge(h);
 	        h->set_cell(c);
-      
         }
-
         c->set_halfedge(dcel.nodes_begin()->halfedge());
         // create twin edges
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
@@ -213,7 +211,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h2->set_prev(h1);
 	        h1->twin()->set_prev(h2->twin());
             h2->twin()->set_next(h1->twin());}
-
         return dcel;
     }
 
@@ -318,7 +315,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     }
 
     
-    halfedge_t* remove_edge(halfedge_t* v1){
+    halfedge_t* remove_edge(halfedge_t* v1){        
         if(!v1) return nullptr;
         if(v1->on_boundary() || v1->twin()->on_boundary()){
             std::cout << "Edge on boundary. Removing is not allowed" << std::endl;
@@ -537,14 +534,26 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // get exiting halfedges from n1 and n2
         node_t* n1 = v1->node();
         node_t* n2 = v2->node();
-      
         // create a pair of twin half-edges
-        halfedge_t* h1 = emplace_halfedge_(n1);
-        halfedge_t* h2 = emplace_halfedge_(n2);
+        halfedge_t* h1;
+        halfedge_t* h2;
+        if(v1->twin()){  //if the halfedge is already structured
+            h1 = emplace_halfedge_(n1);
+        }
+        else{  //if the halfedge was created just to call insert_edge
+            h1 = v1;
+        }
+        if(v2->twin()){
+            h2 = emplace_halfedge_(n2);
+        }
+        else{
+            h2 = v2;
+        }
+        //halfedge_t* h1 = emplace_halfedge_(n1);
+        //halfedge_t* h2 = emplace_halfedge_(n2);
         h1->set_twin(h2);
         h2->set_twin(h1);
         h2->set_next(v1);
-
         if (v1->prev()){
             v1->prev()->set_next(h2->twin());
             h2->twin()->set_prev(v1->prev());
@@ -557,7 +566,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
         h2->next()->set_prev(h2);
         h2->set_node(n2);
         h1->set_next(v2);
-
         if (v2->prev()) {
             v2->prev()->set_next(h1->twin());
             h1->twin()->set_prev(v2->prev());
@@ -569,7 +577,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         h1->next()->set_prev(h1);
         h1->set_node(n1);
-
         if(h1->next() != h2 && h1->prev() != h2){
             //h1->set_cell(v1->cell());  //POTENZIALI PROBLEMI
             h1->set_cell(h1->prev()->cell());
@@ -590,7 +597,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h1->set_cell(h1->prev()->cell());
             h2->set_cell(h1->cell());
         }
-        
         return h1;
     }
 
@@ -613,11 +619,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 n = find_node(nodes.row(i));  //if node is already a vertex of the mesh
             }
             halfedge_t* h = nullptr;
-            
             if(find_halfedge(n,c)){
                     h = find_halfedge(n,c);}
             else{
-                    halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+                    //halfedges_.emplace_back(n_halfedges_+ 1000 + i, n);
+                    halfedges_.emplace_back(n_halfedges_++, n);
                     h = std::addressof(halfedges_.back());  
             }  //NOT using emplace_halfedge cause it messes with  indexes
             //NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
@@ -625,6 +631,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         // add edges
         int count=0;
+        std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = ghost_halfedges[i];
             halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon + 2)];
@@ -632,7 +639,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             // Check for intersection with boundary edges
             coords_t A = h1->node()->coords();
             coords_t B = h2->node()->coords();
-            std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
+
             bool flag=false;
             if(!(h1->on_boundary() && h2->on_boundary())){  //if the edges are not both on the boundary
                int num = 0;
@@ -641,13 +648,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     num++;
                     if(A!=edge.first && A!=edge.second && B!=edge.first && B!=edge.second){
                       if (do_segments_intersect(A, B, edge.first, edge.second)) {
-                        std::cout << "Errore: L'edge interseca il bordo!" << std::endl;
-                        std::cout << "A:id " <<h1->node()->id()<< std::endl;
-                        std::cout << "B:id " <<h2->node()->id()<< std::endl;
-                        std::cout << "haledge id h1: "<<h1->id()<<std::endl;
-                        std::cout << "haledge id h2: "<<h2->id()<<std::endl;
-                        std::cout << "edge_1:id " <<edge.first<< std::endl;
-                        std::cout << "edge_2:id " <<edge.second<< std::endl;
+                        std::cout << "Error:intersection with boundary!" << std::endl;
                         flag=true;
                       }
                     }
@@ -655,24 +656,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
             if(!flag){
                 ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
-                if(!h2->next()) {
-                    auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
-                    if (it != halfedges_.end()){
-                      halfedges_.erase(it);
-                      count++;
-                    } 
-                }
             } 
             else{ //RICONTROLLA TUTTI I CASI
                 ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1->prev(), h1->next())->next();
-                if(!h2->next()) {
-                    auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
-                    if (it != halfedges_.end()){
-                        halfedges_.erase(it);
-                        count++;
-                    } 
-                }
             }
+            //if(!h2->next()) {
+            //    auto it = std::find_if(halfedges_.begin(), halfedges_.end(), [=](const halfedge_t& h) { return h.id() == h2->id();});
+            //    if (it != halfedges_.end()){
+            //      halfedges_.erase(it);
+            //        count++;
+            //    } 
+            //}
         }
 
         c->set_halfedge(v);
@@ -732,7 +726,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     std::vector<std::pair<coords_t, coords_t>> get_boundary_edges() const {
             std::vector<std::pair<coords_t, coords_t>> boundary_edges;
             for (const auto& h : halfedges_) {
-                if (h.node()->on_boundary() && h.twin()->node()->on_boundary()) {
+                if (h.on_boundary() && h.twin()->on_boundary()) {
                     boundary_edges.emplace_back(h.node()->coords(), h.twin()->node()->coords());
                     
                 }

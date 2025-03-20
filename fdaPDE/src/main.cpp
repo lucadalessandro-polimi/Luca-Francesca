@@ -43,19 +43,19 @@ int main() {
                 0.0, 1.0,
                 0.0, 0.5;  // Lato sinistro con 3 punti intermedi
     
-/*
-// Definizione del bordo della stella (10 vertici)
-Eigen::Matrix<double, 10, 2> boundary;
-boundary << 1.0, 2.0,  // Punto superiore
-            2.0, 2.0,  // Incavo in alto a destra
-            2.0, 1.3,  // Punta destra
-            2.0, 0.3,  // Incavo in basso a destra
-            1.7, 0.0,  // Punta inferiore destra
-            1.0, 0.7,  // Incavo inferiore
-            0.3, 0.3,  // Punta inferiore sinistra
-            0.5, 1.0,  // Incavo in basso a sinistra
-            0.0, 1.3,  // Punta sinistra
-            0.0, 2.0;  // Incavo in alto a sinistra
+    /*
+    // Definizione del bordo della stella (10 vertici)
+    Eigen::Matrix<double, 10, 2> boundary;
+    boundary << 1.0, 2.0,  // Punto superiore
+                2.0, 2.0,  // Incavo in alto a destra
+                2.0, 1.3,  // Punta destra
+                2.0, 0.3,  // Incavo in basso a destra
+                1.7, 0.0,  // Punta inferiore destra
+                1.0, 0.7,  // Incavo inferiore
+                0.3, 0.3,  // Punta inferiore sinistra
+                0.5, 1.0,  // Incavo in basso a sinistra
+                0.0, 1.3,  // Punta sinistra
+                0.0, 2.0;  // Incavo in alto a sinistra
     */
   
     /*
@@ -78,20 +78,39 @@ boundary << 1.0, 2.0,  // Punto superiore
 
     Delaunay<2, 2> delaunay(boundary);
 
-    auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
-        for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
+    
+
+    Eigen::Matrix<double, 4, 2> points;
+    points << 0.0, 0.0,
+              2.0, 0.0,
+              2.0, 2.0,
+              0.0, 2.0;
+    Eigen::Matrix<double, 2, 2> inside_nodes;
+    inside_nodes << 1.5, 0.5,
+                    0.6, 0.5;
+                    //1.5, 1.5,
+                    //0.5, 1.5;
+    DCEL<2,2> dcel_;
+    dcel_= DCEL<2,2>::make_polygon(points);
+
+    auto find_halfedge_from_id = [&dcel_](int id) -> DCEL<2, 2>::halfedge_t* {
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
         return nullptr; 
     };
+    
+    dcel_.add_polygon(find_halfedge_from_id(0), inside_nodes);
+    dcel_.export_to_json("dcel_output.json");
+    std::cout <<dcel_.n_halfedges() << std::endl;
 
    //delaunay.dcel().add_polygon(find_halfedge_from_id(0),internal);
    //delaunay.dcel().add_polygon(find_halfedge_from_id(6),internal);
-  // delaunay.dcel().add_polygon(find_halfedge_from_id(26),internal);
+   //delaunay.dcel().add_polygon(find_halfedge_from_id(26),internal);
     
-    delaunay.build_triangulation(10);
-    delaunay.print_dcel();
-    delaunay.dcel().export_to_json("dcel_output.json");
+    //delaunay.build_triangulation(10);
+    //delaunay.print_dcel();
+    //delaunay.dcel().export_to_json("dcel_output.json");
 
     return 0;
 }
