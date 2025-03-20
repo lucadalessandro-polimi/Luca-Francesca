@@ -8,8 +8,11 @@
 #include <nlohmann/json.hpp> 
 using json = nlohmann::json;
 #include "../geometry.h"
-
+#include <chrono>
+using namespace std::chrono;
+using namespace fdapde;
 using coords_t = Eigen::Matrix<double, 2, 1>;  // Vettore 2D
+
 constexpr int N = 10; // Numero di punti del bordo esterno
 constexpr double R = 1.0; // Raggio del dominio principale
 constexpr double cx = 1.0, cy = 1.0; // Centro del dominio
@@ -20,7 +23,7 @@ constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con 
 
 
 int main() {
-    using namespace fdapde;
+
 
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
@@ -42,6 +45,10 @@ int main() {
                 0.0, 1.5,
                 0.0, 1.0,
                 0.0, 0.5;  // Lato sinistro con 3 punti intermedi
+
+    Eigen::Matrix<double, 2, 2> internal;
+    internal << 0.5, 0.5,
+                1.0, 1.0;
     
     /*
     // Definizione del bordo della stella (10 vertici)
@@ -58,7 +65,7 @@ int main() {
                 0.0, 2.0;  // Incavo in alto a sinistra
     */
   
-    /*
+/*    
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
         double theta = 2.0 * M_PI * i / N;
@@ -74,7 +81,7 @@ int main() {
     }
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
-    */
+ */   
 
     Delaunay<2, 2> delaunay(boundary);
 
@@ -112,5 +119,31 @@ int main() {
     //delaunay.print_dcel();
     //delaunay.dcel().export_to_json("dcel_output.json");
 
+///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
+/*
+    std::vector<int> num_points_list = {1, 10, 100};  
+
+    std::ofstream outfile("fdaPDE/src/timing_results.csv");
+    outfile << "NumPoints,TimeElapsed(ms)\n";
+
+    for (int num_points : num_points_list) {
+        std::cout << "Testing with " << num_points << " points..." << std::endl;
+
+        Delaunay<2, 2> delaunay(boundary);  
+
+        auto start = high_resolution_clock::now();  // starting measuring time 
+        
+        delaunay.build_triangulation(num_points);   // function to test
+        
+        auto end = high_resolution_clock::now();    // ending measuring time 
+        auto duration = duration_cast<milliseconds>(end - start).count();
+
+        std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
+        outfile << num_points << "," << duration << "\n";  
+    }
+
+    outfile.close();
+    std::cout << "completed test in 'timing_results.txt'." << std::endl;
+*/
     return 0;
 }
