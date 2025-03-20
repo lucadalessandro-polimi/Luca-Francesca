@@ -41,6 +41,9 @@ class Delaunay {
         }
     }    
 
+    halfedge_t* add_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
+        return dcel_.add_polygon(v ,nodes);
+    }
     const cell_t* find_triangle(const coords_t& P) {
         
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
@@ -73,7 +76,7 @@ class Delaunay {
     void dig_cavity(const coords_t& u, halfedge_t* vw) { 
     //if we are on the boundary we add the triangle  
         if(vw->on_boundary()){
-            dcel_.add_polygon(vw,u.transpose());
+            add_triangle(vw,u.transpose());
             return;
         }
     //finding the point adjacent to vw
@@ -100,7 +103,7 @@ class Delaunay {
             dig_cavity(u, xw);
         } else {
         //passed the test,adding the triangle 
-            dcel_.add_polygon(vw,u.transpose());
+            add_triangle(vw,u.transpose());
             return;
         } 
     }
@@ -163,7 +166,7 @@ class Delaunay {
         auto it = dcel_.halfedges_begin();
         for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
             halfedge_t* he = &(*it);
-            dcel_.add_polygon(he, first_internal.transpose());
+            add_triangle(he, first_internal.transpose());
         }
 
         int node_offset = boundary_points_.rows(); 
@@ -181,7 +184,7 @@ class Delaunay {
             } while (he != first_hole_he);  
 
             for (halfedge_t* he : hole_edges) {
-                dcel_.add_polygon(he, first_internal);
+                add_triangle(he, first_internal);
             }
 
             node_offset += hole.rows(); 
@@ -222,7 +225,7 @@ class Delaunay {
         auto it = dcel_.halfedges_begin();
         for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
             halfedge_t* he = &(*it);
-            dcel_.add_polygon(he, first_internal.transpose());
+            add_triangle(he, first_internal.transpose());
         }
 
         int node_offset = boundary_points_.rows(); 
@@ -240,7 +243,7 @@ class Delaunay {
             } while (he != first_hole_he);  
 
             for (halfedge_t* he : hole_edges) {
-                dcel_.add_polygon(he, first_internal);
+                add_triangle(he, first_internal);
             }
 
             node_offset += hole.rows(); 

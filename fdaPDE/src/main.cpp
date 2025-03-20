@@ -23,7 +23,7 @@ constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con 
 
 
 int main() {
-/*
+
 
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
@@ -49,7 +49,7 @@ int main() {
     Eigen::Matrix<double, 2, 2> internal;
     internal << 0.5, 0.5,
                 1.0, 1.0;
-*/    
+    
 /*
 // Definizione del bordo della stella (10 vertici)
 Eigen::Matrix<double, 10, 2> boundary;
@@ -65,7 +65,7 @@ boundary << 1.0, 2.0,  // Punto superiore
             0.0, 2.0;  // Incavo in alto a sinistra
     */
   
-    
+/*    
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
         double theta = 2.0 * M_PI * i / N;
@@ -81,9 +81,9 @@ boundary << 1.0, 2.0,  // Punto superiore
     }
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
-    
+ */   
 
-    Delaunay<2, 2> delaunay(boundary,holes);
+    Delaunay<2, 2> delaunay(boundary);
 /*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -96,7 +96,7 @@ boundary << 1.0, 2.0,  // Punto superiore
    //delaunay.dcel().add_polygon(find_halfedge_from_id(6),internal);
   // delaunay.dcel().add_polygon(find_halfedge_from_id(26),internal);
     
-   // delaunay.build_triangulation(10);
+    delaunay.build_triangulation(3);
     //delaunay.set_internal_points(internal);
     //delaunay.build_triangulation();
     delaunay.print_dcel();
