@@ -194,10 +194,8 @@ class Delaunay {
             coords_t u = internal_points_[i];
             const cell_t* triangle = find_triangle(u);
 
-            if (!triangle) {
-                continue;
-            }
-            insert_vertex(u, triangle);
+            if (triangle) 
+                insert_vertex(u, triangle);
         }
     //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
