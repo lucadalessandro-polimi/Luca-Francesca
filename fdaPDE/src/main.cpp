@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <list>
+#include <unordered_set>
 #include <Eigen/Dense>
 #include <cstdlib> 
 #include <fstream>
@@ -23,8 +24,7 @@ constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con 
 
 int main() {
 
-/*
-    Eigen::Matrix<double, 16, 2> boundary;
+/*    Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
                 20.0, 0.0,
@@ -44,30 +44,8 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-                
 */
 
-Eigen::Matrix<double, 4, 2> boundary;
-boundary << 0.0, 0.0,
-            10.0, 0.0,
-            10.0, 10.0,
-            0.0,10.0;
-
-    
-    /*
-    // Definizione del bordo della stella (10 vertici)
-    Eigen::Matrix<double, 10, 2> boundary;
-    boundary << 1.0, 2.0,  // Punto superiore
-                2.0, 2.0,  // Incavo in alto a destra
-                2.0, 1.3,  // Punta destra
-                2.0, 0.3,  // Incavo in basso a destra
-                1.7, 0.0,  // Punta inferiore destra
-                1.0, 0.7,  // Incavo inferiore
-                0.3, 0.3,  // Punta inferiore sinistra
-                0.5, 1.0,  // Incavo in basso a sinistra
-                0.0, 1.3,  // Punta sinistra
-                0.0, 2.0;  // Incavo in alto a sinistra
-    */
   
 /*    
     Eigen::Matrix<double, N, 2> boundary;
@@ -85,70 +63,38 @@ boundary << 0.0, 0.0,
     }
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
- */   
-
-Eigen::Matrix<double, 38, 2> internal;
-internal << 11.5, 19.7,
-            3.6, 4.9,
-            9.4, 17.4,
-            35.8, 7.6,
-            0.3, 5.9,
-            24.4, 5.0,
-            13.1, 8.6,
-            27.1, 1.2,
-            17.8, 19.1,
-            0.8, 13.1,
-            8.6, 3.0,
-            22.5, 3.0,
-            7.2, 1.6,
-            31.0, 10.4,
-            19.7, 19.3,
-            29.7, 17.7,
-            17.7, 10.2,
-            10.7, 11.9,
-            2.4, 0.3,
-            8.7, 5.4,
-            32.5, 11.4,
-            36.8, 3.2,
-            0.3, 9.8,
-            19.3, 9.2,
-            12.7, 8.9,
-            4.4, 10.1,
-            29.9, 0.8,
-            18.1, 4.3,
-            27.6, 5.6,
-            9.5, 5.1,
-            35.7, 11.7,
-            4.0, 18.9,
-            2.6, 16.7,
-            27.4, 6.5,
-            23.8, 1.6,
-            15.2, 5.3,
-            1.7, 12.6,
-            5.4, 19.2;
-        //    23.5, 14.3;
-    //        5.9, 2.1;
-
-
- 
-
+ */
+    Eigen::Matrix<double, 1, 2> internal;
+    internal <<   0.6, 0.6;
+              //   1.5, 1.5;
+    
+    // Definizione del bordo della stella (10 vertici)
+    Eigen::Matrix<double, 10, 2> boundary;
+    boundary << 1.0, 2.0, 
+                2.0, 2.0,  
+                2.0, 1.3,  
+                2.0, 0.3,  
+                1.7, 0.0, 
+                1.0, 0.7, 
+                0.3, 0.3,  
+                0.5, 1.0,  
+                0.0, 1.3,  
+                0.0, 2.0;  
+    
     Delaunay<2, 2> delaunay(boundary);
-   // delaunay.set_internal_points(internal);
-   // delaunay.build_triangulation();
-   // std::cout << "PUNTO PROVA TROVATO IN CELLA ID : "<<delaunay.find_triangle(prova)->id() << std::endl;
-   // delaunay.insert_vertex(prova, delaunay.find_triangle(prova));
-
-
+/*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
         return nullptr; 
     };
+*/
 
+    //delaunay.build_triangulation(2);
 
-  //  delaunay.build_triangulation(1000);
-    delaunay.dcel().remove_edge(find_halfedge_from_id(7));
+    delaunay.set_internal_points(internal);
+    delaunay.build_triangulation();
     delaunay.print_dcel();
     delaunay.dcel().export_to_json("dcel_output.json");
 
@@ -160,8 +106,6 @@ internal << 11.5, 19.7,
 
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
-
-
 
         int num_points = 100;
 
@@ -200,7 +144,6 @@ internal << 11.5, 19.7,
         outfile << num_points << "," << duration << "\n"; 
 
     outfile.close();
-    std::cout << "completed test in 'timing_results.txt'." << std::endl;
 */
     return 0;
 }

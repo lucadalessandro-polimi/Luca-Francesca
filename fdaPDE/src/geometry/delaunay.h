@@ -44,6 +44,7 @@ class Delaunay {
     halfedge_t* add_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
         return dcel_.add_polygon(v ,nodes);
     }
+    
     const cell_t* find_triangle(const coords_t& P) {
         
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
@@ -194,8 +195,10 @@ class Delaunay {
             coords_t u = internal_points_[i];
             const cell_t* triangle = find_triangle(u);
 
-            if (triangle) 
-                insert_vertex(u, triangle);
+            if (!triangle) {
+                continue;
+            }
+            insert_vertex(u, triangle);
         }
     //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
