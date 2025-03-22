@@ -24,7 +24,7 @@ constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con 
 
 int main() {
 
-/*    Eigen::Matrix<double, 16, 2> boundary;
+    Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
                 20.0, 0.0,
@@ -44,7 +44,12 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-*/
+
+Eigen::Matrix<double, 3, 2> super_triangle;
+super_triangle << 0.0,0.0,
+                  12000.0,0.0,
+                  12000.0,12000.0; 
+
 
   
 /*    
@@ -64,10 +69,23 @@ int main() {
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
-    Eigen::Matrix<double, 1, 2> internal;
-    internal <<   0.6, 0.6;
-              //   1.5, 1.5;
-    
+Eigen::Matrix<double,12 , 2> internal;
+internal <<   8000.0, 2000.0,  
+              8000.0, 4000.0,   
+              7000.0, 4000.0,    
+              7000.0, 2000.0,
+              7500.0, 2100.0,  
+              7800.0, 3500.0,   
+              7100.0, 2100.0,    
+              7700.0, 3700.0,
+              7300.0, 3000.0,  
+              7900.0, 3500.0,   
+              7100.0, 2800.0,    
+              7100.0, 3700.0;
+
+
+
+ /*   
     // Definizione del bordo della stella (10 vertici)
     Eigen::Matrix<double, 10, 2> boundary;
     boundary << 1.0, 2.0, 
@@ -80,8 +98,8 @@ int main() {
                 0.5, 1.0,  
                 0.0, 1.3,  
                 0.0, 2.0;  
-    
-    Delaunay<2, 2> delaunay(boundary);
+ */   
+    Delaunay<2, 2> delaunay(super_triangle);
 /*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -91,12 +109,14 @@ int main() {
     };
 */
 
-    //delaunay.build_triangulation(2);
+   // delaunay.build_triangulation(30);
 
     delaunay.set_internal_points(internal);
     delaunay.build_triangulation();
-    delaunay.print_dcel();
+   // delaunay.print_dcel();
     delaunay.dcel().export_to_json("dcel_output.json");
+
+
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 /*

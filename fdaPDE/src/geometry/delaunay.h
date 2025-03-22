@@ -206,12 +206,21 @@ class Delaunay {
             it->set_id(cont);
             cont++;
         }
+        dcel_.set_n_cells_(cont);
 
         int cont_h = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
             it->set_id(cont_h);
             cont_h++;
         }
+
+        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
+
+        std::string filename = "mesh_output.txt";
+        export_triangulation_to_txt(triangulation, filename);
+
+        std::string command = "python3 fdaPDE/src/plot_mesh.py";
+        std::system(command.c_str()); 
     }
 
 //overloaded one if user wants to impose internal points manually 
@@ -266,11 +275,21 @@ class Delaunay {
             cont++;
         }
 
+        dcel_.set_n_cells_(cont);
+
         int cont_h = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
             it->set_id(cont_h);
             cont_h++;
         }
+
+        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
+
+        std::string filename = "mesh_output.txt";
+        export_triangulation_to_txt(triangulation, filename);
+
+        std::string command = "python3 fdaPDE/src/plot_mesh.py";
+        std::system(command.c_str()); 
     }
 
 
@@ -316,6 +335,58 @@ class Delaunay {
         }
     
         std::cout << "==============================\n" << std::endl;
+    }
+
+    //function to convert the dcel into a triangulation
+    Triangulation<local_dim, embed_dim> DCEL_to_Triangulation() {  
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> nodes(dcel_.n_nodes(), embed_dim);
+    Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> cells(dcel_.n_cells(), 3);
+    Eigen::Matrix<int, Eigen::Dynamic, 1> boundary_markers(dcel_.n_nodes());
+
+    // Fill nodes matrix
+    int node_idx = 0;
+    for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+        nodes.row(node_idx) = it->coords().transpose();
+        boundary_markers(node_idx) = it->on_boundary() ? 1 : 0;
+        node_idx++;
+    }
+
+    // Fill cells matrix
+    int cell_idx = 0;
+    for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+        halfedge_t* h = it->halfedge();
+        for (int i = 0; i < 3; ++i) {
+            cells(cell_idx, i) = h->node()->id();
+            h = h->next();
+        }
+        cell_idx++;
+    }
+
+    // Create Triangulation object
+    Triangulation<local_dim, embed_dim> triangulation(nodes, cells, boundary_markers);
+    return triangulation;
+    }
+
+    void export_triangulation_to_txt(const Triangulation<LocalDim, EmbedDim>& triangulation, const std::string& filename) {
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            return;
+        }
+
+        file << "Nodes:\n";
+        for (int i = 0; i < triangulation.n_nodes(); ++i) {
+            auto coords = triangulation.node(i);
+            int marker = triangulation.is_node_on_boundary(i) ? 1 : 0;
+            file << i << " " << coords(0) << " " << coords(1) << " " << marker << "\n";
+        }
+
+        file << "\nCells:\n";
+        for (int i = 0; i < triangulation.n_cells(); ++i) {
+            auto cell = triangulation.cells().row(i);;
+            file << i << " " << cell(0) << " " << cell(1) << " " << cell(2) << "\n";
+        }
+
+        file.close();
     }
 
    private:

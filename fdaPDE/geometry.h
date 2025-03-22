@@ -37,7 +37,7 @@
 #include "src/geometry/walk_search.h"
 #include "src/geometry/projection.h"
 // data structures
-//#include "src/geometry/triangulation.h"
+#include "src/geometry/triangulation.h"
 //#include "src/geometry/interval.h"
 #include "src/geometry/linear_network.h"
 #include "src/geometry/dcel.h"
