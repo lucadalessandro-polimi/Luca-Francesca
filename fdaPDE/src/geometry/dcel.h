@@ -233,6 +233,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
     int n_cells() const { return n_cells_; }
     int n_edges() const { return n_halfedges_ / 2; }
 
+    void set_n_cells_(int num){n_cells_=num;}
+
     //non li facciamo funzionare quindi accedere con size !!!
 
 

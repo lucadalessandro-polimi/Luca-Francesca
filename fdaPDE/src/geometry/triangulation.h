@@ -257,12 +257,21 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
     using Base::local_dim;   // dimensionality of the tangent space
     using Base::n_cells_;    // N: number of triangles
     using Base::n_nodes_per_cell;
-    static constexpr auto edge_pattern =
+ /*   static constexpr auto edge_pattern =
       Matrix<int, binomial_coefficient(n_nodes_per_cell, n_nodes_per_edge), n_nodes_per_edge>(
-        combinations(n_nodes_per_edge, n_nodes_per_cell));
+        combinations(n_nodes_per_edge, n_nodes_per_cell));*/
 
     Triangulation() = default;
+
+    //new conctructor needed as a semplification of trinagulation for dcel
     Triangulation(
+        const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, 
+        const Eigen::Matrix<int, Dynamic, Dynamic>& cells,
+        const Eigen::Matrix<int, Dynamic, Dynamic>& boundary, 
+        int flags = 0) :
+          Base(nodes, cells, boundary, flags) {}
+    };
+ /*   Triangulation(
       const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, const Eigen::Matrix<int, Dynamic, Dynamic>& cells,
       const Eigen::Matrix<int, Dynamic, Dynamic>& boundary, int flags = 0) :
         Base(nodes, cells, boundary, flags) {
@@ -900,7 +909,7 @@ template <> class Triangulation<3, 3> : public TriangulationBase<3, 3, Triangula
     std::vector<typename Base::CellType> cell_cache_;
     mutable typename Base::CellType cell_;   // used in case cell caching is off
 };
-
+*/
 }   // namespace fdapde
 
 #endif   // __FDAPDE_TRIANGULATION_H__

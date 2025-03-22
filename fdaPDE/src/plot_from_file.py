@@ -59,7 +59,7 @@ def plot_dcel(filename):
 
 
     # Disegna gli ID degli half-edges sugli archi
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8, font_color='red')
+    #nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8, font_color='red')
 
     # Disegna i nodi di bordo in blu
     for node_id in boundary_nodes:

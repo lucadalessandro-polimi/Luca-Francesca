@@ -24,7 +24,7 @@ constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con 
 
 int main() {
 
-/*    Eigen::Matrix<double, 16, 2> boundary;
+    Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
                 20.0, 0.0,
@@ -44,7 +44,12 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-*/
+
+Eigen::Matrix<double, 3, 2> super_triangle;
+super_triangle << 0.0,0.0,
+                  12000.0,0.0,
+                  12000.0,12000.0; 
+
 
   
 /*    
@@ -85,8 +90,8 @@ int main() {
                 0.0, 1.5,
                 0.0, 1.3;
               
-    
-    Delaunay<2, 2> delaunay(boundary);
+ */   
+    Delaunay<2, 2> delaunay(super_triangle);
 
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -96,7 +101,7 @@ int main() {
     };
 
 
-    //delaunay.build_triangulation(2);
+   // delaunay.build_triangulation(30);
 
     delaunay.set_internal_points(internal);
     
@@ -115,9 +120,11 @@ int main() {
     
     
     //delaunay.build_triangulation();
-    //delaunay.print_dcel();
+   // //delaunay.print_dcel();
     
     delaunay.dcel().export_to_json("dcel_output.json");
+
+
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 /*
