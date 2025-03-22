@@ -41,9 +41,104 @@ class Delaunay {
         }
     }    
 
-    halfedge_t* add_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){
-        return dcel_.add_polygon(v ,nodes);
+    halfedge_t* add_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& node){
+        return dcel_.add_polygon(v ,node);
     }
+
+    halfedge_t* add_first_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& node){                                                                       
+        cell_t* c= v->cell();                                                                                    
+        std::cout << "-------------------------------------------------------------------------------" <<std::endl;
+        auto& cell_begin = *dcel_.cells_begin();
+        std::vector<halfedge_t*> ghost_halfedges(3); 
+    
+        // add nodes and create ghost halfedges
+        node_t* n;
+        if(dcel_.find_node(node.row(0))==nullptr){  
+                n = dcel_.insert_node(node_t(dcel_.n_nodes(), /* boundary = */ false, node.row(0)));
+            }
+        else {
+                n = dcel_.find_node(node.row(0));  //if node is already a vertex of the mesh
+        }
+        if(dcel_.find_halfedge(n,c)){
+            halfedge_t* h = dcel_.find_halfedge(n,c);
+            ghost_halfedges[2] = h;
+        }
+        else if(dcel_.find_halfedge(n,&cell_begin)){
+            halfedge_t* h = dcel_.find_halfedge(n,&cell_begin);
+            ghost_halfedges[2] = h;
+        }
+        else{  
+            ghost_halfedges[2] = dcel_.emplace_halfedge_(n);
+            ghost_halfedges[2]->set_cell(c);
+        }
+        ghost_halfedges[0] = v;
+        if(v->next()->cell()==ghost_halfedges[2]->cell())
+            ghost_halfedges[1] = v->next();
+        else{
+            ghost_halfedges[1] = dcel_.find_halfedge(v->next()->node(),ghost_halfedges[2]->cell());
+            if(!ghost_halfedges[1])
+                return dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);
+                //ghost_halfedges[1]=dcel_.find_halfedge(v->prev()->node(), c);
+        }
+            
+
+        for(auto v: ghost_halfedges){
+           std::cout << "ghost_halfedges: " << v->id() << std::endl;
+        }
+        
+        // add edges
+        for (int i = 0; i < 3 ; ++i) {
+            halfedge_t* h1 = ghost_halfedges[i];
+            halfedge_t* h2 = ghost_halfedges[(i + 1) % (3)];
+            
+            // Check for intersection with boundary edges
+            coords_t A = h1->node()->coords();
+            coords_t B = h2->node()->coords();
+            coords_t C;
+            coords_t D;
+            node_t* node_C;
+            node_t* node_D;
+            bool flag=false;
+            if(!(h1->on_boundary() && h2->on_boundary())) {  //if the edges are not both on the boundary
+                for (size_t i = 0; i < boundary_points_.rows(); ++i) {  
+                    C = boundary_points_.row(i).transpose();
+                    D = boundary_points_.row((i + 1) % boundary_points_.rows()).transpose();  
+                    if (A != C && A != D && B != C && B != D) {  
+                        if (fdapde::internals::intersect(A, B, C, D)) {  
+                            std::cout << "Error: intersection with boundary!" << std::endl;
+                            flag = true;
+                            node_C = dcel_.find_node(C);
+                            node_D = dcel_.find_node(D);
+                            std::cout << "node_D: " << node_D->id() << std::endl;
+                            break;
+                        }
+                    }
+                }
+            }
+            if(!flag){
+                halfedge_t* h = dcel_.insert_edge(h1, h2); 
+                if(h && h!=h1)
+                    ghost_halfedges[(i + 1) % (3)] = h->next();  //->next();
+            } 
+            else{
+                //ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->prev(), h1->next())->twin();  //non vale sempre
+                if(dcel_.find_halfedge(node_D, h1->next()->cell())){
+                    std::cout << "qui" << std::endl;
+                    ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->next(), dcel_.find_halfedge(node_D, h1->next()->cell()))->twin();
+                }
+                else{
+                    std::cout << "C: " <<node_C->id() << std::endl;
+                    ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->prev(), dcel_.find_halfedge(node_C, h1->next()->cell()))->twin();
+                }
+            }
+        }
+        
+        //c->set_halfedge(v);
+
+        return c->halfedge();
+    }
+    
+
     
     const cell_t* find_triangle(const coords_t& P) {
         
@@ -226,7 +321,7 @@ class Delaunay {
         auto it = dcel_.halfedges_begin();
         for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
             halfedge_t* he = &(*it);
-            add_triangle(he, first_internal.transpose());
+            add_first_triangle(he, first_internal.transpose());
         }
 
         int node_offset = boundary_points_.rows(); 
@@ -244,7 +339,7 @@ class Delaunay {
             } while (he != first_hole_he);  
 
             for (halfedge_t* he : hole_edges) {
-                add_triangle(he, first_internal);
+                add_first_triangle(he, first_internal);
             }
 
             node_offset += hole.rows(); 

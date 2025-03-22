@@ -527,11 +527,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
     halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
         if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
-            std::cout<< "cella " << v1->next()->id() << std::endl;
-            std::cout<< "cella " << v1->next()->next()->id() << std::endl;
-            std::cout<< "cella " << v1->next()->next()->next()->id() << std::endl;
-            std::cout<< "cella " << v1->next()->next()->next()->next()->id() << std::endl;
-            std::cout<< "cella " << v1->next()->next()->next()->next()->next()->id() << std::endl;
             std::cout << v1->node()->id() << std::endl;
             std::cout << v2->node()->id() << std::endl;
             std::cout << "halfedge v1 : "<<v1->id() << std::endl;
@@ -542,8 +537,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
             return v1;
         }
         if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-           // std::cout << "Consecutive halfedges" << std::endl;
+            std::cout << "Consecutive halfedges" << std::endl;
             return v1;   
+        }
+        if(v1==v2 || v1->node()==v2->node()){
+            std::cout << "Same halfedge" << std::endl;
+            return v1;
         }
         // get exiting halfedges from n1 and n2
         node_t* n1 = v1->node();
@@ -634,22 +633,20 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     h = find_halfedge(n,c);}
             else{
                     h = emplace_halfedge_(n);
-                    //halfedges_.emplace_back(n_halfedges_++, n);
-                    //h = std::addressof(halfedges_.back());  
             }
             //NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
             ghost_halfedges[i+2] = h;
         }
         // add edges
-        std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
+        //std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = ghost_halfedges[i];
             halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon + 2)];
 
             // Check for intersection with boundary edges
-            coords_t A = h1->node()->coords();
-            coords_t B = h2->node()->coords();
-
+            //coords_t A = h1->node()->coords();
+            //coords_t B = h2->node()->coords();
+            /*
             bool flag=false;
             if(!(h1->on_boundary() && h2->on_boundary())){  //if the edges are not both on the boundary
                int num = 0;
@@ -663,13 +660,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
                       }
                     }
                 }
-            }
-            if(!flag){
+            }*/
+            //if(!intersection){
                 ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
-            } 
-            else{ 
-                ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1->prev(), h1->next())->next();
-            }
+            //} 
+           // else{ 
+           //     ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1->prev(), h1->next())->next();
+           // }
         }
 
         c->set_halfedge(v);
@@ -692,7 +689,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return nullptr;
     }
 
-
+    /*
     bool do_segments_intersect(const coords_t& A, const coords_t& B, const coords_t& C, const coords_t& D) const {
             // Funzione di orientazione: restituisce il segno dell'area del parallelogramma formato dai tre punti
             auto orientation = [](const coords_t& P, const coords_t& Q, const coords_t& R) -> double {
@@ -733,13 +730,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
             return boundary_edges;
     }
-
+    */
 
         
 
  
  //////////////////////////////   FINE FUNZIONI NUOVE DCEL ////////////////////////////////////
-   private:
+   
     // internal utils
     template <typename... Args> halfedge_t* emplace_halfedge_(Args&&... args) {
         halfedges_.emplace_back(n_halfedges_++, std::forward<Args>(args)...);
@@ -750,7 +747,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         nodes_.emplace_back(n_nodes_++, std::forward<Args>(args)...);
         return std::addressof(nodes_.back());
     }  
-
+private:
     // internal storage (use list to avoid reallocations)
     std::list<node_t> nodes_;
     std::list<halfedge_t> halfedges_;
