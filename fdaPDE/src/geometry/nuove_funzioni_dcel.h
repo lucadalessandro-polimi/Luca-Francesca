@@ -990,3 +990,18 @@ void dig_cavity(const coords_t& u, halfedge_t* vw) {
         return;
     } 
 }
+
+
+
+delaunay.add_first_triangle(find_halfedge_from_id(0), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(1), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(2), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(3), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(4), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(5), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(6), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(7), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(8), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(9), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(10), internal.row(0));
+delaunay.add_first_triangle(find_halfedge_from_id(11), internal.row(0));

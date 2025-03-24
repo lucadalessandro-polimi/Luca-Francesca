@@ -23,7 +23,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-
+/*
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -44,14 +44,7 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-
-Eigen::Matrix<double, 3, 2> super_triangle;
-super_triangle << 0.0,0.0,
-                  12000.0,0.0,
-                  12000.0,12000.0; 
-
-
-  
+*/
 /*    
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
@@ -69,11 +62,9 @@ super_triangle << 0.0,0.0,
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
+
     Eigen::Matrix<double, 1, 2> internal;
-    internal <<  // 1.5, 1.5;
-                0.7, 0.7;
-                //0.5, 1.5,
-                //1.3, 1.5;
+    internal <<   0.6, 0.6;
     
     Eigen::Matrix<double, 13, 2> boundary;
     boundary <<  0.5, 1.0,  
@@ -90,8 +81,15 @@ super_triangle << 0.0,0.0,
                 0.0, 1.5,
                 0.0, 1.3;
               
- */   
-    Delaunay<2, 2> delaunay(super_triangle);
+ /*   
+Eigen::Matrix<double, 5, 2> boundary;
+boundary <<  0.0, 0.0,  
+            10.0, 0.0,  
+            10.0, 5.0,
+            5.0, 5.0,  
+            0.0, 5.0;
+*/
+    Delaunay<2, 2> delaunay(boundary);
 
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -101,25 +99,11 @@ super_triangle << 0.0,0.0,
     };
 
 
-   // delaunay.build_triangulation(30);
+    //delaunay.build_triangulation(4);
+    std::cout<<"------------------------------------------------------------------------------"<<std::endl;
 
-    delaunay.set_internal_points(internal);
-    
-    delaunay.add_first_triangle(find_halfedge_from_id(0), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(1), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(2), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(3), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(4), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(5), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(6), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(7), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(8), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(9), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(10), internal.row(0));
-    delaunay.add_first_triangle(find_halfedge_from_id(11), internal.row(0));
-    
-    
-    //delaunay.build_triangulation();
+   // delaunay.set_internal_points(internal);
+   // delaunay.build_triangulation();
    // //delaunay.print_dcel();
     
     delaunay.dcel().export_to_json("dcel_output.json");

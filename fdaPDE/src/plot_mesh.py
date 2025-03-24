@@ -54,7 +54,7 @@ def plot_mesh(file_path):
             radius = np.linalg.norm(A - center)
 
             circle = Circle(center, radius, color='blue', fill=False, linestyle='dotted', lw=0.8)
-            #plt.gca().add_patch(circle)
+            plt.gca().add_patch(circle)
 
     # Disegna i nodi
     for node_id, x, y, marker in nodes:

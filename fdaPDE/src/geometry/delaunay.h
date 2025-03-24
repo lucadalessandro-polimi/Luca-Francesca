@@ -237,8 +237,10 @@ class Delaunay {
         while (static_cast<int>(internal_points_.size()) < num_points) {
             coords_t u;
             u << dist_x(gen), dist_y(gen);
+            std::cout << "nuovo punto interno: " << u.transpose() << std::endl;
             //verifies if the point is inside the domain (in order to control the concavities)
-            if (fdapde::internals::point_in_polygon(boundary_points_, u)) {
+            if (fdapde::internals::point_in_polygon(boundary_points_, u)){
+            /* {
                 bool in_hole = false;
                 for (const auto& hole : hole_points_) {
                     if (fdapde::internals::point_in_polygon(hole, u)) {
@@ -246,10 +248,11 @@ class Delaunay {
                         break;
                     }
                 }
-                if (!in_hole) {
-                    internal_points_.push_back(u);
-                }
-            }
+                if (!in_hole) {*/
+                std::cout << "nuovo punto inserito: " << u.transpose() << std::endl;
+                    internal_points_.push_back(u);}
+              //  }
+          //  }
         }
     
         if (internal_points_.empty()) {
@@ -262,9 +265,9 @@ class Delaunay {
         auto it = dcel_.halfedges_begin();
         for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
             halfedge_t* he = &(*it);
-            add_triangle(he, first_internal.transpose());
+            add_first_triangle(he, first_internal.transpose());
         }
-
+/*
         int node_offset = boundary_points_.rows(); 
         for (const auto& hole : hole_points_) {
             if (hole.rows() == 0) continue; 
@@ -280,11 +283,13 @@ class Delaunay {
             } while (he != first_hole_he);  
 
             for (halfedge_t* he : hole_edges) {
-                add_triangle(he, first_internal);
+                add_first_triangle(he, first_internal);
             }
 
             node_offset += hole.rows(); 
         }
+*/
+        flip();
     //inserting the num_points-1 inner points in the domain
         for (size_t i = 1; i < internal_points_.size(); ++i) {
             coords_t u = internal_points_[i];
@@ -332,7 +337,7 @@ class Delaunay {
             halfedge_t* he = &(*it);
             add_first_triangle(he, first_internal.transpose());
         }
-
+/*
         int node_offset = boundary_points_.rows(); 
         for (const auto& hole : hole_points_) {
             if (hole.rows() == 0) continue; 
@@ -352,7 +357,10 @@ class Delaunay {
             }
 
             node_offset += hole.rows(); 
-        }
+        }*/
+
+    // flip the initial trinagulation if not Delaunay 
+       flip();
     //inserting the num_points-1 inner points in the domain
         for (size_t i = 1; i < internal_points_.size(); ++i) {
             coords_t u = internal_points_[i];
@@ -386,6 +394,56 @@ class Delaunay {
         std::string command = "python3 fdaPDE/src/plot_mesh.py";
         std::system(command.c_str()); 
     }
+
+
+    void flip() {
+
+        // Creating a list of halfedges to check wheter they are locally delaunay or not (in this case flippable)
+        std::list<halfedge_t*> halfedges_to_check;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it,++it) {
+            if(!it->on_boundary())
+            halfedges_to_check.push_back(&(*it));
+        }
+        // flip algorithm
+        while (!halfedges_to_check.empty()) {
+            halfedge_t* edge = halfedges_to_check.front();
+            halfedges_to_check.pop_front();
+
+            cell_t* neighbor = edge->twin()->cell();
+            std::cout<<"cella vicina : "<<neighbor->id()<<" ad halfedge: "<<edge->id()<<std::endl;
+    
+            // obtaining the 4 vertices of the quadrilateral formed by the two adjoining triangles 
+            coords_t A = edge->node()->coords();
+            coords_t B = edge->twin()->node()->coords();
+            coords_t C = edge->prev()->node()->coords();
+            coords_t D = edge->twin()->prev()->node()->coords();
+    
+            if (fdapde::internals::in_circle(A, B, C, D) || fdapde::internals::in_circle(A, D, B, C)) {
+                std::cout<<"SONO QUA"<<std::endl;
+                std::cout <<"A: "<<edge->node()->id()<<" B: "<<edge->twin()->node()->id()<<" C: "<<edge->prev()->node()->id()<<" D: "<<edge->twin()->prev()->node()->id()<<std::endl;
+            
+                // we flip since edge is not locally delaunay
+                halfedge_t* e = edge;
+                dcel_.remove_edge(edge);
+                halfedge_t* new_edge = dcel_.insert_edge(e->prev(), e->twin()->prev());
+            
+                if (new_edge) {
+                    // Inserting the new halfedges created by the flip
+                    if(!new_edge->prev()->on_boundary())
+                    halfedges_to_check.push_back(new_edge->prev());
+                    if(!new_edge->next()->on_boundary())
+                    halfedges_to_check.push_back(new_edge->next());
+                    if(!new_edge->twin()->prev()->on_boundary())
+                    halfedges_to_check.push_back(new_edge->twin()->prev());
+                    if(!new_edge->twin()->next()->on_boundary())
+                    halfedges_to_check.push_back(new_edge->twin()->next());
+                }
+            
+            }
+        }
+    }
+    
+    
 
 
     
