@@ -239,6 +239,7 @@ class Delaunay {
             u << dist_x(gen), dist_y(gen);
             std::cout << "nuovo punto interno: " << u.transpose() << std::endl;
             //verifies if the point is inside the domain (in order to control the concavities)
+            //and discard the points falling on the boundary of the domain
             if (fdapde::internals::point_in_polygon(boundary_points_, u)){
             /* {
                 bool in_hole = false;

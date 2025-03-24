@@ -160,6 +160,7 @@ constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, cons
 }
 
 //new function to detect if a point is inside the polygon or not (used for the insertion of points in concave domains)
+//algorithm of Ray-Casting 
 template <typename Derived, typename PointT>
 constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p) {
 

@@ -64,8 +64,8 @@ int main() {
  */
 
     Eigen::Matrix<double, 1, 2> internal;
-    internal <<   0.6, 0.6;
-    
+    internal <<   1.0, 0.0;
+/*    
     Eigen::Matrix<double, 13, 2> boundary;
     boundary <<  0.5, 1.0,  
                 0.3, 0.3,  
@@ -80,15 +80,15 @@ int main() {
                 0.0, 1.7,
                 0.0, 1.5,
                 0.0, 1.3;
-              
- /*   
+ */             
+    
 Eigen::Matrix<double, 5, 2> boundary;
 boundary <<  0.0, 0.0,  
-            10.0, 0.0,  
-            10.0, 5.0,
-            5.0, 5.0,  
-            0.0, 5.0;
-*/
+            1.0, 0.0,  
+            1.0, 1.0,
+            0.5, 0.5,  
+            0.0, 1.0;
+
     Delaunay<2, 2> delaunay(boundary);
 
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
@@ -100,11 +100,11 @@ boundary <<  0.0, 0.0,
 
 
     //delaunay.build_triangulation(4);
-    std::cout<<"------------------------------------------------------------------------------"<<std::endl;
 
    // delaunay.set_internal_points(internal);
    // delaunay.build_triangulation();
    // //delaunay.print_dcel();
+   std::cout<<"controllo point in polygon: "<<fdapde::internals::point_in_polygon(boundary,internal)<<std::endl;
     
     delaunay.dcel().export_to_json("dcel_output.json");
 
