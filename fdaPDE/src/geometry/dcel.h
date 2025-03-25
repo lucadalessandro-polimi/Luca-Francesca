@@ -39,6 +39,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
         halfedge_t* halfedge_;    // any edge having this node as its origin
         bool boundary_;           // asserted true if node is on boundary
         coords_t coords_;
+        //new code needed for conflict graph algorithm
+        cell_t* conflicting_triangle_=nullptr;
        public:
 
         node_t() : coords_(), halfedge_(nullptr), boundary_(false) { }
@@ -79,6 +81,18 @@ template <int LocalDim, int EmbedDim> class DCEL {
         bool on_boundary() const { return boundary_; }
         node_t* next() const { return halfedge_->next()->node(); }
         node_t* prev() const { return halfedge_->prev()->node(); }
+        //new code for conflict graph 
+        void set_conflict(cell_t* triangle) { conflicting_triangle_ = triangle; }
+        cell_t* conflict() const { return conflicting_triangle_; }
+        void clear_conflict() { conflicting_triangle_ = nullptr; }
+        void remove_conflict() {
+            if (conflicting_triangle_ != nullptr) {
+                auto& points = conflicting_triangle_->conflicting_points();
+                points.erase(std::remove(points.begin(), points.end(), this), points.end());
+                clear_conflict();
+            }
+        }
+        
 
     };
     struct halfedge_t {
@@ -162,9 +176,20 @@ template <int LocalDim, int EmbedDim> class DCEL {
           return id_ == other.id_;  // Confrontiamo solo l'ID, che dovrebbe essere univoco
         }
 
+        //new code for conflict graph algorithm 
+        void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
+        std::vector<node_t*>& conflicting_points() const{ return conflicting_points_; }
+        void clear_conflicts() { conflicting_points.clear(); }
+        bool visited() const { return visited_; }
+        void mark_visited() { visited = true; }
+      
+
        private:
         int id_;
         halfedge_t* h_;
+        //new code needed for conflict graph algorithm 
+        std::vector<node_t*> conflicting_points_;
+        bool visited_ = false;
     };
 
 
@@ -529,17 +554,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
     halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
         if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
-            std::cout << v1->node()->id() << std::endl;
-            std::cout << v2->node()->id() << std::endl;
-            std::cout << "halfedge v1 : "<<v1->id() << std::endl;
-            std::cout << "halfedge v2 : "<<v2->id() << std::endl;
-            std::cout << "cella1 " << v1->cell()->id() << std::endl;
-            std::cout << "cella2 " << v2->cell()->id() << std::endl;
-            std::cerr << "Error: the two halfedges belong to different cells. It's not allowed to insert an edge in between them" << std::endl;
+        //    std::cout << v1->node()->id() << std::endl;
+        //    std::cout << v2->node()->id() << std::endl;
+        //    std::cout << "halfedge v1 : "<<v1->id() << std::endl;
+        //    std::cout << "halfedge v2 : "<<v2->id() << std::endl;
+        //    std::cout << "cella1 " << v1->cell()->id() << std::endl;
+        //    std::cout << "cella2 " << v2->cell()->id() << std::endl;
+        //    std::cerr << "Error: the two halfedges belong to different cells. It's not allowed to insert an edge in between them" << std::endl;
             return v1;
         }
         if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-            std::cout << "Consecutive halfedges" << std::endl;
+         //   std::cout << "Consecutive halfedges" << std::endl;
             return v1;   
         }
         if(v1==v2 || v1->node()==v2->node()){

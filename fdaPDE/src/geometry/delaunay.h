@@ -45,6 +45,11 @@ class Delaunay {
         return dcel_.add_polygon(v ,node);
     }
 
+    void remove_triangle(const cell_t* cell){
+        dcel_.remove_polygon(cell);
+        return;
+    }
+
     halfedge_t* add_first_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& node){                                                                       
         cell_t* c= v->cell();                                                                                    
         std::cout << "-------------------------------------------------------------------------------" <<std::endl;
@@ -442,54 +447,112 @@ class Delaunay {
             
             }
         }
+
+        std::cout<<"FINE FLIP"<<std::endl;
     }
-    
-    
 
 
+
+    cell_t* find_next_triangle(cell_t* current_triangle, node_t* u, node_t* y) {
+       
+        const coords_t& t1 = current_triangle->halfedge()->prev()->node()->coords();
+        const coords_t& t2 = current_triangle->halfedge()->node()->coords();
+        const coords_t& t3 = current_triangle->halfedge()_>next()->node()->coords();
     
-    void print_dcel() {
-        std::cout << "==============================" << std::endl;
-        std::cout << "📌 STATO ATTUALE DELLA DCEL 📌" << std::endl;
-        std::cout << "==============================" << std::endl;
-    
-        // 📍 Stampa tutti i nodi
-        std::cout << "\n🟢 NODI: \n";
-        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
-            std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
-                      << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+        if (fdapde::internals::point_in_2d_tri(y->coords(), t1, t2, t3)) {
+            return nullptr;  //y is actually inside current_triangle
         }
     
-        // 🔗 Stampa tutti gli Half-Edges
-        std::cout << "\n🔵 HALF-EDGES: \n";
-        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
-            std::cout << "ID: " << it->id()
-                      << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
-                      << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
-                      << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
-                      << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
-                      << std::endl;
-        }
-    
-        // 🔳 Stampa tutte le Celle
-        std::cout << "\n🟠 CELLE: \n";
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
-                      << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
-            if (it->halfedge()) {
-                halfedge_t* h = it->halfedge();
-                std::cout << "  🔗 Half-edges nella cella: ";
-                halfedge_t* start = h;
-                do {
-                    std::cout << h->id() << " ";
-                    h = h->next();
-                } while (h && h != start);
-                std::cout << std::endl;
+        // if not we search in the adjacent triangles 
+        for (int i = 0; i < 3; ++i) {
+            halfedge_t* he = current_triangle->halfedge(i);
+            const auto& A = he->node()->coords();
+            const auto& B = he->twin()->node()->coords();
+            
+            // Verifichiamo se y è al di fuori del triangolo generato da (A, B, u)
+            if (!fdapde::internals::point_in_2d_tri(y->coords(), A, B, u->coords())) {
+                return he->twin()->cell();  // Torna il triangolo adiacente che si trova dall'altro lato di AB
             }
         }
-    
-        std::cout << "==============================\n" << std::endl;
+        return nullptr; 
     }
+    
+    
+
+    // Function to update conflict graph after inserting a new vertex
+    void redistribute_list(node_t* u, cell_t* vwx) {
+        for (node_t* y : vwx->conflicting_points()) {
+            cell_t* current_triangle = vwx;
+            while (true) {
+                // Walk through triangles to find the conflict
+                cell_t* next_triangle = find_next_triangle(current_triangle, u, y);  // Implement this function
+                if (next_triangle == nullptr) break;
+                current_triangle = next_triangle;
+            }
+            // Register the new conflict
+            current_triangle.add_conflict(y);
+            y->set_conflict(current_triangle);
+        }
+        // Clear the conflict list 
+        vwx->clear_conflicts();
+    }
+
+
+    // Function to insert a vertex handling conflicts
+    void insert_vertex_at_conflict(node_t* u) {
+        // Retrieve the triangle in conflict with u and we marked as visited 
+        cell_t* vwx = u->conflict(); 
+        vwx->mark_visited();
+
+        std::vector<cell_t*> D = {vwx};
+        std::vector<std::pair<halfedge_t*, node_t*>> C;
+
+        mark_cavity(u, vwx->halfedge(), D, C);
+        mark_cavity(u, vwx->halfedge()->prev(), D, C);
+        mark_cavity(u, vwx->halfedge()->next(), D, C);
+
+        for (cell_t* t : D) {
+            redistribute_list(u, t);
+            remove_triangle(t);
+        }
+        for (auto& [vw, u] : C) {
+            add_triangle(vw,u.transpose());  
+        }
+    }
+
+
+    // Function to mark the cavity during insertion
+    void mark_cavity(node_t* u, halfedge_t* vw, std::vector<cell_t*>& D, std::vector<std::pair<halfedge_t*, node_t*>>& C) {
+        node_t* x = dcel_.adjacent(vw);
+        if (!x) {
+            return;
+        }
+        if(vw->twin()->cell()->visited()) return; 
+        bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u->coords(), vw->node()->coords(), vw->twin()->node()->coords());
+        //test of circumcircle   
+        bool inside;
+        if (ccw) {
+            inside = fdapde::internals::in_circle(u->coords(), vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
+        } else {
+            inside = fdapde::internals::in_circle(u->coords(), vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
+        }
+
+        if (inside) {    //test fails so append wvx to D and expand the cavity 
+            vw->twin()->cell()->mark_visited();
+            D.push_back(vw->twin()->cell());
+            mark_cavity(u, vw->twin()->prev(), D, C);
+            mark_cavity(u, vw->twin()->next(), D, C);
+        } else {
+            C.push_back({vw, u});  // Add the new triangle to the list (without actually adding it)
+        }
+    }
+
+    
+    
+
+
+    
+
 
     //function to convert the dcel into a triangulation
     Triangulation<local_dim, embed_dim> DCEL_to_Triangulation() {  

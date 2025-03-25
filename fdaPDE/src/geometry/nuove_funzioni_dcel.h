@@ -1005,3 +1005,86 @@ delaunay.add_first_triangle(find_halfedge_from_id(8), internal.row(0));
 delaunay.add_first_triangle(find_halfedge_from_id(9), internal.row(0));
 delaunay.add_first_triangle(find_halfedge_from_id(10), internal.row(0));
 delaunay.add_first_triangle(find_halfedge_from_id(11), internal.row(0));
+
+
+
+void print_dcel() {
+    std::cout << "==============================" << std::endl;
+    std::cout << "📌 STATO ATTUALE DELLA DCEL 📌" << std::endl;
+    std::cout << "==============================" << std::endl;
+
+    // 📍 Stampa tutti i nodi
+    std::cout << "\n🟢 NODI: \n";
+    for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+        std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                  << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+    }
+
+    // 🔗 Stampa tutti gli Half-Edges
+    std::cout << "\n🔵 HALF-EDGES: \n";
+    for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+        std::cout << "ID: " << it->id()
+                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                  << std::endl;
+    }
+
+    // 🔳 Stampa tutte le Celle
+    std::cout << "\n🟠 CELLE: \n";
+    for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+        std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                  << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+        if (it->halfedge()) {
+            halfedge_t* h = it->halfedge();
+            std::cout << "  🔗 Half-edges nella cella: ";
+            halfedge_t* start = h;
+            do {
+                std::cout << h->id() << " ";
+                h = h->next();
+            } while (h && h != start);
+            std::cout << std::endl;
+        }
+    }
+
+    std::cout << "==============================\n" << std::endl;
+}
+
+
+
+void dig_cavity(const coords_t& u, halfedge_t* vw) { 
+    //if we are on the boundary we add the triangle  
+        if(vw->on_boundary()){
+            add_triangle(vw,u.transpose());
+            return;
+        }
+    //finding the point adjacent to vw
+        node_t* x = dcel_.adjacent(vw);
+        if (!x) {
+            return;
+        }
+        bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u, vw->node()->coords(), vw->twin()->node()->coords());
+    //test of circumcircle   
+        bool inside;
+        if (ccw) {
+            inside = fdapde::internals::in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
+        } else {
+            inside = fdapde::internals::in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
+        }
+        if (inside) { 
+        //falied the test so remove the triangle and expand the cavity on the remaining edges
+            halfedge_t* wv = vw->twin();
+            halfedge_t* vx = vw->twin()->next();
+            halfedge_t* xw = vw->twin()->prev(); 
+            
+            dcel_.remove_edge(vw);
+            dig_cavity(u, vx);
+            dig_cavity(u, xw);
+        } else {
+        //passed the test,adding the triangle 
+            add_triangle(vw,u.transpose());
+            return;
+        } 
+    }
+    

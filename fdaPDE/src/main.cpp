@@ -1,7 +1,8 @@
 #include <iostream>
 #include <cmath>
 #include <list>
-#include <unordered_set>
+#include <unordered_map>
+#include <vector>
 #include <Eigen/Dense>
 #include <cstdlib> 
 #include <fstream>
@@ -23,7 +24,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-/*
+
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -44,7 +45,7 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-*/
+
 /*    
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
@@ -81,32 +82,31 @@ int main() {
                 0.0, 1.5,
                 0.0, 1.3;
  */             
-    
+/*    
 Eigen::Matrix<double, 5, 2> boundary;
 boundary <<  0.0, 0.0,  
             1.0, 0.0,  
             1.0, 1.0,
             0.5, 0.5,  
             0.0, 1.0;
-
-    Delaunay<2, 2> delaunay(boundary);
-
+*/
+   // Delaunay<2, 2> delaunay(boundary);
+/*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
         return nullptr; 
     };
+*/
 
-
-    //delaunay.build_triangulation(4);
+  //  delaunay.build_triangulation(1);
 
    // delaunay.set_internal_points(internal);
    // delaunay.build_triangulation();
-   // //delaunay.print_dcel();
-   std::cout<<"controllo point in polygon: "<<fdapde::internals::point_in_polygon(boundary,internal)<<std::endl;
+    //delaunay.print_dcel();
     
-    delaunay.dcel().export_to_json("dcel_output.json");
+   // delaunay.dcel().export_to_json("dcel_output.json");
 
 
 
