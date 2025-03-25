@@ -452,7 +452,7 @@ class Delaunay {
     }
 
 
-
+/*
     cell_t* find_next_triangle(cell_t* current_triangle, node_t* u, node_t* y) {
        
         const coords_t& t1 = current_triangle->halfedge()->prev()->node()->coords();
@@ -496,7 +496,7 @@ class Delaunay {
         // Clear the conflict list 
         vwx->clear_conflicts();
     }
-
+*/
 
     // Function to insert a vertex handling conflicts
     void insert_vertex_at_conflict(node_t* u) {
@@ -505,7 +505,7 @@ class Delaunay {
         vwx->mark_visited();
 
         std::vector<cell_t*> D = {vwx};
-        std::vector<std::pair<halfedge_t*, node_t*>> C;
+        std::vector<halfedge_t*> C;
 
         mark_cavity(u, vwx->halfedge(), D, C);
         mark_cavity(u, vwx->halfedge()->prev(), D, C);
@@ -515,14 +515,14 @@ class Delaunay {
             redistribute_list(u, t);
             remove_triangle(t);
         }
-        for (auto& [vw, u] : C) {
+        for (halfedge_t* vw : C) {
             add_triangle(vw,u.transpose());  
         }
     }
 
 
     // Function to mark the cavity during insertion
-    void mark_cavity(node_t* u, halfedge_t* vw, std::vector<cell_t*>& D, std::vector<std::pair<halfedge_t*, node_t*>>& C) {
+    void mark_cavity(node_t* u, halfedge_t* vw, std::vector<cell_t*>& D, std::vector<halfedge_t*>& C) {
         node_t* x = dcel_.adjacent(vw);
         if (!x) {
             return;
@@ -543,16 +543,84 @@ class Delaunay {
             mark_cavity(u, vw->twin()->prev(), D, C);
             mark_cavity(u, vw->twin()->next(), D, C);
         } else {
-            C.push_back({vw, u});  // Add the new triangle to the list (without actually adding it)
+            C.push_back(vw);  // Add the new triangle to the list (without actually adding it)
         }
     }
 
-    
-    
+    void build_triangulation_graph() {
 
-
+        if (internal_points_.empty()) {
+            return;
+        }
+        //inserting fist node in the domain and creating all the triangles from the boundary edges
+        coords_t first_internal = internal_points_.front();
+        auto it = dcel_.halfedges_begin();
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            add_first_triangle(he, first_internal.transpose());
+        }
+    // flip the initial trinagulation if not Delaunay 
+        flip();
     
+    //costruction of the conflict graph
+    //DEVI CREARE I NODI A PARTIRE DA INTERNAL POINTS
+        for (cell_t* t : dcel_.cells()) {  
+            for (node_t* y : internal_points_) {
+            
+                if (y == internal_points_[0]) continue; 
 
+                bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(t->halfedge()->prev()->node()->coords(), 
+                         t->halfedge()->node()->coords(),t->halfedge()->next()->node()->coords());
+                //test of circumcircle   
+                bool inside;
+                if (ccw) {
+                    inside = fdapde::internals::in_circle(t->halfedge()->prev()->node()->coords(), 
+                    t->halfedge()->node()->coords(),t->halfedge()->next()->node()->coords(), y->coords());
+                } else {
+                    inside = fdapde::internals::in_circle(t->halfedge()->next()->node()->coords(), 
+                    t->halfedge()->node()->coords(),t->halfedge()->prev()->node()->coords(), y->coords());                   
+                }
+                if(inside) {
+                    t->add_conflict(y);  
+                    y->set_conflict(t);
+                }
+            }
+        }
+    /*    
+    //inserting the num_points-1 inner points in the domain
+        for (size_t i = 1; i < internal_points_.size(); ++i) {
+            coords_t u = internal_points_[i];
+            const cell_t* triangle = find_triangle(u);
+
+            if (!triangle) {
+                continue;
+            }
+            insert_vertex(u, triangle);
+        }*/
+    /*    
+    //reordering id of cells and halfedges to cover some jumps between ids after removing
+        int cont = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            it->set_id(cont);
+            cont++;
+        }
+
+        dcel_.set_n_cells_(cont);
+
+        int cont_h = 0;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            it->set_id(cont_h);
+            cont_h++;
+        }
+
+        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
+
+        std::string filename = "mesh_output.txt";
+        export_triangulation_to_txt(triangulation, filename);
+
+        std::string command = "python3 fdaPDE/src/plot_mesh.py";
+        std::system(command.c_str()); */
+    }
 
     //function to convert the dcel into a triangulation
     Triangulation<local_dim, embed_dim> DCEL_to_Triangulation() {  

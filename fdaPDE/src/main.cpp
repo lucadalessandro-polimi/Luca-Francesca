@@ -24,7 +24,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-
+/*
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -45,7 +45,7 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-
+*/
 /*    
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
@@ -64,8 +64,9 @@ int main() {
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
 
-    Eigen::Matrix<double, 1, 2> internal;
-    internal <<   1.0, 0.0;
+    Eigen::Matrix<double, 2, 2> internal;
+    internal <<   4.0, 2.0,
+                  7.0, 3.0;
 /*    
     Eigen::Matrix<double, 13, 2> boundary;
     boundary <<  0.5, 1.0,  
@@ -82,15 +83,15 @@ int main() {
                 0.0, 1.5,
                 0.0, 1.3;
  */             
-/*    
-Eigen::Matrix<double, 5, 2> boundary;
+    
+Eigen::Matrix<double, 4, 2> boundary;
 boundary <<  0.0, 0.0,  
-            1.0, 0.0,  
-            1.0, 1.0,
-            0.5, 0.5,  
-            0.0, 1.0;
-*/
-   // Delaunay<2, 2> delaunay(boundary);
+            10.0, 0.0,  
+            10.0, 5.0,
+         //   0.5, 0.5,  
+            0.0, 5.0;
+
+    Delaunay<2, 2> delaunay(boundary);
 /*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -102,11 +103,11 @@ boundary <<  0.0, 0.0,
 
   //  delaunay.build_triangulation(1);
 
-   // delaunay.set_internal_points(internal);
-   // delaunay.build_triangulation();
+    delaunay.set_internal_points(internal);
+    delaunay.build_triangulation_graph();
     //delaunay.print_dcel();
     
-   // delaunay.dcel().export_to_json("dcel_output.json");
+    delaunay.dcel().export_to_json("dcel_output.json");
 
 
 
