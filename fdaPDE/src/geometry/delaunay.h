@@ -143,267 +143,7 @@ class Delaunay {
         return c->halfedge();
     }
     
-
-    
-    const cell_t* find_triangle(const coords_t& P) {
-        
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* cell = &(*it);  
-    
-            const coords_t& A = cell->halfedge()->node()->coords();
-            const coords_t& B = cell->halfedge()->next()->node()->coords();
-            const coords_t& C = cell->halfedge()->prev()->node()->coords();
-
-            // Checking if one point is on the edge
-            if (fdapde::internals::contains(P, A, B) || 
-            fdapde::internals::contains(P, B, C) || 
-            fdapde::internals::contains(P, C, A)) {
-            //I remove from internal_points vector
-                auto it = std::remove_if(internal_points_.begin(), internal_points_.end(), 
-                [&](const coords_t& point) { return point.isApprox(P); });
-                internal_points_.erase(it, internal_points_.end());
-
-                return nullptr;
-            }
-    
-            if (fdapde::internals::point_in_2d_tri(P, A, B, C)) {
-                return cell;
-            }
-        }
-
-    return nullptr;
-    }
-
-    void dig_cavity(const coords_t& u, halfedge_t* vw) { 
-    //if we are on the boundary we add the triangle  
-        if(vw->on_boundary()){
-            add_triangle(vw,u.transpose());
-            return;
-        }
-    //finding the point adjacent to vw
-        node_t* x = dcel_.adjacent(vw);
-        if (!x) {
-            return;
-        }
-        bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u, vw->node()->coords(), vw->twin()->node()->coords());
-    //test of circumcircle   
-        bool inside;
-        if (ccw) {
-            inside = fdapde::internals::in_circle(u, vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
-        } else {
-            inside = fdapde::internals::in_circle(u, vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
-        }
-        if (inside) { 
-        //falied the test so remove the triangle and expand the cavity on the remaining edges
-            halfedge_t* wv = vw->twin();
-            halfedge_t* vx = vw->twin()->next();
-            halfedge_t* xw = vw->twin()->prev(); 
-            
-            dcel_.remove_edge(vw);
-            dig_cavity(u, vx);
-            dig_cavity(u, xw);
-        } else {
-        //passed the test,adding the triangle 
-            add_triangle(vw,u.transpose());
-            return;
-        } 
-    }
-    
-    
-    void insert_vertex(const coords_t& u, const cell_t* triangle) {
-        
-        halfedge_t* vw = triangle->halfedge();
-        halfedge_t* wx = vw->next();
-        halfedge_t* xv = vw->prev();
-        // expanding cavity
-        dig_cavity(u, vw);
-        dig_cavity(u, wx);
-        dig_cavity(u, xv);
-    }
-
-
-    void build_triangulation(int num_points) {
-
-        double min_x = boundary_points_.col(0).minCoeff();
-        double max_x = boundary_points_.col(0).maxCoeff();
-        double min_y = boundary_points_.col(1).minCoeff();
-        double max_y = boundary_points_.col(1).maxCoeff();
-    
-        //creating the generator of casual points for the internal_points
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> dist_x(min_x, max_x);
-        std::uniform_real_distribution<double> dist_y(min_y, max_y);
-
-        //generating internal_points 
-        internal_points_.clear();
-        internal_points_.reserve(num_points);
-
-        while (static_cast<int>(internal_points_.size()) < num_points) {
-            coords_t u;
-            u << dist_x(gen), dist_y(gen);
-            std::cout << "nuovo punto interno: " << u.transpose() << std::endl;
-            //verifies if the point is inside the domain (in order to control the concavities)
-            //and discard the points falling on the boundary of the domain
-            if (fdapde::internals::point_in_polygon(boundary_points_, u)){
-            /* {
-                bool in_hole = false;
-                for (const auto& hole : hole_points_) {
-                    if (fdapde::internals::point_in_polygon(hole, u)) {
-                        in_hole = true;
-                        break;
-                    }
-                }
-                if (!in_hole) {*/
-                std::cout << "nuovo punto inserito: " << u.transpose() << std::endl;
-                    internal_points_.push_back(u);}
-              //  }
-          //  }
-        }
-    
-        if (internal_points_.empty()) {
-            return;
-        }
-    
-        //inserting fist node in the domain and creating all the triangles from the boundary edges
-        coords_t first_internal = internal_points_.front();
-        
-        auto it = dcel_.halfedges_begin();
-        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
-            halfedge_t* he = &(*it);
-            add_first_triangle(he, first_internal.transpose());
-        }
-/*
-        int node_offset = boundary_points_.rows(); 
-        for (const auto& hole : hole_points_) {
-            if (hole.rows() == 0) continue; 
-            
-            node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
-            halfedge_t* first_hole_he = first_hole_node->halfedge();
-            
-            std::vector<halfedge_t*> hole_edges;
-            halfedge_t* he = first_hole_he;
-            do {
-                hole_edges.push_back(he);
-                he = he->next();
-            } while (he != first_hole_he);  
-
-            for (halfedge_t* he : hole_edges) {
-                add_first_triangle(he, first_internal);
-            }
-
-            node_offset += hole.rows(); 
-        }
-*/
-        flip();
-    //inserting the num_points-1 inner points in the domain
-        for (size_t i = 1; i < internal_points_.size(); ++i) {
-            coords_t u = internal_points_[i];
-            const cell_t* triangle = find_triangle(u);
-
-            if (!triangle) {
-                continue;
-            }
-            insert_vertex(u, triangle);
-        }
-    //reordering id of cells and halfedges to cover some jumps between ids after removing
-        int cont = 0;
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            it->set_id(cont);
-            cont++;
-        }
-        dcel_.set_n_cells_(cont);
-
-        int cont_h = 0;
-        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
-            it->set_id(cont_h);
-            cont_h++;
-        }
-
-        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
-
-        std::string filename = "mesh_output.txt";
-        export_triangulation_to_txt(triangulation, filename);
-
-        std::string command = "python3 fdaPDE/src/plot_mesh.py";
-        std::system(command.c_str()); 
-    }
-
-//overloaded one if user wants to impose internal points manually 
-//if one point exceeds the domain find_triangle return nullptr and does not enter in the triangulation
-    void build_triangulation() {
-
-        if (internal_points_.empty()) {
-            return;
-        }
-        //inserting fist node in the domain and creating all the triangles from the boundary edges
-        coords_t first_internal = internal_points_.front();
-        auto it = dcel_.halfedges_begin();
-        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
-            halfedge_t* he = &(*it);
-            add_first_triangle(he, first_internal.transpose());
-        }
-/*
-        int node_offset = boundary_points_.rows(); 
-        for (const auto& hole : hole_points_) {
-            if (hole.rows() == 0) continue; 
-            
-            node_t* first_hole_node = std::addressof(*std::next(dcel_.nodes_begin(), node_offset)); 
-            halfedge_t* first_hole_he = first_hole_node->halfedge();
-            
-            std::vector<halfedge_t*> hole_edges;
-            halfedge_t* he = first_hole_he;
-            do {
-                hole_edges.push_back(he);
-                he = he->next();
-            } while (he != first_hole_he);  
-
-            for (halfedge_t* he : hole_edges) {
-                add_first_triangle(he, first_internal);
-            }
-
-            node_offset += hole.rows(); 
-        }*/
-
-    // flip the initial trinagulation if not Delaunay 
-       flip();
-    //inserting the num_points-1 inner points in the domain
-        for (size_t i = 1; i < internal_points_.size(); ++i) {
-            coords_t u = internal_points_[i];
-            const cell_t* triangle = find_triangle(u);
-
-            if (!triangle) {
-                continue;
-            }
-            insert_vertex(u, triangle);
-        }
-    //reordering id of cells and halfedges to cover some jumps between ids after removing
-        int cont = 0;
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            it->set_id(cont);
-            cont++;
-        }
-
-        dcel_.set_n_cells_(cont);
-
-        int cont_h = 0;
-        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
-            it->set_id(cont_h);
-            cont_h++;
-        }
-
-        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
-
-        std::string filename = "mesh_output.txt";
-        export_triangulation_to_txt(triangulation, filename);
-
-        std::string command = "python3 fdaPDE/src/plot_mesh.py";
-        std::system(command.c_str()); 
-    }
-
-
     void flip() {
-
         // Creating a list of halfedges to check wheter they are locally delaunay or not (in this case flippable)
         std::list<halfedge_t*> halfedges_to_check;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it,++it) {
@@ -414,10 +154,7 @@ class Delaunay {
         while (!halfedges_to_check.empty()) {
             halfedge_t* edge = halfedges_to_check.front();
             halfedges_to_check.pop_front();
-
             cell_t* neighbor = edge->twin()->cell();
-            std::cout<<"cella vicina : "<<neighbor->id()<<" ad halfedge: "<<edge->id()<<std::endl;
-    
             // obtaining the 4 vertices of the quadrilateral formed by the two adjoining triangles 
             coords_t A = edge->node()->coords();
             coords_t B = edge->twin()->node()->coords();
@@ -425,9 +162,6 @@ class Delaunay {
             coords_t D = edge->twin()->prev()->node()->coords();
     
             if (fdapde::internals::in_circle(A, B, C, D) || fdapde::internals::in_circle(A, D, B, C)) {
-                std::cout<<"SONO QUA"<<std::endl;
-                std::cout <<"A: "<<edge->node()->id()<<" B: "<<edge->twin()->node()->id()<<" C: "<<edge->prev()->node()->id()<<" D: "<<edge->twin()->prev()->node()->id()<<std::endl;
-            
                 // we flip since edge is not locally delaunay
                 halfedge_t* e = edge;
                 dcel_.remove_edge(edge);
@@ -447,8 +181,6 @@ class Delaunay {
             
             }
         }
-
-        std::cout<<"FINE FLIP"<<std::endl;
     }
 
 
@@ -546,9 +278,10 @@ class Delaunay {
         }
         // creating the new cells 
         for (halfedge_t* h : C) { 
-            std::cout << h->id() << std::endl;
-         //   add_triangle(h, u->coords().transpose());
+          //  std::cout << h->id() << std::endl;
+            add_triangle(h, u->coords().transpose());
         }
+        
         //reassing the conflicts to the new cells 
         for (node_t* y : conflict_points_temp) {
             for (halfedge_t* h : C) { // Ciclyng on the new cells
@@ -581,8 +314,9 @@ class Delaunay {
     }   
 
     
-    void build_triangulation_graph() {
-
+    //overloaded one if user wants to impose internal points manually 
+    void build_triangulation() {
+    //BISOGNA UNIRE I CHECK PUNTO CASCA SUL LATO DELLA FIND_TRIANGLE CHE ORA NON ESISTE PIU
         if (internal_points_.empty()) {
             return;
         }
@@ -613,7 +347,7 @@ class Delaunay {
 
             bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(t1, t2, t3);
             // Test 1: Verifing if the point is inside the triangle
-            bool found = float
+            bool found = false;
             if(!found){
                 bool inside_triangle = ccw ? fdapde::internals::point_in_2d_tri(y, t1, t2, t3)
                                         : fdapde::internals::point_in_2d_tri(y, t3, t2, t1);
@@ -630,8 +364,6 @@ class Delaunay {
             if (inside_circumcircle) t->add_conflict(n);  
         }
     }
-
-   
     //inserting the num_points-1 inner nodes in the domain
     for (node_t* u : internal_nodes_to_insert) {
         insert_vertex_at_conflict(u);
@@ -660,6 +392,92 @@ class Delaunay {
         std::string command = "python3 fdaPDE/src/plot_mesh.py";
         std::system(command.c_str()); 
     }
+/*
+    void build_triangulation(int num_points) {
+
+        double min_x = boundary_points_.col(0).minCoeff();
+        double max_x = boundary_points_.col(0).maxCoeff();
+        double min_y = boundary_points_.col(1).minCoeff();
+        double max_y = boundary_points_.col(1).maxCoeff();
+    
+        //creating the generator of casual points for the internal_points
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+        std::uniform_real_distribution<double> dist_y(min_y, max_y);
+
+        //generating internal_points 
+        internal_points_.clear();
+        internal_points_.reserve(num_points);
+
+        while (static_cast<int>(internal_points_.size()) < num_points) {
+            coords_t u;
+            u << dist_x(gen), dist_y(gen);
+            std::cout << "nuovo punto interno: " << u.transpose() << std::endl;
+            //verifies if the point is inside the domain (in order to control the concavities)
+            //and discard the points falling on the boundary of the domain
+            if (fdapde::internals::point_in_polygon(boundary_points_, u)){
+            /* {
+                bool in_hole = false;
+                for (const auto& hole : hole_points_) {
+                    if (fdapde::internals::point_in_polygon(hole, u)) {
+                        in_hole = true;
+                        break;
+                    }
+                }
+                if (!in_hole) {*/
+         //       std::cout << "nuovo punto inserito: " << u.transpose() << std::endl;
+         //           internal_points_.push_back(u);}
+              //  }
+          //  }
+/*        }
+    
+        if (internal_points_.empty()) {
+            return;
+        }
+    
+        //inserting fist node in the domain and creating all the triangles from the boundary edges
+        coords_t first_internal = internal_points_.front();
+        
+        auto it = dcel_.halfedges_begin();
+        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
+            halfedge_t* he = &(*it);
+            add_first_triangle(he, first_internal.transpose());
+        }
+
+        flip();
+    //inserting the num_points-1 inner points in the domain
+        for (size_t i = 1; i < internal_points_.size(); ++i) {
+            coords_t u = internal_points_[i];
+            const cell_t* triangle = find_triangle(u);
+
+            if (!triangle) {
+                continue;
+            }
+            insert_vertex(u, triangle);
+        }
+    //reordering id of cells and halfedges to cover some jumps between ids after removing
+        int cont = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            it->set_id(cont);
+            cont++;
+        }
+        dcel_.set_n_cells_(cont);
+
+        int cont_h = 0;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            it->set_id(cont_h);
+            cont_h++;
+        }
+
+        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
+
+        std::string filename = "mesh_output.txt";
+        export_triangulation_to_txt(triangulation, filename);
+
+        std::string command = "python3 fdaPDE/src/plot_mesh.py";
+        std::system(command.c_str()); 
+    }*/
 
     //////////////////////////// END OF NEW STORY /////////////////////////////////
 

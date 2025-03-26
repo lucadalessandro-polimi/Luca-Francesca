@@ -116,8 +116,8 @@ boundary <<  0.0, 0.0,
     //std::cout<<"punti in conflitto con cella id: "<<find_halfedge_from_id(10)->cell()->id()<<" "<<find_halfedge_from_id(10)->cell()->conflicting_points()[0]->id()<<" "<<find_halfedge_from_id(10)->cell()->conflicting_points()[1]->id()<<std::endl;
   //  delaunay.dcel().remove_edge(find_halfedge_from_id(10));
   //  delaunay.dcel().add_polygon(find_halfedge_from_id(0),prova);
-  //  delaunay.print_dcel();
-    delaunay.dcel().export_to_json("dcel_output.json");
+   // delaunay.print_dcel();
+   // delaunay.dcel().export_to_json("dcel_output.json");
 
 
 
