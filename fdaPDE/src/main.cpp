@@ -64,10 +64,12 @@ int main() {
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
 
-    Eigen::Matrix<double, 1, 2> internal;
-    internal <<   7.0, 4.0;
-                //  4.0, 2.0;
-                 // 6.0, 1.0;
+    Eigen::Matrix<double, 5, 2> internal;
+    internal <<   7.0, 4.0,
+                  4.0, 2.0,
+                  6.0, 1.0,
+                  1.0, 5.0,
+                  1.0, 9.5;
 
     Eigen::Matrix<double, 1, 2> prova;
     prova <<  // 5.0, 5.0,
@@ -110,11 +112,11 @@ boundary <<  0.0, 0.0,
   //  delaunay.build_triangulation(1);
 
     delaunay.set_internal_points(internal);
-    delaunay.build_triangulation();
+    delaunay.build_triangulation_graph();
     //std::cout<<"punti in conflitto con cella id: "<<find_halfedge_from_id(10)->cell()->id()<<" "<<find_halfedge_from_id(10)->cell()->conflicting_points()[0]->id()<<" "<<find_halfedge_from_id(10)->cell()->conflicting_points()[1]->id()<<std::endl;
-    delaunay.dcel().remove_edge(find_halfedge_from_id(10));
-    delaunay.dcel().add_polygon(find_halfedge_from_id(0),prova);
-    delaunay.print_dcel();
+  //  delaunay.dcel().remove_edge(find_halfedge_from_id(10));
+  //  delaunay.dcel().add_polygon(find_halfedge_from_id(0),prova);
+  //  delaunay.print_dcel();
     delaunay.dcel().export_to_json("dcel_output.json");
 
 
