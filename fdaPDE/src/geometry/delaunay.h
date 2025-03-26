@@ -498,35 +498,19 @@ class Delaunay {
     }
 */
 
-    // Function to insert a vertex handling conflicts
-    void insert_vertex_at_conflict(node_t* u) {
-        // Retrieve the triangle in conflict with u and we marked as visited 
-        cell_t* vwx = u->conflict(); 
-        vwx->mark_visited();
-
-        std::vector<cell_t*> D = {vwx};
-        std::vector<halfedge_t*> C;
-
-        mark_cavity(u, vwx->halfedge(), D, C);
-        mark_cavity(u, vwx->halfedge()->prev(), D, C);
-        mark_cavity(u, vwx->halfedge()->next(), D, C);
-
-        for (cell_t* t : D) {
-            redistribute_list(u, t);
-            remove_triangle(t);
-        }
-        for (halfedge_t* vw : C) {
-            add_triangle(vw,u.transpose());  
-        }
-    }
-
-
     // Function to mark the cavity during insertion
-    void mark_cavity(node_t* u, halfedge_t* vw, std::vector<cell_t*>& D, std::vector<halfedge_t*>& C) {
+    void mark_cavity(node_t* u, halfedge_t* vw, std::vector<halfedge_t*>& D, std::vector<halfedge_t*>& C) {
+        if(vw->on_boundary()){
+            C.push_back(vw);  
+            std::cout<<"SONO QUA"<<std::endl;
+            return;
+        }
+
         node_t* x = dcel_.adjacent(vw);
         if (!x) {
             return;
         }
+        std::cout<<"nodo adiacente: "<<x->id()<<std::endl; 
         if(vw->twin()->cell()->visited()) return; 
         bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u->coords(), vw->node()->coords(), vw->twin()->node()->coords());
         //test of circumcircle   
@@ -536,17 +520,45 @@ class Delaunay {
         } else {
             inside = fdapde::internals::in_circle(u->coords(), vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
         }
-
-        if (inside) {    //test fails so append wvx to D and expand the cavity 
+    std::cout<<"inside: "<<inside<<std::endl;
+        if (inside) {    //test fails so append vw to D and expand the cavity 
             vw->twin()->cell()->mark_visited();
-            D.push_back(vw->twin()->cell());
+            D.push_back(vw);
             mark_cavity(u, vw->twin()->prev(), D, C);
             mark_cavity(u, vw->twin()->next(), D, C);
         } else {
             C.push_back(vw);  // Add the new triangle to the list (without actually adding it)
+            std::cout<<"SONO QUA CON : "<<vw->id()<<std::endl;
+            return;
         }
     }
 
+    // Function to insert a vertex handling conflicts
+    void insert_vertex_at_conflict(node_t* u) {
+        // Retrieve the triangle in conflict with u and we marked as visited 
+        cell_t* vwx = u->conflict(); 
+        vwx->mark_visited();
+
+        std::vector<halfedge_t*> D;
+        std::vector<halfedge_t*> C;
+
+        mark_cavity(u, vwx->halfedge(), D, C);
+        mark_cavity(u, vwx->halfedge()->prev(), D, C);
+        mark_cavity(u, vwx->halfedge()->next(), D, C);
+
+        for (halfedge_t* h : D) {
+            //   redistribute_list(u, t);
+            std::cout<<h->id()<<std::endl;
+            dcel_.remove_edge(h);
+        }
+
+        for (halfedge_t* h : C) {
+            std::cout<<h->id()<<std::endl;
+         //   add_triangle(h,u->coords().transpose());  
+        }      
+    }
+
+    
     void build_triangulation_graph() {
 
         if (internal_points_.empty()) {
@@ -562,41 +574,40 @@ class Delaunay {
     // flip the initial trinagulation if not Delaunay 
         flip();
     
-    //costruction of the conflict graph
-    //DEVI CREARE I NODI A PARTIRE DA INTERNAL POINTS
-        for (cell_t* t : dcel_.cells()) {  
-            for (node_t* y : internal_points_) {
-            
-                if (y == internal_points_[0]) continue; 
+ /*   //costruction of the conflict graph
+    std::vector<node_t*> internal_nodes_to_insert; 
 
-                bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(t->halfedge()->prev()->node()->coords(), 
-                         t->halfedge()->node()->coords(),t->halfedge()->next()->node()->coords());
-                //test of circumcircle   
-                bool inside;
-                if (ccw) {
-                    inside = fdapde::internals::in_circle(t->halfedge()->prev()->node()->coords(), 
-                    t->halfedge()->node()->coords(),t->halfedge()->next()->node()->coords(), y->coords());
-                } else {
-                    inside = fdapde::internals::in_circle(t->halfedge()->next()->node()->coords(), 
-                    t->halfedge()->node()->coords(),t->halfedge()->prev()->node()->coords(), y->coords());                   
-                }
-                if(inside) {
-                    t->add_conflict(y);  
-                    y->set_conflict(t);
-                }
-            }
+    for (coords_t& y : internal_points_) {
+        if (y == internal_points_[0]) continue;  //already inserted
+    */
+     //   node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), /* boundary = */ false, y.transpose()));
+     /*   internal_nodes_to_insert.push_back(n);
+        // finding the conflicts with existing cells 
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            cell_t* t = &(*it);
+            const coords_t& t1 = t->halfedge()->prev()->node()->coords();
+            const coords_t& t2 = t->halfedge()->node()->coords();
+            const coords_t& t3 = t->halfedge()->next()->node()->coords();
+
+            bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(t1, t2, t3);
+            // Test 1: Verifing if the point is inside the triangle
+            bool inside_triangle = ccw ? fdapde::internals::point_in_2d_tri(y, t1, t2, t3)
+                                       : fdapde::internals::point_in_2d_tri(y, t3, t2, t1);
+            // Assigning principal conflict                            
+            if (inside_triangle) n->set_conflict(t);  
+            // Test 2: Verifing if the point is in the circumcircle 
+            bool inside_circumcircle = ccw ? fdapde::internals::in_circle(t1, t2, t3, y)
+                                           : fdapde::internals::in_circle(t3, t2, t1, y);
+            // adding n to list of conflict with t
+            if (inside_circumcircle) t->add_conflict(n);  
         }
-    /*    
-    //inserting the num_points-1 inner points in the domain
-        for (size_t i = 1; i < internal_points_.size(); ++i) {
-            coords_t u = internal_points_[i];
-            const cell_t* triangle = find_triangle(u);
+    }
 
-            if (!triangle) {
-                continue;
-            }
-            insert_vertex(u, triangle);
-        }*/
+   
+    //inserting the num_points-1 inner nodes in the domain
+    for (node_t* u : internal_nodes_to_insert) {
+        insert_vertex_at_conflict(u);
+    }
     /*    
     //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
@@ -672,6 +683,49 @@ class Delaunay {
         }
 
         file.close();
+    }
+
+    void print_dcel() {
+        std::cout << "==============================" << std::endl;
+        std::cout << "📌 STATO ATTUALE DELLA DCEL 📌" << std::endl;
+        std::cout << "==============================" << std::endl;
+    
+        // 📍 Stampa tutti i nodi
+        std::cout << "\n🟢 NODI: \n";
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                      << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+        }
+    
+        // 🔗 Stampa tutti gli Half-Edges
+        std::cout << "\n🔵 HALF-EDGES: \n";
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            std::cout << "ID: " << it->id()
+                      << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                      << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                      << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                      << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                      << std::endl;
+        }
+    
+        // 🔳 Stampa tutte le Celle
+        std::cout << "\n🟠 CELLE: \n";
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                      << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+            if (it->halfedge()) {
+                halfedge_t* h = it->halfedge();
+                std::cout << "  🔗 Half-edges nella cella: ";
+                halfedge_t* start = h;
+                do {
+                    std::cout << h->id() << " ";
+                    h = h->next();
+                } while (h && h != start);
+                std::cout << std::endl;
+            }
+        }
+    
+        std::cout << "==============================\n" << std::endl;
     }
 
    private:

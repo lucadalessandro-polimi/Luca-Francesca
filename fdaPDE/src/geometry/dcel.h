@@ -179,9 +179,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
         //new code for conflict graph algorithm 
         void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
         std::vector<node_t*>& conflicting_points() const{ return conflicting_points_; }
+        std::vector<node_t*>& conflicting_points() { return conflicting_points_; }
         void clear_conflicts() { conflicting_points_.clear(); }
         bool visited() const { return visited_; }
-        void mark_visited() { visited = true; }
+        void mark_visited() { visited_ = true; }
       
 
        private:
