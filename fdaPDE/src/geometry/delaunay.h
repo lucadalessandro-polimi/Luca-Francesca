@@ -45,7 +45,14 @@ class Delaunay {
         return dcel_.add_polygon(v ,node);
     }
 
-    halfedge_t* add_first_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& node){                                                                       
+
+    
+    halfedge_t* add_first_triangle(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& node){   
+        bool concave=false;
+        auto iter = dcel_.halfedges_begin();
+        halfedge_t* v1 = &(*iter);
+        for (int il = 0; il < boundary_points_.rows(); ++il, ++iter) {
+        halfedge_t* v = &(*iter);                                                                  
         cell_t* c= v->cell();                                                                                    
         std::cout << "-------------------------------------------------------------------------------" <<std::endl;
         auto& cell_begin = *dcel_.cells_begin();
@@ -54,7 +61,7 @@ class Delaunay {
         // add nodes and create ghost halfedges
         node_t* n;
         if(dcel_.find_node(node.row(0))==nullptr){  
-                n = dcel_.insert_node(node_t(dcel_.n_nodes(), /* boundary = */ false, node.row(0)));
+                n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, node.row(0)));
             }
         else {
                 n = dcel_.find_node(node.row(0));  //if node is already a vertex of the mesh
@@ -107,8 +114,12 @@ class Delaunay {
                         if (fdapde::internals::intersect(A, B, C, D)) {  
                             std::cout << "Error: intersection with boundary!" << std::endl;
                             flag = true;
+                            concave=true;
                             node_C = dcel_.find_node(C);
                             node_D = dcel_.find_node(D);
+                            std::cout << "node_A: " << h1->node()->id() << std::endl;
+                            std::cout << "node_B: " << h2->node()->id() << std::endl;
+                            std::cout << "node_C: " << node_C->id() << std::endl;
                             std::cout << "node_D: " << node_D->id() << std::endl;
                             break;
                         }
@@ -118,28 +129,75 @@ class Delaunay {
             if(!flag){
                 halfedge_t* h = dcel_.insert_edge(h1, h2); 
                 if(h && h!=h1)
-                    ghost_halfedges[(i + 1) % (3)] = h->next();  //->next();
+                    ghost_halfedges[(i + 1) % (3)] = h->next();  
             } 
+            /*
             else{
+                std::cout << "h1: " << h1->id() << std::endl;
+                std::cout << "h2: " << h2->id() << std::endl;
                 //ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->prev(), h1->next())->twin();  //non vale sempre
-                if(dcel_.find_halfedge(node_D, h1->next()->cell())){
-                    std::cout << "qui" << std::endl;
-                    ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->next(), dcel_.find_halfedge(node_D, h1->next()->cell()))->twin();
+                if (h1->prev() && dcel_.find_halfedge(node_C, h1->prev()->cell())){
+                    std::cout << "QUI 1 " << std::endl;
+                    if( dcel_.find_halfedge(node_C, h1->prev()->cell()) ->next()->node()!= h1->prev()->node()){
+                        ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->prev(), dcel_.find_halfedge(node_C, h1->prev()->cell()))->next(); //?? TWIN O NEXT??
+                        if(ghost_halfedges[(i + 1) % (3)]==h1)
+                          if(h2 && dcel_.find_halfedge(node_C, h2->cell())){
+                            std::cout << "QUI 2 " << std::endl;
+                            if( dcel_.find_halfedge(node_C, h2->cell()) ->next()->node()!= h2->node()){
+                                ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h2, dcel_.find_halfedge(node_C, h2->cell()))->next(); //?? TWIN O NEXT??
+                            }
+                          }
+                    }
                 }
-                else{
-                    std::cout << "C: " <<node_C->id() << std::endl;
-                    ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1->prev(), dcel_.find_halfedge(node_C, h1->next()->cell()))->twin();
-                }
-            }
+                else if(h2->next() && dcel_.find_halfedge(node_D, h2->next()->cell()) ){  //??
+                    std::cout << "QUI 3 " << std::endl;
+                    if( dcel_.find_halfedge(node_D, h2->next()->cell()) ->next()->node()!= h2->next()->node()){
+                        ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h2->next(), dcel_.find_halfedge(node_D, h2->next()->cell()))->next(); //?? TWIN O NEXT??
+                        if(ghost_halfedges[(i + 1) % (3)]==h2->next()->next())
+                          if(h1 && dcel_.find_halfedge(node_D, h1->cell())){
+                            std::cout << "QUI 4 " << std::endl;
+                            if( dcel_.find_halfedge(node_D, h1->cell()) ->next()->node()!= h1->node()){
+                                ghost_halfedges[(i + 1) % (3)] = dcel_.insert_edge(h1, dcel_.find_halfedge(node_D, h1->cell()))->next(); //?? TWIN O NEXT??
+                            }
+                          }
+                    }
+                }    
+            }*/
+        }
         }
         
+        if(concave){
+            std::cout << "CONCAVE" << std::endl;
+            for(auto it=dcel_.halfedges_begin(); it!=dcel_.halfedges_end(); ++it){
+                halfedge_t* h = &(*it);
+                if(!h->cell()) 
+                    break;
+                int i=0;
+                do{
+                    h=h->next();
+                    i++;
+                }while(h!=&(*it));
+                if(i>3){
+                    //IN TEORIA VISTO CHE SCANSIONO halfedges DOVREI PARTIRE DAL BORDO, 
+                    //QUINDI QUESTO CONTROLLO DOVREBBE ANDARE BENE
+                    std::cout << "Current ID: " << h->id() << std::endl;
+                    for(int l=0; l<i-3; ++l){
+                      halfedge_t* n=h->next()->next();
+                      if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()))
+                        std::cout << "ID: " << dcel_.insert_edge(h, n)->id()   << std::endl;
+                      h=n;   
+                    }
+                }
+
+            }
+        }
         //c->set_halfedge(v);
 
-        return c->halfedge();
+        //return c->halfedge();
+        return v1;
     }
     
-
-    
+        
     const cell_t* find_triangle(const coords_t& P) {
         
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
@@ -264,10 +322,7 @@ class Delaunay {
         coords_t first_internal = internal_points_.front();
         
         auto it = dcel_.halfedges_begin();
-        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
-            halfedge_t* he = &(*it);
-            add_first_triangle(he, first_internal.transpose());
-        }
+        add_first_triangle( first_internal.transpose());
 /*
         int node_offset = boundary_points_.rows(); 
         for (const auto& hole : hole_points_) {
@@ -334,10 +389,8 @@ class Delaunay {
         //inserting fist node in the domain and creating all the triangles from the boundary edges
         coords_t first_internal = internal_points_.front();
         auto it = dcel_.halfedges_begin();
-        for (int i = 0; i < boundary_points_.rows(); ++i, ++it) {
-            halfedge_t* he = &(*it);
-            add_first_triangle(he, first_internal.transpose());
-        }
+        add_first_triangle(first_internal.transpose());
+        
 /*
         int node_offset = boundary_points_.rows(); 
         for (const auto& hole : hole_points_) {
@@ -361,7 +414,7 @@ class Delaunay {
         }*/
 
     // flip the initial trinagulation if not Delaunay 
-       flip();
+       //flip();
     //inserting the num_points-1 inner points in the domain
         for (size_t i = 1; i < internal_points_.size(); ++i) {
             coords_t u = internal_points_[i];

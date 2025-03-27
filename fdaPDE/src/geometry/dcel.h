@@ -528,6 +528,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
     node_t* adjacent(halfedge_t* edge) const {return (edge->twin()) ? edge->twin()->prev()->node() : nullptr;  }
 
     halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
+        if (!v1 || !v2) {
+            std::cerr << "Error: one of the halfedges is null" << std::endl;
+            return v1;
+        }
         if (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()){
             std::cout << v1->node()->id() << std::endl;
             std::cout << v2->node()->id() << std::endl;
@@ -538,7 +542,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             std::cerr << "Error: the two halfedges belong to different cells. It's not allowed to insert an edge in between them" << std::endl;
             return v1;
         }
-        if (v1 && v2 && v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
+        if (v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
             std::cout << "Consecutive halfedges" << std::endl;
             return v1;   
         }

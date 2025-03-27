@@ -64,10 +64,16 @@ int main() {
  */
 
     Eigen::Matrix<double, 1, 2> internal;
-    internal <<   1.0, 0.0;
-/*    
+    internal << //0.6, 0.6;
+                //0.142559,  1.95381;
+                //1.61805, 0.289818;
+                2.45651, 4.29328;
+
+    Eigen::Matrix<double, 1, 2> prova;
+    prova << 4.0, 1.0;
+ /*   
     Eigen::Matrix<double, 13, 2> boundary;
-    boundary <<  0.5, 1.0,  
+    boundary << 0.5, 1.0, 
                 0.3, 0.3,  
                 1.0, 0.7,  
                 1.7, 0.0, 
@@ -79,15 +85,35 @@ int main() {
                 0.0, 2.0,  
                 0.0, 1.7,
                 0.0, 1.5,
-                0.0, 1.3;
- */             
+                0.0, 1.3;*/
+    /*
+    Eigen::Matrix<double, 18, 2> boundary; //scala
+    boundary << 0.0, 0.0, 
+                3.0, 0.0,  
+                6.0, 0.0,  
+                9.0, 0.0, 
+                12.0, 0.0,
+                12.0, 2.0, 
+                9.0, 2.0,  
+                9.0, 4.0,
+                8.0, 4.0,
+                7.0, 4.0,
+                6.0, 4.0,  
+                6.0, 6.0,
+                3.0, 6.0,
+                3.0, 8.0,
+                0.0, 8.0,
+                0.0, 6.0,
+                0.0, 4.0,
+                0.0, 2.0;
+    */          
     
-Eigen::Matrix<double, 5, 2> boundary;
+Eigen::Matrix<double, 4, 2> boundary;
 boundary <<  0.0, 0.0,  
-            1.0, 0.0,  
-            1.0, 1.0,
-            0.5, 0.5,  
-            0.0, 1.0;
+            10.0, 0.0,  
+            10.0, 10.0,
+         //   0.5, 0.5,  
+            0.0, 10.0;
 
     Delaunay<2, 2> delaunay(boundary);
 
@@ -99,12 +125,15 @@ boundary <<  0.0, 0.0,
     };
 
 
-    //delaunay.build_triangulation(4);
+    //delaunay.build_triangulation(5);
 
-   // delaunay.set_internal_points(internal);
-   // delaunay.build_triangulation();
-   // //delaunay.print_dcel();
-   std::cout<<"controllo point in polygon: "<<fdapde::internals::point_in_polygon(boundary,internal)<<std::endl;
+    delaunay.set_internal_points(internal);
+    delaunay.build_triangulation();
+    delaunay.dcel().remove_edge(find_halfedge_from_id(10));
+    delaunay.add_triangle(find_halfedge_from_id(0), prova);
+    //for(int i=0; i<1; ++i)
+    //    delaunay.add_first_triangle(find_halfedge_from_id(i), internal);
+    delaunay.print_dcel();
     
     delaunay.dcel().export_to_json("dcel_output.json");
 
