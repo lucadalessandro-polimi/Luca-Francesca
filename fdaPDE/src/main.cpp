@@ -1,7 +1,8 @@
 #include <iostream>
 #include <cmath>
 #include <list>
-#include <unordered_set>
+#include <unordered_map>
+#include <vector>
 #include <Eigen/Dense>
 #include <cstdlib> 
 #include <fstream>
@@ -126,16 +127,15 @@ boundary <<  0.0, 0.0,
 
 
     //delaunay.build_triangulation(5);
+  //  delaunay.build_triangulation(1);
 
     delaunay.set_internal_points(internal);
-    delaunay.build_triangulation();
-    delaunay.dcel().remove_edge(find_halfedge_from_id(10));
-    delaunay.add_triangle(find_halfedge_from_id(0), prova);
-    //for(int i=0; i<1; ++i)
-    //    delaunay.add_first_triangle(find_halfedge_from_id(i), internal);
-    delaunay.print_dcel();
-    
-    delaunay.dcel().export_to_json("dcel_output.json");
+    delaunay.build_triangulation_graph();
+    //std::cout<<"punti in conflitto con cella id: "<<find_halfedge_from_id(10)->cell()->id()<<" "<<find_halfedge_from_id(10)->cell()->conflicting_points()[0]->id()<<" "<<find_halfedge_from_id(10)->cell()->conflicting_points()[1]->id()<<std::endl;
+  //  delaunay.dcel().remove_edge(find_halfedge_from_id(10));
+  //  delaunay.dcel().add_polygon(find_halfedge_from_id(0),prova);
+   // delaunay.print_dcel();
+   // delaunay.dcel().export_to_json("dcel_output.json");
 
 
 
