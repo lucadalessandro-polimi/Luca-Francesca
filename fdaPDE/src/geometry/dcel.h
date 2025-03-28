@@ -41,7 +41,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         coords_t coords_;
         //new code needed for conflict graph algorithm
         cell_t* conflicting_triangle_=nullptr;
-        bool valid_conflict_; 
+        bool valid_conflict_ = false; 
 
        public:
 
@@ -186,8 +186,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
         std::vector<node_t*>& conflicting_points() const{ return conflicting_points_; }
         std::vector<node_t*>& conflicting_points() { return conflicting_points_; }
         void clear_conflicts() { conflicting_points_.clear(); }
-        bool visited() const { return visited_; }
-        void mark_visited() { visited_ = true; }
+        //bool visited() const { return visited_; }
+        //void mark_visited() { visited_ = true; }
       
 
        private:
@@ -195,7 +195,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         halfedge_t* h_;
         //new code needed for conflict graph algorithm 
         std::vector<node_t*> conflicting_points_;
-        bool visited_ = false;
+        //bool visited_ = false;
     };
 
 
@@ -411,7 +411,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 ++it2;
             }
             if (it1 != halfedges_.end() && it2 != halfedges_.end()) {
-                halfedges_.erase(it1);
+                halfedges_.erase(it1);  //elimina anche il puntatore?
                 halfedges_.erase(it2);
             }
         }
@@ -570,11 +570,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
         //    std::cout << "halfedge v2 : "<<v2->id() << std::endl;
         //    std::cout << "cella1 " << v1->cell()->id() << std::endl;
         //    std::cout << "cella2 " << v2->cell()->id() << std::endl;
-        //    std::cerr << "Error: the two halfedges belong to different cells. It's not allowed to insert an edge in between them" << std::endl;
+            std::cerr << "Error: the two halfedges belong to different cells. It's not allowed to insert an edge in between them" << std::endl;
             return v1;
         }
         if (v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node()) ) {
-            std::cout << "Consecutive halfedges" << std::endl;
+        //    std::cout << "Consecutive halfedges" << std::endl;
             return v1;   
         }
         if(v1==v2 || v1->node()==v2->node()){
@@ -670,40 +670,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     h = find_halfedge(n,c);}
             else{
                     h = emplace_halfedge_(n);
+                    h->set_cell(c);
+
             }
             //NON STIAMO ASSEGNANDO L'HALFEDGE AL NODO 
             ghost_halfedges[i+2] = h;
         }
         // add edges
-        //std::vector<std::pair<coords_t, coords_t>> boundary_edges = get_boundary_edges();
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = ghost_halfedges[i];
             halfedge_t* h2 = ghost_halfedges[(i + 1) % (nodes_polygon + 2)];
-
-            // Check for intersection with boundary edges
-            //coords_t A = h1->node()->coords();
-            //coords_t B = h2->node()->coords();
-            /*
-            bool flag=false;
-            if(!(h1->on_boundary() && h2->on_boundary())){  //if the edges are not both on the boundary
-               int num = 0;
-                for (const auto& edge : boundary_edges) {
-                    if(num==boundary_edges.size()/2) break;   //DA RIVEDERE IL CHECK DOPO AVER AGGIUNTO COME ATTRIBUTO I BOUNDARY EDGES
-                    num++;
-                    if(A!=edge.first && A!=edge.second && B!=edge.first && B!=edge.second){
-                      if (do_segments_intersect(A, B, edge.first, edge.second)) {
-                        std::cout << "Error:intersection with boundary!" << std::endl;
-                        flag=true;
-                      }
-                    }
-                }
-            }*/
-            //if(!intersection){
-                ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
-            //} 
-           // else{ 
-           //     ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1->prev(), h1->next())->next();
-           // }
+            ghost_halfedges[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
         }
 
         c->set_halfedge(v);
