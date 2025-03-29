@@ -1675,3 +1675,136 @@ void print_dcel() {
                     internal_points_.erase(it, internal_points_.end());
                     continue;
                 }
+
+
+
+                            // Debug: Verifica dei conflitti triangolo -> nodi
+        std::cout << "=== Conflitti Triangolo -> Nodi ===" << std::endl;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            cell_t* t = &(*it);
+            if (!t) continue;
+            auto& conflict_list = t->conflicting_points();
+            std::cout << "Triangolo " << t->id() << " ha conflitti con nodi: ";
+            for (node_t* point : conflict_list) {
+                std::cout << point->id() << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        std::cout << "=== Conflitti Nodi -> Triangoli ===" << std::endl;
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            node_t* n = &(*it);
+            if (!n) continue;
+            if(!n->on_boundary() && n->conflict()){
+            cell_t* conflict = n->conflict();
+            std::cout << "Nodo " << n->id() << " appartiene a : "<<conflict->id() << std::endl;}
+        //  std::cout << "Nodo " << n->id() << "   "<<n->is_valid_conflict()<<std::endl;
+        }
+
+
+
+            // Function to insert a vertex handling conflicts
+    void insert_vertex_at_conflict(node_t* u) {
+        // Retrieve the triangle in conflict with u and we marked as visited 
+        cell_t* t = u->conflict(); 
+        std::vector<halfedge_t*> D;
+        std::vector<halfedge_t*> C;
+
+        mark_cavity(u, t->halfedge(), D, C);
+        mark_cavity(u, t->halfedge()->prev(), D, C);
+        mark_cavity(u, t->halfedge()->next(), D, C);
+        
+        //passing the conflicts of cthe cavity to a temporary vector 
+        std::vector<node_t*> conflict_points_temp; 
+        for (halfedge_t* h : D) { 
+            cell_t* current_cell = h->cell();
+            if (current_cell) {
+                auto& conflict_list = current_cell->conflicting_points();
+                for (node_t* point : conflict_list) {
+                    if (point != u) { 
+                        conflict_points_temp.push_back(point);
+                        // checking if the point is in the cavity or is in a cell that does not belong to the cavity 
+                        if (point->conflict() == current_cell) {
+                            point->set_valid_conflict(false); // Invalidating the conflict 
+                        }
+                    }
+                }
+                current_cell->clear_conflicts();
+            }
+
+
+            cell_t* twin_cell = h->twin()->cell();
+            if (twin_cell) {
+                auto& conflict_list = twin_cell->conflicting_points();
+                for (node_t* point : conflict_list) {
+                    if (point != u) { 
+                        conflict_points_temp.push_back(point);
+                        // checking if the point is in the cavity or is in a cell that does not belong to the cavity 
+                        if (point->conflict() == twin_cell) {
+                            point->set_valid_conflict(false); // Invalidating the conflict 
+                        }
+                    }
+                }
+                twin_cell->clear_conflicts();
+            }
+        }
+        if(D.empty()){
+            cell_t* current_cell = u->conflict();
+            if (current_cell) {
+                auto& conflict_list = current_cell->conflicting_points();
+                for (node_t* point : conflict_list) {
+                    if (point != u) { 
+                        conflict_points_temp.push_back(point);
+                        // checking if the point is in the cavity or is in a cell that does not belong to the cavity 
+                        if (point->conflict() == current_cell) {
+                            point->set_valid_conflict(false); // Invalidating the conflict 
+                        }
+                    }
+                }
+                current_cell->clear_conflicts();
+            }
+        }
+        u->remove_conflict();
+        
+        // removing cells of the cavity 
+        for (halfedge_t* h : D) { 
+            //std::cout <<"CIAO"<< h->id() << std::endl;
+            dcel_.remove_edge(h);
+        }
+        // creating the new cells 
+        for (halfedge_t* h : C) { 
+          //  std::cout << h->id() << std::endl;
+            add_triangle(h, u->coords().transpose());
+        }
+        
+        // reassigning the conflicts to the new cells 
+        for (node_t* y : conflict_points_temp) {
+            bool found = false;
+            for (halfedge_t* h : C) { // Ciclyng on the new cells
+                cell_t* t = h->cell();
+           // std::cout<<"TRIANGOLO CON ID: "<<h->cell()->id()<<std::endl;
+                if (!t) continue;
+                const coords_t& t1 = t->halfedge()->prev()->node()->coords();
+                const coords_t& t2 = t->halfedge()->node()->coords();
+                const coords_t& t3 = t->halfedge()->next()->node()->coords();
+    
+                bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(t1, t2, t3);
+                // Test 1: Verifing if the point is inside the triangle
+                if (!y->is_valid_conflict() && !found){
+                    bool inside_triangle = ccw ? fdapde::internals::point_in_2d_tri(y->coords(), t1, t2, t3)
+                                            : fdapde::internals::point_in_2d_tri(y->coords(), t3, t2, t1);
+                    // Assigning principal conflict                            
+                    if (inside_triangle) {
+                    y->set_conflict(t);
+                    y->set_valid_conflict(true);
+                    found = true;
+                    } 
+                } 
+                // Test 2: Verifing if the point is in the circumcircle 
+                bool inside_circumcircle = ccw ? fdapde::internals::in_circle(t1, t2, t3, y->coords())
+                                                : fdapde::internals::in_circle(t3, t2, t1, y->coords());
+                // adding n to list of conflict with t
+                if (inside_circumcircle) t->add_conflict(y);  
+            }
+        }
+    }  

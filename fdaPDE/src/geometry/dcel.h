@@ -41,7 +41,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
         coords_t coords_;
         //new code needed for conflict graph algorithm
         cell_t* conflicting_triangle_=nullptr;
-        bool valid_conflict_ = false; 
+        bool inserted_ = false;
+
 
        public:
 
@@ -94,8 +95,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 clear_conflict();
             }
         }
-        void set_valid_conflict(bool valid) { valid_conflict_ = valid; }
-        bool is_valid_conflict() const { return valid_conflict_; }
+        bool is_inserted() const { return inserted_; }
+        void set_inserted(bool val) { inserted_ = val; }
 
         
 

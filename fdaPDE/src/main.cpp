@@ -24,7 +24,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-/*
+
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -45,8 +45,8 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-*/
-/*    
+
+ /*   
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
         double theta = 2.0 * M_PI * i / N;
@@ -64,7 +64,7 @@ int main() {
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
 
-   
+ /*  
     Eigen::Matrix<double, 13, 2> boundary;
     boundary << 0.5, 1.0, 
                 0.3, 0.3,  
@@ -78,7 +78,7 @@ int main() {
                 0.0, 2.0,  
                 0.0, 1.7,
                 0.0, 1.5,
-                0.0, 1.3;
+                0.0, 1.3;*/
     /*
     Eigen::Matrix<double, 18, 2> boundary; //scala
     boundary << 0.0, 0.0, 
@@ -101,16 +101,14 @@ int main() {
                 0.0, 2.0;
     */
 
-    Eigen::Matrix<double, 6, 2> internal;
+    Eigen::Matrix<double, 4, 2> internal;
     internal << 5.0, 5.0,
-                5.0, 1.0,
-                7.0, 1.0,
-                4.0, 3.5,
-                8.0, 5.0,
-                1.0, 2.0;
+                5.0, 15.0,
+                27.0, 11.0,
+                34.0, 8.5;
 
-    Eigen::Matrix<double, 2, 1> prova;
-    prova << 1.4, 0.5;
+    Eigen::Matrix<double, 1, 2> prova;
+    prova << 3.8, 5.0;
                 
           
 /*    
@@ -121,25 +119,27 @@ boundary <<  0.0, 0.0,
          //   0.5, 0.5,  
             0.0, 10.0;*/
 
-   Delaunay<2, 2> delaunay(boundary);
-
+   // Delaunay<2, 2> delaunay(boundary);
+  //  Delaunay<2, 2> delaunay(boundary,holes);
+/*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
         return nullptr; 
     };
-
-    delaunay.build_triangulation(10);
-    std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
-    delaunay.flip();
-    delaunay.dcel().export_to_json("dcel_output.json");
+*/
+    //delaunay.build_triangulation(internal, boundary);
+    //delaunay.build_triangulation(100,boundary);
+    //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
+    //delaunay.flip();
+    //delaunay.dcel().export_to_json("dcel_output.json");
     
 
 
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-/*
+
     Delaunay<2, 2> delaunay_100(boundary); 
     Delaunay<2, 2> delaunay_1000(boundary); 
     Delaunay<2, 2> delaunay_10000(boundary); 
@@ -151,7 +151,7 @@ boundary <<  0.0, 0.0,
 
         auto start = high_resolution_clock::now();  // starting measuring time 
         
-        delaunay_100.build_triangulation(num_points);   // function to test
+        delaunay_100.build_triangulation(num_points,boundary);   // function to test
         
         auto end = high_resolution_clock::now();    // ending measuring time 
         auto duration = duration_cast<milliseconds>(end - start).count();
@@ -163,7 +163,7 @@ boundary <<  0.0, 0.0,
 
         start = high_resolution_clock::now();  // starting measuring time 
         
-        delaunay_1000.build_triangulation(num_points);   // function to test
+        delaunay_1000.build_triangulation(num_points,boundary);   // function to test
         
         end = high_resolution_clock::now();    // ending measuring time 
         duration = duration_cast<milliseconds>(end - start).count();
@@ -175,7 +175,7 @@ boundary <<  0.0, 0.0,
 
         start = high_resolution_clock::now();  // starting measuring time 
         
-        delaunay_10000.build_triangulation(num_points);   // function to test
+        delaunay_10000.build_triangulation(num_points,boundary);   // function to test
         
         end = high_resolution_clock::now();    // ending measuring time 
         duration = duration_cast<milliseconds>(end - start).count();
@@ -184,6 +184,6 @@ boundary <<  0.0, 0.0,
         outfile << num_points << "," << duration << "\n"; 
 
     outfile.close();
-*/    
+    
     return 0;
 }
