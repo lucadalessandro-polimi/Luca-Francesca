@@ -72,7 +72,7 @@ class Delaunay {
             else{
                 ghost_halfedges[1] = dcel_.find_halfedge(v->next()->node(),ghost_halfedges[2]->cell());
                 if(!ghost_halfedges[1]){
-                    dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);
+                    dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);  //NON SICURISSIMA
                     return;
                 }
             }
@@ -118,7 +118,7 @@ class Delaunay {
                     h=h->next();
                     i++;
                 }while(h!=&(*it));
-                if(i>3)
+                if(i>3) //not a triangle yet
                     for(int l=0; l<i-3; ++l){
                       halfedge_t* n=h->next()->next();
                       if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()))

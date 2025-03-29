@@ -64,8 +64,8 @@ int main() {
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
 
- /*  
-    Eigen::Matrix<double, 13, 2> boundary;
+    /*
+    Eigen::Matrix<double, 13, 2> boundary;  //concave
     boundary << 0.5, 1.0, 
                 0.3, 0.3,  
                 1.0, 0.7,  
@@ -99,7 +99,7 @@ int main() {
                 0.0, 6.0,
                 0.0, 4.0,
                 0.0, 2.0;
-    */
+    
 
     Eigen::Matrix<double, 4, 2> internal;
     internal << 5.0, 5.0,
@@ -111,13 +111,13 @@ int main() {
     prova << 3.8, 5.0;
                 
           
-/*    
-Eigen::Matrix<double, 4, 2> boundary;
-boundary <<  0.0, 0.0,  
-            10.0, 0.0,  
-            10.0, 10.0,
-         //   0.5, 0.5,  
-            0.0, 10.0;*/
+    /*    
+    Eigen::Matrix<double, 4, 2> boundary;
+    boundary <<  0.0, 0.0,  
+                10.0, 0.0,  
+                10.0, 10.0,
+            //   0.5, 0.5,  
+                0.0, 10.0;*/
 
    // Delaunay<2, 2> delaunay(boundary);
   //  Delaunay<2, 2> delaunay(boundary,holes);
