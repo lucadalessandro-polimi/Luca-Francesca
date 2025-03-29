@@ -404,6 +404,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
 
     // modifiers
+
+    void set_n_cells_(int cont){n_cells_ = cont;}
+
     node_t* insert_node(const node_t& node) {
         nodes_.push_back(node);
 	    n_nodes_++;

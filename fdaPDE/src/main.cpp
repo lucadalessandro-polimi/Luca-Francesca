@@ -64,8 +64,8 @@ int main() {
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
 
-   
-    Eigen::Matrix<double, 13, 2> boundary;
+    /*
+    Eigen::Matrix<double, 13, 2> boundary;  //concave
     boundary << 0.5, 1.0, 
                 0.3, 0.3,  
                 1.0, 0.7,  
@@ -79,7 +79,7 @@ int main() {
                 0.0, 1.7,
                 0.0, 1.5,
                 0.0, 1.3;
-    /*
+    */
     Eigen::Matrix<double, 18, 2> boundary; //scala
     boundary << 0.0, 0.0, 
                 3.0, 0.0,  
@@ -99,7 +99,7 @@ int main() {
                 0.0, 6.0,
                 0.0, 4.0,
                 0.0, 2.0;
-    */
+    
 
     Eigen::Matrix<double, 6, 2> internal;
     internal << 5.0, 5.0,
@@ -110,7 +110,7 @@ int main() {
                 1.0, 2.0;
 
     Eigen::Matrix<double, 2, 1> prova;
-    prova << 1.4, 0.5;
+    prova << 0.6, 0.6;
                 
           
     /*    
@@ -130,10 +130,9 @@ int main() {
         return nullptr; 
     };
 
-    delaunay.build_triangulation(5);
-    delaunay.dcel().remove_polygon(18); 
+    delaunay.build_triangulation(10);
     std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
-    delaunay.flip();
+    //delaunay.flip();
     delaunay.dcel().export_to_json("dcel_output.json");
     
 
