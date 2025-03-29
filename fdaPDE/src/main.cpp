@@ -113,13 +113,13 @@ int main() {
     prova << 1.4, 0.5;
                 
           
-/*    
-Eigen::Matrix<double, 4, 2> boundary;
-boundary <<  0.0, 0.0,  
-            10.0, 0.0,  
-            10.0, 10.0,
-         //   0.5, 0.5,  
-            0.0, 10.0;*/
+    /*    
+    Eigen::Matrix<double, 4, 2> boundary;
+    boundary <<  0.0, 0.0,  
+                10.0, 0.0,  
+                10.0, 10.0,
+            //   0.5, 0.5,  
+                0.0, 10.0;*/
 
    Delaunay<2, 2> delaunay(boundary);
 
@@ -130,7 +130,8 @@ boundary <<  0.0, 0.0,
         return nullptr; 
     };
 
-    delaunay.build_triangulation(10);
+    delaunay.build_triangulation(5);
+    delaunay.dcel().remove_polygon(18); 
     std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     delaunay.flip();
     delaunay.dcel().export_to_json("dcel_output.json");

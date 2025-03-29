@@ -83,8 +83,10 @@ class Delaunay {
                 ghost_halfedges[1] = v->next();
             else{
                 ghost_halfedges[1] = dcel_.find_halfedge(v->next()->node(),ghost_halfedges[2]->cell());
-                if(!ghost_halfedges[1])
-                    return dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);
+                if(!ghost_halfedges[1]){
+                    dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);  //NON SICURISSIMA
+                    return;
+                }
             }
             
             // add edges
