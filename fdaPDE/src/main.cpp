@@ -129,11 +129,11 @@ int main() {
         return nullptr; 
     };
 */
-    delaunay.build_triangulation(internal, boundary);
-    //delaunay.build_triangulation(100,boundary);
+    //delaunay.build_triangulation(internal, boundary);
+    delaunay.build_triangulation(1000,boundary);
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    delaunay.dcel().export_to_json("dcel_output.json");
+    //delaunay.dcel().export_to_json("dcel_output.json");
     
 
 
@@ -184,6 +184,6 @@ int main() {
         outfile << num_points << "," << duration << "\n"; 
 
     outfile.close();
- */  
+*/  
     return 0;
 }

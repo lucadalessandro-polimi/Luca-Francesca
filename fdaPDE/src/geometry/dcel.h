@@ -23,14 +23,6 @@ using namespace std::chrono;
 
 namespace fdapde {
 
-// Custom hash for pair<int, int>
-struct pair_hash {
-    template <class T1, class T2>
-    std::size_t operator () (const std::pair<T1,T2> &p) const {
-        return std::hash<T1>{}(p.first) ^ (std::hash<T2>{}(p.second) << 1);
-    }
-};
-
 // implementation of the Double Connected Edge List data structure (also known as DCEL or half-edge)
 template <int LocalDim, int EmbedDim> class DCEL {
    public:
@@ -491,10 +483,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
         return h1;
     }
-
-    halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){  //DARE IN INGRESSO ANCHE I BOUNDARY EDGES...
-        int nodes_polygon= nodes.rows();                                                                         //passare boundary edges se ci sono....
-        cell_t* c= v->cell();                                                                                    //ma per i poligoni va bene??
+    halfedge_t* add_polygon(halfedge_t* v, const std::vector<node_t*>& nodes){
+      int nodes_polygon= nodes.size();                                                                         
+        cell_t* c= v->cell();                                                                                    
     
         std::vector<halfedge_t*> halfedges_to_call(nodes_polygon +2 ); 
         halfedges_to_call[0] = v;
@@ -502,16 +493,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
     
         // add nodes and create ghost halfedges
        for (int i = 0; i < nodes_polygon; ++i) {
-            node_t* n;
-            if(find_node(nodes.row(i))==nullptr) 
-                n = insert_node(node_t(n_nodes_, false, nodes.row(i)));
-            else // node is already a vertex of the mesh
-                n = find_node(nodes.row(i));  
             halfedge_t* h = nullptr;
-            if(find_halfedge(n,c))
-                    h = find_halfedge(n,c);
+            if(find_halfedge(nodes[i],c))
+                    h = find_halfedge(nodes[i],c);
             else{
-                    h = emplace_halfedge_(n);
+                    h = emplace_halfedge_(nodes[i]);
                     h->set_cell(c);
             } 
             halfedges_to_call[i+2] = h;
@@ -526,10 +512,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
         c->set_halfedge(v);
         return c->halfedge();
     }
-    
 
 
-    
+ 
     halfedge_t* remove_edge(halfedge_t* v1){        
         if(!v1) return nullptr;
 
@@ -642,25 +627,18 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
     // return the node of the halfedge previous to h 
     node_t* adjacent(halfedge_t* h) const {return (h->twin()) ? h->twin()->prev()->node() : nullptr;  }
-    // find a node given its coordinates
-    node_t* find_node(const Eigen::Matrix<double, Eigen::Dynamic, 1>& position) {
-        for (auto& n : nodes_) 
-            if (n.coords().isApprox(position, 1e-6)) 
-                return &n;
-        return nullptr;
-    }
+
     // find the halfedge given its node and cell
     halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
-        for (auto& h : halfedges_) {
-            if (h.cell() == cell && h.node() == n) 
-                return &h;
-        }
+        halfedge_t* h= cell->halfedge();
+        halfedge_t* end=h;
+        do{
+            if(h->node()==n)
+                return h;
+            h = h->next();
+        }while(h!=end);
         return nullptr;
-    }/*
-    halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
-        auto it = halfedge_lookup_.find({n->id(), cell->id()});
-        return (it != halfedge_lookup_.end()) ? it->second : nullptr;
-    }*/
+    }
   
 
     // internal utils
@@ -668,15 +646,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
         halfedges_.emplace_back(n_halfedges_++, std::forward<Args>(args)...);
         return std::addressof(halfedges_.back());
     }
-    /*
-    template <typename... Args> halfedge_t* emplace_halfedge_(Args&&... args) {
-        halfedges_.emplace_back(n_halfedges_++, std::forward<Args>(args)...);
-        halfedge_t* h = std::addressof(halfedges_.back());
-        if (h->node() && h->cell()) {
-            halfedge_lookup_[{h->node()->id(), h->cell()->id()}] = h;
-        }
-        return h;
-    }*/
 
     template <typename... Args> node_t* emplace_node_(Args&&... args) {
         nodes_.emplace_back(n_nodes_++, std::forward<Args>(args)...);
@@ -688,10 +657,6 @@ private:
     std::list<halfedge_t> halfedges_;
     std::list<cell_t> cells_;
     int n_nodes_, n_halfedges_, n_cells_;
-
-
-    // optimized lookup for halfedges by (node_id, cell_id)
-    //std::unordered_map<std::pair<int, int>, halfedge_t*, pair_hash> halfedge_lookup_;
 };
 
 

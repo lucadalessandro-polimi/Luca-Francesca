@@ -30,12 +30,11 @@ class Delaunay {
         dcel_ = dcel;
         flip();
     }
-    halfedge_t* add_triangle(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& node){
+    halfedge_t* add_triangle(halfedge_t* v,const std::vector<node_t*>& node){
         return dcel_.add_polygon(v ,node);
     }
 
-    void add_first_triangle(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& point,
-                            const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
+    void add_first_triangle(node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
         bool concave=false;
         auto iter = dcel_.halfedges_begin();
 
@@ -45,15 +44,7 @@ class Delaunay {
             cell_t* c= v->cell();                                                                                    
             auto& cell_begin = *dcel_.cells_begin();
             std::vector<halfedge_t*> ghost_halfedges(3); 
-        
-            // add nodes and create ghost halfedges
-            node_t* n;
-            if(dcel_.find_node(point.row(0))==nullptr){  
-                    n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, point.row(0)));
-                }
-            else {  // node is already a vertex of the mesh
-                    n = dcel_.find_node(point.row(0));  
-            }
+
             if(dcel_.find_halfedge(n,c)){
                 halfedge_t* h = dcel_.find_halfedge(n,c);
                 ghost_halfedges[2] = h;
@@ -76,7 +67,6 @@ class Delaunay {
                     return;
                 }
             }
-            
             // add edges
             for (int i = 0; i < 3 ; ++i) {
                 halfedge_t* h1 = ghost_halfedges[i];
@@ -205,7 +195,7 @@ class Delaunay {
         }
     }
 
-
+/*
     // Function to insert a vertex handling conflicts
     void insert_vertex_at_conflict(node_t* u) {
         // Retrieve the triangle in conflict with u and we marked as visited 
@@ -263,14 +253,105 @@ class Delaunay {
         }
         // creating the new cells 
         for (halfedge_t* h : C) { 
-            add_triangle(h, u->coords().transpose());
+            add_triangle(h, std::vector<node_t*> {u});
         }
         
         // Reassigning the conflicts to the new cells  
         for (node_t* y : invalidated_nodes) {
             detect_conflicts(y, C);
         }
-    }  
+    }  */
+
+    void insert_vertex_at_conflict(node_t* u) {
+        auto t0 = high_resolution_clock::now(); // Start totale
+    
+        cell_t* t = u->conflict(); 
+        std::vector<halfedge_t*> D;
+        std::vector<halfedge_t*> C;
+    
+        auto t1 = high_resolution_clock::now(); // Start mark_cavity
+    
+        mark_cavity(u, t->halfedge(), D, C);
+        mark_cavity(u, t->halfedge()->prev(), D, C);
+        mark_cavity(u, t->halfedge()->next(), D, C);
+    
+        auto t2 = high_resolution_clock::now(); // End mark_cavity - start invalidazione
+    
+        std::unordered_set<node_t*> invalidated_nodes;
+        for (halfedge_t* h : D) {
+            cell_t* current_cell = h->cell();
+            if (current_cell) {
+                for (node_t* point : current_cell->conflicting_points()) {
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
+                }
+                current_cell->clear_conflicts();
+            }
+    
+            cell_t* twin_cell = h->twin()->cell();
+            if (twin_cell) {
+                for (node_t* point : twin_cell->conflicting_points()) {
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
+                }
+                twin_cell->clear_conflicts();
+            }
+        }
+    
+        if (D.empty()) {
+            cell_t* current_cell = u->conflict();
+            if (current_cell) {
+                for (node_t* point : current_cell->conflicting_points()) {
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
+                }
+                current_cell->clear_conflicts();
+            }
+        }
+        u->remove_conflict();
+    
+        auto t3 = high_resolution_clock::now(); // End invalidazione - start rimozione
+    
+        for (halfedge_t* h : D) { 
+            dcel_.remove_edge(h);
+        }
+    
+        auto t4 = high_resolution_clock::now(); // End rimozione - start aggiunta
+    
+        for (halfedge_t* h : C) { 
+            add_triangle(h, std::vector<node_t*> {u});
+        }
+    
+        auto t5 = high_resolution_clock::now(); // End aggiunta - start ridistribuzione
+    
+        for (node_t* y : invalidated_nodes) {
+            detect_conflicts(y, C);
+        }
+    
+        auto t6 = high_resolution_clock::now(); // Fine totale
+    
+        // Timing breakdown
+        auto cavity_time = duration_cast<microseconds>(t2 - t1).count();
+        auto invalidate_time = duration_cast<microseconds>(t3 - t2).count();
+        auto remove_time = duration_cast<microseconds>(t4 - t3).count();
+        auto add_time = duration_cast<microseconds>(t5 - t4).count();
+        auto redistribute_time = duration_cast<microseconds>(t6 - t5).count();
+        auto total_time = duration_cast<microseconds>(t6 - t0).count();
+    
+        std::cout << "----- insert_vertex_at_conflict() breakdown -----\n";
+        std::cout << "Mark cavity:        " << cavity_time        << " µs\n";
+        std::cout << "Invalidate conf:    " << invalidate_time    << " µs\n";
+        std::cout << "Remove triangles:   " << remove_time        << " µs\n";
+        std::cout << "Add triangles:      " << add_time           << " µs\n";
+        std::cout << "Redistribute conf:  " << redistribute_time  << " µs\n";
+        std::cout << "TOTAL:              " << total_time         << " µs\n";
+    }
 
     void build_triangulation(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
 
@@ -297,7 +378,8 @@ class Delaunay {
                 continue; 
             if (generated_points == 0) {
                 // Initialize triangulation with the first valid point
-                add_first_triangle(u.transpose(), boundary);
+                node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, u));
+                add_first_triangle(n, boundary);
                 first_internal_id = dcel_.n_nodes() - 1;
             } else {
                 // Create the node and detect the conflicts with existing cells 
@@ -343,8 +425,9 @@ class Delaunay {
     //the user must know the passed internal points lie all inside the domain 
     void build_triangulation(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
-
-        add_first_triangle(internal.row(0), boundary);
+        
+        node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, internal.row(0)));
+        add_first_triangle(n, boundary);
         int first_internal_id = dcel_.n_nodes() - 1;
 
         //inserting the remaining internal points in the triangulation
@@ -358,8 +441,8 @@ class Delaunay {
             node_t* u = &(*it);
             if (!u->on_boundary() && u->id()!=first_internal_id)  
                 insert_vertex_at_conflict(u); 
-        }
-        /*   
+        }  
+        /* 
         //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
@@ -373,8 +456,8 @@ class Delaunay {
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
             it->set_id(cont_h);
             cont_h++;
-        }
-        */
+        }*/
+        
         /*mesh generation not included in order to test the efficiency of the triangulation
         Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
 
