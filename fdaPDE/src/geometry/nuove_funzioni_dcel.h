@@ -1808,3 +1808,149 @@ void print_dcel() {
             }
         }
     }  
+
+
+
+
+
+    
+    void build_triangulation(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+
+        // Computing the bounding box
+        double min_x = boundary.col(0).minCoeff();
+        double max_x = boundary.col(0).maxCoeff();
+        double min_y = boundary.col(1).minCoeff();
+        double max_y = boundary.col(1).maxCoeff();
+    
+        // Creating the generator of causal numbers
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+        std::uniform_real_distribution<double> dist_y(min_y, max_y);
+   
+        int first_internal_id = -1;
+        int generated_points = 0;
+
+        while (generated_points < N) {
+            coords_t u;
+            u << dist_x(gen), dist_y(gen);
+            // Verifiyng if the point is inside the polygon, in order to coorecty dale with concavities
+            if (!fdapde::internals::point_in_polygon(boundary, u)) 
+                continue; 
+            if (generated_points == 0) {
+                // Initialize triangulation with the first valid point
+                add_first_triangle(u.transpose(), boundary);
+                first_internal_id = dcel_.n_nodes() - 1;
+            } else {
+                // Create the node and detect the conflicts with existing cells 
+                node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, u));
+                detect_conflicts(n); 
+            }
+            ++generated_points;
+        }
+        // inserting the remaining nodes in the domain 
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            node_t* u = &(*it);
+            if (!u->on_boundary() && u->id()!=first_internal_id)   
+                insert_vertex_at_conflict(u); 
+        }
+         /*   
+        //reordering id of cells and halfedges to cover some jumps between ids after removing
+        int cont = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            it->set_id(cont);
+            cont++;
+        }
+
+        dcel_.set_n_cells_(cont);
+
+        int cont_h = 0;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            it->set_id(cont_h);
+            cont_h++;
+        }
+        */
+        /*mesh generation not included in order to test the efficiency of the triangulation
+        Triangulation<local_dim, embed_dim> triangulation = DCEL_to_Triangulation();
+
+        std::string filename = "mesh_output.txt";
+        export_triangulation_to_txt(triangulation, filename);
+
+        std::string command = "python3 fdaPDE/src/plot_mesh.py";
+        std::system(command.c_str()); 
+        */
+    }
+
+
+
+
+        // Function to insert a vertex handling conflicts
+        void insert_vertex_at_conflict(node_t* u) {
+            // Retrieve the triangle in conflict with u and we marked as visited 
+            cell_t* t = u->conflict(); 
+            std::vector<halfedge_t*> D;
+            std::vector<halfedge_t*> C;
+    
+            mark_cavity(u, t->halfedge(), D, C);
+            mark_cavity(u, t->halfedge()->prev(), D, C);
+            mark_cavity(u, t->halfedge()->next(), D, C);
+      
+            //invalidating the conflicts node->cell for the point of the cavity
+            std::unordered_set<node_t*> invalidated_nodes;
+            for (halfedge_t* h : D) {
+                cell_t* current_cell = h->cell();
+                if (current_cell) {
+                    for (node_t* point : current_cell->conflicting_points()) {
+                        if (point != u) {
+                            point->set_conflict(nullptr);  
+                            invalidated_nodes.insert(point);
+                        }
+                    }
+                    current_cell->clear_conflicts();
+                }
+            
+                cell_t* twin_cell = h->twin()->cell();
+                if (twin_cell) {
+                    for (node_t* point : twin_cell->conflicting_points()) {
+                        if (point != u) {
+                            point->set_conflict(nullptr);  
+                            invalidated_nodes.insert(point);
+                        }
+                    }
+                    twin_cell->clear_conflicts();
+                }
+            }
+            //if all the new traingles are Delaunay and i am not expanding the cavity 
+            if(D.empty()){
+                cell_t* current_cell = u->conflict();
+                if (current_cell) {
+                    for (node_t* point : current_cell->conflicting_points()) {
+                        if (point != u) {
+                            point->set_conflict(nullptr);  
+                            invalidated_nodes.insert(point);
+                        }
+                    }
+                    current_cell->clear_conflicts();
+                }
+            }
+            u->remove_conflict();
+            
+            // removing cells of the cavity 
+            for (halfedge_t* h : D) { 
+                dcel_.remove_edge(h);
+            }
+            // creating the new cells 
+            for (halfedge_t* h : C) { 
+                add_triangle(h, u->coords().transpose());
+            }
+            
+            // Reassigning the conflicts to the new cells  
+            for (node_t* y : invalidated_nodes) {
+                detect_conflicts(y, C);
+            }
+        }  
+    
+
+
+
+

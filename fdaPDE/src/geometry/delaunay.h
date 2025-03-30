@@ -157,7 +157,7 @@ class Delaunay {
                 halfedge_t* e = edge;
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(e->prev(), e->twin()->prev());
-                //std::cout << "FLIP" << std::endl;
+                std::cout << "FLIP" << std::endl;
             
                 if (new_edge) {
                     // Inserting the new halfedges created by the flip
@@ -218,12 +218,15 @@ class Delaunay {
         mark_cavity(u, t->halfedge()->next(), D, C);
   
         //invalidating the conflicts node->cell for the point of the cavity
+        std::unordered_set<node_t*> invalidated_nodes;
         for (halfedge_t* h : D) {
             cell_t* current_cell = h->cell();
             if (current_cell) {
                 for (node_t* point : current_cell->conflicting_points()) {
-                    if (point != u && point->conflict() == current_cell) 
+                    if (point != u) {
                         point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
                 }
                 current_cell->clear_conflicts();
             }
@@ -231,8 +234,10 @@ class Delaunay {
             cell_t* twin_cell = h->twin()->cell();
             if (twin_cell) {
                 for (node_t* point : twin_cell->conflicting_points()) {
-                    if (point != u && point->conflict() == twin_cell) 
-                        point->set_conflict(nullptr); 
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
                 }
                 twin_cell->clear_conflicts();
             }
@@ -242,8 +247,10 @@ class Delaunay {
             cell_t* current_cell = u->conflict();
             if (current_cell) {
                 for (node_t* point : current_cell->conflicting_points()) {
-                    if (point != u && point->conflict() == current_cell) 
-                        point->set_conflict(nullptr);
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
                 }
                 current_cell->clear_conflicts();
             }
@@ -260,14 +267,9 @@ class Delaunay {
         }
         
         // Reassigning the conflicts to the new cells  
-        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
-            node_t* y = &(*it);
-            if (y == u || y->on_boundary() || y->is_inserted())
-                continue;
-
-            detect_conflicts(y, C);  
+        for (node_t* y : invalidated_nodes) {
+            detect_conflicts(y, C);
         }
-        u->set_inserted(true);
     }  
 
     void build_triangulation(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
@@ -357,7 +359,6 @@ class Delaunay {
             if (!u->on_boundary() && u->id()!=first_internal_id)  
                 insert_vertex_at_conflict(u); 
         }
-        
         /*   
         //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
@@ -397,21 +398,16 @@ class Delaunay {
     
                 bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(t1, t2, t3);
     
-                // Test 1: Verifying if the point is inside the triangle
+                // Test : Verifying if the point is inside the triangle
                 if (!found) {
                     bool inside_triangle = ccw ? fdapde::internals::point_in_2d_tri(n->coords(), t1, t2, t3)
                                                : fdapde::internals::point_in_2d_tri(n->coords(), t3, t2, t1);
                     if (inside_triangle) {
                         n->set_conflict(t); 
+                        t->add_conflict(n);
                         found = true;
                     }
                 }
-    
-                // Test 2: Verifying if the point is in the circumcircle 
-                bool inside_circumcircle = ccw ? fdapde::internals::in_circle(t1, t2, t3, n->coords())
-                                               : fdapde::internals::in_circle(t3, t2, t1, n->coords());
-    
-                if (inside_circumcircle) t->add_conflict(n);  
             }
         } else {  // normal case: scan the cavity
             for (halfedge_t* h : cells_to_check) {
@@ -429,14 +425,10 @@ class Delaunay {
                                                : fdapde::internals::point_in_2d_tri(n->coords(), t3, t2, t1);
                     if (inside_triangle) {
                         n->set_conflict(t); 
+                        t->add_conflict(n);
                         found = true;
                     }
                 }
-    
-                bool inside_circumcircle = ccw ? fdapde::internals::in_circle(t1, t2, t3, n->coords())
-                                               : fdapde::internals::in_circle(t3, t2, t1, n->coords());
-    
-                if (inside_circumcircle) t->add_conflict(n);  
             }
         }
     }

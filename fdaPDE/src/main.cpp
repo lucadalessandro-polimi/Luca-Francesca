@@ -98,7 +98,7 @@ int main() {
                 0.0, 8.0,
                 0.0, 6.0,
                 0.0, 4.0,
-                0.0, 2.0;
+                0.0, 2.0;*/
     
 
     Eigen::Matrix<double, 4, 2> internal;
@@ -119,7 +119,7 @@ int main() {
             //   0.5, 0.5,  
                 0.0, 10.0;*/
 
-   // Delaunay<2, 2> delaunay(boundary);
+    Delaunay<2, 2> delaunay(boundary);
   //  Delaunay<2, 2> delaunay(boundary,holes);
 /*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
@@ -129,17 +129,17 @@ int main() {
         return nullptr; 
     };
 */
-    //delaunay.build_triangulation(internal, boundary);
+    delaunay.build_triangulation(internal, boundary);
     //delaunay.build_triangulation(100,boundary);
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    //delaunay.dcel().export_to_json("dcel_output.json");
+    delaunay.dcel().export_to_json("dcel_output.json");
     
 
 
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-
+/*
     Delaunay<2, 2> delaunay_100(boundary); 
     Delaunay<2, 2> delaunay_1000(boundary); 
     Delaunay<2, 2> delaunay_10000(boundary); 
@@ -184,6 +184,6 @@ int main() {
         outfile << num_points << "," << duration << "\n"; 
 
     outfile.close();
-    
+ */  
     return 0;
 }

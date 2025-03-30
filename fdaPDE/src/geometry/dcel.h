@@ -18,8 +18,18 @@
 #define __FDAPDE_DCEL_H__
 
 #include "header_check.h"
+#include <chrono>
+using namespace std::chrono;
 
 namespace fdapde {
+
+// Custom hash for pair<int, int>
+struct pair_hash {
+    template <class T1, class T2>
+    std::size_t operator () (const std::pair<T1,T2> &p) const {
+        return std::hash<T1>{}(p.first) ^ (std::hash<T2>{}(p.second) << 1);
+    }
+};
 
 // implementation of the Double Connected Edge List data structure (also known as DCEL or half-edge)
 template <int LocalDim, int EmbedDim> class DCEL {
@@ -40,10 +50,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
         coords_t coords_;
         // code needed for conflict graph algorithm
         cell_t* conflicting_triangle_=nullptr;
-        bool inserted_ = false;
 
-
-       public:
+        public:
 
         node_t() : coords_(), halfedge_(nullptr), boundary_(false) { }
 
@@ -88,16 +96,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // code for conflict graph 
         void set_conflict(cell_t* triangle) { conflicting_triangle_ = triangle; }
         cell_t* conflict() const { return conflicting_triangle_; }
-        void clear_conflict() { conflicting_triangle_ = nullptr; }
-        void remove_conflict() {
-            if (conflicting_triangle_ != nullptr) {
-                auto& points = conflicting_triangle_->conflicting_points();
-                points.erase(std::remove(points.begin(), points.end(), this), points.end());
-                clear_conflict();
-            }
-        }
-        bool is_inserted() const { return inserted_; }
-        void set_inserted(bool val) { inserted_ = val; }
+        void remove_conflict() { conflicting_triangle_ = nullptr; }
 
         
 
@@ -493,7 +492,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return h1;
     }
 
-
     halfedge_t* add_polygon(halfedge_t* v, const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes){  //DARE IN INGRESSO ANCHE I BOUNDARY EDGES...
         int nodes_polygon= nodes.rows();                                                                         //passare boundary edges se ci sono....
         cell_t* c= v->cell();                                                                                    //ma per i poligoni va bene??
@@ -506,7 +504,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
        for (int i = 0; i < nodes_polygon; ++i) {
             node_t* n;
             if(find_node(nodes.row(i))==nullptr) 
-                n = insert_node(node_t(n_nodes_, /* boundary = */ false, nodes.row(i)));
+                n = insert_node(node_t(n_nodes_, false, nodes.row(i)));
             else // node is already a vertex of the mesh
                 n = find_node(nodes.row(i));  
             halfedge_t* h = nullptr;
@@ -528,6 +526,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
         c->set_halfedge(v);
         return c->halfedge();
     }
+    
+
 
     
     halfedge_t* remove_edge(halfedge_t* v1){        
@@ -656,7 +656,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 return &h;
         }
         return nullptr;
-    }
+    }/*
+    halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
+        auto it = halfedge_lookup_.find({n->id(), cell->id()});
+        return (it != halfedge_lookup_.end()) ? it->second : nullptr;
+    }*/
   
 
     // internal utils
@@ -664,6 +668,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
         halfedges_.emplace_back(n_halfedges_++, std::forward<Args>(args)...);
         return std::addressof(halfedges_.back());
     }
+    /*
+    template <typename... Args> halfedge_t* emplace_halfedge_(Args&&... args) {
+        halfedges_.emplace_back(n_halfedges_++, std::forward<Args>(args)...);
+        halfedge_t* h = std::addressof(halfedges_.back());
+        if (h->node() && h->cell()) {
+            halfedge_lookup_[{h->node()->id(), h->cell()->id()}] = h;
+        }
+        return h;
+    }*/
 
     template <typename... Args> node_t* emplace_node_(Args&&... args) {
         nodes_.emplace_back(n_nodes_++, std::forward<Args>(args)...);
@@ -675,6 +688,10 @@ private:
     std::list<halfedge_t> halfedges_;
     std::list<cell_t> cells_;
     int n_nodes_, n_halfedges_, n_cells_;
+
+
+    // optimized lookup for halfedges by (node_id, cell_id)
+    //std::unordered_map<std::pair<int, int>, halfedge_t*, pair_hash> halfedge_lookup_;
 };
 
 
