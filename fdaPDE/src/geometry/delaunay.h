@@ -518,16 +518,14 @@ class Delaunay {
         node_t* a = e->node();
         node_t* b = e->twin()->node();
         coords_t mid = 0.5 * (a->coords() + b->coords());
-        // Iinserting the midpoint
+        // inserting the midpoint
         node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, mid));
-        
-        // delete e and inserting the two halves (sa gestire il bordo la insert edge?)
-        //NON FUNZIONANTE DA RIVEDERE IN FASE DI DEBUG 
-        halfedge_t* h1 = e->prev()->twin();
-        halfedge_t* h2 = e->prev()->prev();
+        // cutting in two the cell of the encroached segment
+        add_triangle(e->prev(), std::vector<node_t*> {m});
+        add_triangle(e->next(), std::vector<node_t*> {m});
         dcel_.remove_edge(e);
-        dcel_.insert_edge(dcel_.insert_edge(h1,dcel_.emplace_halfedge_(m)), h2);
     }
+    
 
     void split_triangle(cell_t* t) {
         coords_t A = t->halfedge()->prev()->node()->coords();
@@ -547,7 +545,7 @@ class Delaunay {
             coords_t b = e->twin()->node()->coords();
     
            if (fdapde::internals::is_encroached(c, a, b)) {
-            //    split_subsegment(e); // if encroaches, then split the subsegment
+                split_subsegment(e); // if encroaches, then split the subsegment
                 return;
             }
         }
@@ -559,10 +557,72 @@ class Delaunay {
     }
 
     void build_refinement(double rho_bar) {
+        while (true) {
+            //if there is any edge of the boundary encroaching a point split and restart from same line 
+            if (split_first_encroached_segment()) {
+                continue; 
+            }
+            //if there is any triangle with radius/edge > rho_bar split and restart from above
+            if (split_first_bad_triangle(rho_bar)) {
+                continue;  
+            }
+            break;
+        }
     }
     
+    bool split_first_encroached_segment() {
+        halfedge_t* encroached_edge = nullptr;
     
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            halfedge_t* e = &(*it);
     
+            if (!e->on_boundary()) break;
+            //PROBLEMA CON INSERT CHE SWITCHA IN PRIMA CHIAMATA 134/135 E QUINDI CONTROLLO NON VA PIU E NENACHE LE CHIAMATE AD ADD_POLYGON PERCHE DA SEGMENTATION FALUT
+            if (e->id() > e->twin()->id()) break;
+    
+            coords_t a = e->node()->coords();
+            coords_t b = e->twin()->node()->coords();
+    
+            for (auto nit = dcel_.nodes_begin(); nit != dcel_.nodes_end(); ++nit) {
+                node_t* n = &(*nit);
+                if (n == e->node() || n == e->twin()->node()) continue;
+    
+                if (fdapde::internals::is_encroached(n->coords(), a, b)) {
+                    encroached_edge = e;
+                    break;
+                }
+            }
+    
+            if (encroached_edge != nullptr)
+                break;
+        }
+    
+        if (encroached_edge != nullptr) {
+            split_subsegment(encroached_edge);
+            return true;
+        }
+    
+        return false;
+    }
+
+    bool split_first_bad_triangle(double rho_bar) {
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            cell_t* t = &(*it);
+    
+            coords_t A = t->halfedge()->prev()->node()->coords();
+            coords_t B = t->halfedge()->node()->coords();
+            coords_t C = t->halfedge()->next()->node()->coords();
+    
+            double ratio = fdapde::internals::radius_edge_ratio(A, B, C);
+    
+            if (ratio > rho_bar) {
+                std::cout << "Splitting triangle with ratio = " << ratio << " > " << rho_bar << "\n";
+                split_triangle(t);
+                return true;
+            }
+        }
+        return false;
+    }
     
     ///////////////////////////// END OF REFINMENT ////////////////////////////////
     

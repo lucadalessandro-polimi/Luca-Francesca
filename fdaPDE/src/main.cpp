@@ -102,8 +102,9 @@ int main() {
     
 
     Eigen::Matrix<double, 4, 2> internal;
-    internal << 5.0, 5.0,
-                5.0, 15.0,
+    internal << 2.0, 2.0,
+                //5.0, 15.0,
+                6.0, 15.0,
                 27.0, 11.0,
                 34.0, 8.5;
 
@@ -133,6 +134,10 @@ int main() {
     //delaunay.build_triangulation(1000,boundary);
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
+    
+    //delaunay.build_refinement(2.0);
+    //PER RISOLVERE PROBLEMA CON FRANCESCA FA SOTTO CON TRIANGOLAZIONE DI PARTENZA 
+    //delaunay.split_subsegment(find_halfedge_from_id(0));
     delaunay.dcel().export_to_json("dcel_output.json");
     
 
