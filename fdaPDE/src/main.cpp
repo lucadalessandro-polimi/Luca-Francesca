@@ -121,24 +121,23 @@ int main() {
 
     Delaunay<2, 2> delaunay(boundary);
   //  Delaunay<2, 2> delaunay(boundary,holes);
-/*
+
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
         return nullptr; 
     };
-*/
-    //delaunay.build_triangulation(internal, boundary);
-    delaunay.build_triangulation(1000,boundary);
+
+    delaunay.build_triangulation(internal, boundary);
+    //delaunay.build_triangulation(1000,boundary);
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    //delaunay.dcel().export_to_json("dcel_output.json");
+    delaunay.split_triangle(find_halfedge_from_id(78)->cell());
+    delaunay.dcel().export_to_json("dcel_output.json");
     
 
-
-
-///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
+    ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 /*
     Delaunay<2, 2> delaunay_100(boundary); 
     Delaunay<2, 2> delaunay_1000(boundary); 

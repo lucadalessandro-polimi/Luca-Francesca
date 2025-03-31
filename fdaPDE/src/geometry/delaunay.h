@@ -37,40 +37,33 @@ class Delaunay {
     void add_first_triangle(node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
         bool concave=false;
         auto iter = dcel_.halfedges_begin();
+        halfedge_t* first_h= dcel_.emplace_halfedge_(n);
+        auto& cell_begin = *dcel_.cells_begin();
+        first_h->set_cell(&cell_begin);
 
         // iterate over all boundary edges to connect to node, if possible
         for (int il = 0; il < boundary.rows(); ++il, ++iter) { 
             halfedge_t* v = &(*iter);                                                                  
             cell_t* c= v->cell();                                                                                    
-            auto& cell_begin = *dcel_.cells_begin();
-            std::vector<halfedge_t*> ghost_halfedges(3); 
+            std::vector<halfedge_t*> halfedges_to_call(3); 
 
             if(dcel_.find_halfedge(n,c)){
                 halfedge_t* h = dcel_.find_halfedge(n,c);
-                ghost_halfedges[2] = h;
-            }
-            else if(dcel_.find_halfedge(n,&cell_begin)){
-                halfedge_t* h = dcel_.find_halfedge(n,&cell_begin);
-                ghost_halfedges[2] = h;
+                halfedges_to_call[2] = h;
             }
             else{  
-                ghost_halfedges[2] = dcel_.emplace_halfedge_(n);
-                ghost_halfedges[2]->set_cell(c);
+                halfedges_to_call[2]= first_h;
             }
-            ghost_halfedges[0] = v;
-            if(v->next()->cell()==ghost_halfedges[2]->cell())
-                ghost_halfedges[1] = v->next();
+            halfedges_to_call[0] = v;
+            if(v->next()->cell()==halfedges_to_call[2]->cell())
+                halfedges_to_call[1] = v->next();
             else{
-                ghost_halfedges[1] = dcel_.find_halfedge(v->next()->node(),ghost_halfedges[2]->cell());
-                if(!ghost_halfedges[1]){
-                    dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);  //NON SICURISSIMA
-                    return;
-                }
+                halfedges_to_call[1] = dcel_.find_halfedge(v->next()->node(),halfedges_to_call[2]->cell());
             }
             // add edges
             for (int i = 0; i < 3 ; ++i) {
-                halfedge_t* h1 = ghost_halfedges[i];
-                halfedge_t* h2 = ghost_halfedges[(i + 1) % (3)];
+                halfedge_t* h1 = halfedges_to_call[i];
+                halfedge_t* h2 = halfedges_to_call[(i + 1) % (3)];
                 
                 // check for intersection with boundary edges
                 coords_t A = h1->node()->coords();
@@ -94,7 +87,7 @@ class Delaunay {
                 if(!intersect){
                     halfedge_t* h = dcel_.insert_edge(h1, h2); 
                     if(h && h!=h1)
-                        ghost_halfedges[(i + 1) % (3)] = h->next();  
+                        halfedges_to_call[(i + 1) % (3)] = h->next();  
                 } 
             }
         }
@@ -108,18 +101,21 @@ class Delaunay {
                     h=h->next();
                     i++;
                 }while(h!=&(*it));
-                if(i>3) //not a triangle yet
+                if(i>3){ //not a triangle yet
                     for(int l=0; l<i-3; ++l){
                       halfedge_t* n=h->next()->next();
-                      if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()))
+                      if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() 
+                         && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords())
+                         && fdapde::internals::are_2d_counterclockwise_sorted(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()) ){
                         dcel_.insert_edge(h, n);
+                      }
                       h=n;   
                     }
+                }
             }
         }
         flip();
     }
-
 
     void flip() {
 
@@ -195,7 +191,7 @@ class Delaunay {
         }
     }
 
-/*
+
     // Function to insert a vertex handling conflicts
     void insert_vertex_at_conflict(node_t* u) {
         // Retrieve the triangle in conflict with u and we marked as visited 
@@ -260,8 +256,8 @@ class Delaunay {
         for (node_t* y : invalidated_nodes) {
             detect_conflicts(y, C);
         }
-    }  */
-
+    }  
+/*
     void insert_vertex_at_conflict(node_t* u) {
         auto t0 = high_resolution_clock::now(); // Start totale
     
@@ -352,7 +348,7 @@ class Delaunay {
         std::cout << "Redistribute conf:  " << redistribute_time  << " µs\n";
         std::cout << "TOTAL:              " << total_time         << " µs\n";
     }
-
+*/
     void build_triangulation(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
 
         // Computing the bounding box
@@ -515,6 +511,101 @@ class Delaunay {
             }
         }
     }
+
+
+    ///////////////////////////// REFINMENT BY RUPPERT /////////////////////////////
+    void split_subsegment(halfedge_t* e) {
+        node_t* a = e->node();
+        node_t* b = e->twin()->node();
+        coords_t mid = 0.5 * (a->coords() + b->coords());
+        // Iinserting the midpoint
+        node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, mid));
+        
+        // delete e and inserting the two halves (sa gestire il bordo la insert edge?)
+        //NON FUNZIONANTE DA RIVEDERE IN FASE DI DEBUG 
+        halfedge_t* h1 = e->prev()->twin();
+        halfedge_t* h2 = e->prev()->prev();
+        dcel_.remove_edge(e);
+        dcel_.insert_edge(dcel_.insert_edge(h1,dcel_.emplace_halfedge_(m)), h2);
+    }
+
+    void split_triangle(cell_t* t) {
+        coords_t A = t->halfedge()->prev()->node()->coords();
+        coords_t B = t->halfedge()->node()->coords();
+        coords_t C = t->halfedge()->next()->node()->coords();
+        coords_t c = fdapde::internals::circumcenter(A, B, C);
+
+        //find if c encroaches some edge of the trinagulation
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            halfedge_t* e = &(*it);
+            //in order to evaluate only the segments of the PLC (i.e. the boundary of the domain)
+            if (!e->on_boundary()) break;
+            // o si fa cosi o si tiene in memoria nella delaunay.h un contatore di nodi al bordo per gestire meglio il bordo
+            if (e->id() > e->twin()->id()) break;
+            
+            coords_t a = e->node()->coords();
+            coords_t b = e->twin()->node()->coords();
+    
+           if (fdapde::internals::is_encroached(c, a, b)) {
+            //    split_subsegment(e); // if encroaches, then split the subsegment
+                return;
+            }
+        }
+        // otherwise c is inserted as node
+        //grazie a questa frase: Sì, può cadere sul bordo, e viene accettato se non encroacha un subsegmento 
+        //(cioè se sta esattamente sul bordo ma non dentro al disco di diametro di un segmento).
+        //dovrebbe essere la prova del fatto che c non puo mai cadere sul bordo del dominio dove ci sono tutti i segmenti della PLC
+        node_t* new_node = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
+    }
+
+    void build_refinement(double rho_bar) {
+    /*    // Step 3: Loop di raffinamento finché ci sono subsegmenti encroached o triangoli skinny
+        bool repeat = true;
+        while (repeat) {
+            repeat = false;
+    
+            // Step 3: Splitta tutti i subsegmenti encroached
+            for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+                halfedge_t* e = &(*it);
+                if (e->on_boundary()) {
+                    coords_t a = e->node()->coords();
+                    coords_t b = e->twin()->node()->coords();
+                    for (auto v : S) {
+                        if (is_encroached(v->coords(), a, b)) {
+                            split_subsegment(e);
+                            repeat = true;
+                            break;
+                        }
+                    }
+                    if (repeat) break;
+                }
+            }
+    
+            if (repeat) continue; // dopo uno split, rifai Step 3
+    
+            // Step 4: Splitta triangoli con radius-edge ratio maggiore di rho_bar
+            for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+                cell_t* t = &(*it);
+    
+                // Estrai i vertici
+                coords_t A = t->halfedge()->node()->coords();
+                coords_t B = t->halfedge()->next()->node()->coords();
+                coords_t C = t->halfedge()->prev()->node()->coords();
+    
+                double rho = radius_edge_ratio(A, B, C);
+                if (rho > rho_bar) {
+                    split_triangle(t, rho_bar, E, S);  // inserisce nodo o splitta subsegmento
+                    repeat = true;
+                    break;
+                }
+            }
+        }*/
+    }
+    
+    
+    
+    
+    ///////////////////////////// END OF REFINMENT ////////////////////////////////
     
     //function to convert the dcel into a triangulation
     Triangulation<local_dim, embed_dim> DCEL_to_Triangulation() {  

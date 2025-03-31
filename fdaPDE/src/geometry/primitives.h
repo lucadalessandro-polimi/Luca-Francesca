@@ -177,6 +177,54 @@ constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const
     return inside;
 }
 
+// Compute radius-edge ratio of triangle given its 2D coordinates
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr double radius_edge_ratio(const PointT& A, const PointT& B, const PointT& C) {
+    double a = (B - C).norm();
+    double b = (A - C).norm();
+    double c = (A - B).norm();
+
+    double s = 0.5 * (a + b + c);  //semi-perimeter
+    double area = std::sqrt(s * (s - a) * (s - b) * (s - c)); //Heron's formula 
+    if (area <= 0.0) return std::numeric_limits<double>::infinity(); //for degenerate case 
+
+    double circum_radius = (a * b * c) / (4.0 * area);
+    double shortest_edge = std::min({a, b, c});
+    return circum_radius / shortest_edge;
+}
+
+// Compute circumcenter of triangle given its 2D coordinates
+//CAPIRE SE SI VUOLE RISOLVERE O MENO IL SISTEMA LINEARE (QUANTO COSTA IN EFFICIENZA?)
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C) {
+    PointT midAB = 0.5 * (A + B);
+    PointT midBC = 0.5 * (B + C);
+
+    PointT dirAB(B[1] - A[1], A[0] - B[0]);
+    PointT dirBC(C[1] - B[1], B[0] - C[0]);
+
+    Eigen::Matrix<double, 2, 2> M;
+    M << dirAB[0], -dirBC[0],
+         dirAB[1], -dirBC[1];
+
+    Eigen::Vector2d rhs = midBC - midAB;
+    Eigen::Vector2d t = M.colPivHouseholderQr().solve(rhs);
+
+    return midAB + t[0] * dirAB;
+}
+//function detecting if p is the circle of diameter ab
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr bool is_encroached(const PointT& p, const PointT& a, const PointT& b) {
+    PointT m = 0.5 * (a + b);  // midpoint
+    double radius_sq = 0.25 * (a - b).squaredNorm();
+    double dist_sq = (p - m).squaredNorm();
+    return dist_sq < radius_sq - machine_epsilon; 
+}
+
+
 
 
 
