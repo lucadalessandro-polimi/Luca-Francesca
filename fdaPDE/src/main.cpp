@@ -133,7 +133,6 @@ int main() {
     //delaunay.build_triangulation(1000,boundary);
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    delaunay.split_triangle(find_halfedge_from_id(78)->cell());
     delaunay.dcel().export_to_json("dcel_output.json");
     
 

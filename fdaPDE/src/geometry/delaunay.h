@@ -559,47 +559,6 @@ class Delaunay {
     }
 
     void build_refinement(double rho_bar) {
-    /*    // Step 3: Loop di raffinamento finché ci sono subsegmenti encroached o triangoli skinny
-        bool repeat = true;
-        while (repeat) {
-            repeat = false;
-    
-            // Step 3: Splitta tutti i subsegmenti encroached
-            for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
-                halfedge_t* e = &(*it);
-                if (e->on_boundary()) {
-                    coords_t a = e->node()->coords();
-                    coords_t b = e->twin()->node()->coords();
-                    for (auto v : S) {
-                        if (is_encroached(v->coords(), a, b)) {
-                            split_subsegment(e);
-                            repeat = true;
-                            break;
-                        }
-                    }
-                    if (repeat) break;
-                }
-            }
-    
-            if (repeat) continue; // dopo uno split, rifai Step 3
-    
-            // Step 4: Splitta triangoli con radius-edge ratio maggiore di rho_bar
-            for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-                cell_t* t = &(*it);
-    
-                // Estrai i vertici
-                coords_t A = t->halfedge()->node()->coords();
-                coords_t B = t->halfedge()->next()->node()->coords();
-                coords_t C = t->halfedge()->prev()->node()->coords();
-    
-                double rho = radius_edge_ratio(A, B, C);
-                if (rho > rho_bar) {
-                    split_triangle(t, rho_bar, E, S);  // inserisce nodo o splitta subsegmento
-                    repeat = true;
-                    break;
-                }
-            }
-        }*/
     }
     
     
