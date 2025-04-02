@@ -261,15 +261,11 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
       Matrix<int, binomial_coefficient(n_nodes_per_cell, n_nodes_per_edge), n_nodes_per_edge>(
         combinations(n_nodes_per_edge, n_nodes_per_cell));*/
 
-    Triangulation() = default;
+    Triangulation(const Eigen::Matrix<double, Eigen::Dynamic, N>& nodes,
+        const Eigen::Matrix<int, Eigen::Dynamic, 3>& cells,
+        const Eigen::Matrix<int, Eigen::Dynamic, 1>& boundary_markers)
+        : Base(nodes, cells, boundary_markers) {}
 
-    //new conctructor needed as a semplification of trinagulation for dcel
-    Triangulation(
-        const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, 
-        const Eigen::Matrix<int, Dynamic, Dynamic>& cells,
-        const Eigen::Matrix<int, Dynamic, Dynamic>& boundary, 
-        int flags = 0) :
-          Base(nodes, cells, boundary, flags) {}
     };
  /*   Triangulation(
       const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, const Eigen::Matrix<int, Dynamic, Dynamic>& cells,

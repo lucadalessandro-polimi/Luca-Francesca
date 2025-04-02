@@ -1813,6 +1813,10 @@ void print_dcel() {
 
 
 
+
+
+
+
     
     void build_triangulation(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
 
@@ -1953,4 +1957,173 @@ void print_dcel() {
 
 
 
+        /*
+    void insert_vertex_at_conflict(node_t* u) {
+        auto t0 = high_resolution_clock::now(); // Start totale
+    
+        cell_t* t = u->conflict(); 
+        std::vector<halfedge_t*> D;
+        std::vector<halfedge_t*> C;
+    
+        auto t1 = high_resolution_clock::now(); // Start mark_cavity
+    
+        mark_cavity(u, t->halfedge(), D, C);
+        mark_cavity(u, t->halfedge()->prev(), D, C);
+        mark_cavity(u, t->halfedge()->next(), D, C);
+    
+        auto t2 = high_resolution_clock::now(); // End mark_cavity - start invalidazione
+    
+        std::unordered_set<node_t*> invalidated_nodes;
+        for (halfedge_t* h : D) {
+            cell_t* current_cell = h->cell();
+            if (current_cell) {
+                for (node_t* point : current_cell->conflicting_points()) {
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
+                }
+                current_cell->clear_conflicts();
+            }
+    
+            cell_t* twin_cell = h->twin()->cell();
+            if (twin_cell) {
+                for (node_t* point : twin_cell->conflicting_points()) {
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
+                }
+                twin_cell->clear_conflicts();
+            }
+        }
+    
+        if (D.empty()) {
+            cell_t* current_cell = u->conflict();
+            if (current_cell) {
+                for (node_t* point : current_cell->conflicting_points()) {
+                    if (point != u) {
+                        point->set_conflict(nullptr);  
+                        invalidated_nodes.insert(point);
+                    }
+                }
+                current_cell->clear_conflicts();
+            }
+        }
+        u->remove_conflict();
+    
+        auto t3 = high_resolution_clock::now(); // End invalidazione - start rimozione
+    
+        for (halfedge_t* h : D) { 
+            dcel_.remove_edge(h);
+        }
+    
+        auto t4 = high_resolution_clock::now(); // End rimozione - start aggiunta
+    
+        for (halfedge_t* h : C) { 
+            add_triangle(h, std::vector<node_t*> {u});
+        }
+    
+        auto t5 = high_resolution_clock::now(); // End aggiunta - start ridistribuzione
+    
+        for (node_t* y : invalidated_nodes) {
+            detect_conflicts(y, C);
+        }
+    
+        auto t6 = high_resolution_clock::now(); // Fine totale
+    
+        // Timing breakdown
+        auto cavity_time = duration_cast<microseconds>(t2 - t1).count();
+        auto invalidate_time = duration_cast<microseconds>(t3 - t2).count();
+        auto remove_time = duration_cast<microseconds>(t4 - t3).count();
+        auto add_time = duration_cast<microseconds>(t5 - t4).count();
+        auto redistribute_time = duration_cast<microseconds>(t6 - t5).count();
+        auto total_time = duration_cast<microseconds>(t6 - t0).count();
+    
+        std::cout << "----- insert_vertex_at_conflict() breakdown -----\n";
+        std::cout << "Mark cavity:        " << cavity_time        << " µs\n";
+        std::cout << "Invalidate conf:    " << invalidate_time    << " µs\n";
+        std::cout << "Remove triangles:   " << remove_time        << " µs\n";
+        std::cout << "Add triangles:      " << add_time           << " µs\n";
+        std::cout << "Redistribute conf:  " << redistribute_time  << " µs\n";
+        std::cout << "TOTAL:              " << total_time         << " µs\n";
+    }
+*/
 
+
+
+
+
+    //function to convert the dcel into a triangulation
+    Triangulation<local_dim, embed_dim> DCEL_to_Triangulation() {  
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> nodes(dcel_.n_nodes(), embed_dim);
+        Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic> cells(dcel_.n_cells(), n_nodes_cell);
+        Eigen::Matrix<int, Eigen::Dynamic, 1> boundary_markers(dcel_.n_nodes());
+
+        // Fill nodes matrix
+        int node_idx = 0;
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            nodes.row(node_idx) = it->coords().transpose();
+            boundary_markers(node_idx) = it->on_boundary() ? 1 : 0;
+            node_idx++;
+        }
+
+        // Fill cells matrix
+        int cell_idx = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            halfedge_t* h = it->halfedge();
+            for (int i = 0; i < n_nodes_cell; ++i) {
+                cells(cell_idx, i) = h->node()->id();
+                h = h->next();
+            }
+            cell_idx++;
+        }
+
+        // Create Triangulation object
+        Triangulation<local_dim, embed_dim> triangulation(nodes, cells, boundary_markers);
+        return triangulation;
+    }
+
+    void export_triangulation_to_txt(const Triangulation<LocalDim, EmbedDim>& triangulation, const std::string& filename) {
+        std::ofstream file(filename);
+        if (!file.is_open()) {
+            return;
+        }
+
+        file << "Nodes:\n";
+        for (int i = 0; i < triangulation.n_nodes(); ++i) {
+            auto coords = triangulation.node(i);
+            int marker = triangulation.is_node_on_boundary(i) ? 1 : 0;
+            file << i << " " << coords(0) << " " << coords(1) << " " << marker << "\n";
+        }
+
+        file << "\nCells:\n";
+        for (int i = 0; i < triangulation.n_cells(); ++i) {
+            auto cell = triangulation.cells().row(i);;
+            file << i << " " << cell(0) << " " << cell(1) << " " << cell(2) << "\n";
+        }
+
+        file.close();
+    }
+
+
+
+    Triangulation() = default;
+
+    //new conctructor needed as a semplification of trianagulation for dcel
+    Triangulation(
+        const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, 
+        const Eigen::Matrix<int, Dynamic, Dynamic>& cells,
+        const Eigen::Matrix<int, Dynamic, Dynamic>& boundary, 
+        int flags = 0) :
+          Base(nodes, cells, boundary, flags) {}
+    };
+
+
+
+
+
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {})
+    : dcel(holes.empty() ? DCEL<local_dim, embed_dim>::make_polygon(boundary)
+                    : DCEL<local_dim, embed_dim>::make_polygon(boundary, holes)) { }

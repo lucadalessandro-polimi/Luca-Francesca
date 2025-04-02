@@ -35,157 +35,163 @@ template <int LocalDim, int EmbedDim> class DCEL {
     using coords_t = Eigen::Matrix<double, embed_dim, 1>;
     // internal data structures
     struct node_t {
-       private:
-        int id_;                  // global node index
-        halfedge_t* halfedge_;    // any edge having this node as its origin
-        bool boundary_;           // asserted true if node is on boundary
-        coords_t coords_;
-        // code needed for conflict graph algorithm
-        cell_t* conflicting_triangle_=nullptr;
-
+        private:
+         int id_;                  // global node index
+         halfedge_t* halfedge_;    // any edge having this node as its origin
+         bool boundary_;           // asserted true if node is on boundary
+         coords_t coords_;
+         // code needed for conflict graph algorithm
+         cell_t* conflicting_triangle_=nullptr;
+ 
+         public:
+ 
+         node_t() : coords_(), halfedge_(nullptr), boundary_(false) { }
+ 
+         template <typename CoordsType>
+             requires(internals::is_eigen_dense_xpr_v<CoordsType>)
+         node_t(int id, halfedge_t* halfedge, bool boundary, const CoordsType& coords) :
+             id_(id), halfedge_(halfedge), boundary_(boundary), coords_() {
+             fdapde_assert(
+               (coords.rows() == 1 && coords.cols() == embed_dim) || (coords.rows() == embed_dim && coords.cols() == 1));
+             if (coords.rows() == 1) {
+                 coords_ = coords.transpose();
+             } else {
+                 coords_ = coords;
+             }
+         }
+ 
+         template <typename CoordsType>
+             requires(internals::is_eigen_dense_xpr_v<CoordsType>)
+         node_t(int id, bool boundary, const CoordsType& coords) : node_t(id, nullptr, boundary, coords) { }
+        
+         template <typename... CoordsType>
+             requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
+         node_t(int id, halfedge_t* halfedge, bool boundary, CoordsType&&... coords) :
+             id_(id), halfedge_(halfedge), boundary_(boundary), coords_(coords...) { }
+        
+             template <typename... CoordsType>
+             requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
+         node_t(int id, bool boundary, CoordsType&&... coords) :
+             node_t(id, nullptr, boundary, coords...) { }
+ 
+ 
+         // observers and modifiers
+         const Eigen::Matrix<double, embed_dim, 1>& coords() const { return coords_; }
+         halfedge_t* halfedge() const { return halfedge_; }
+         void set_halfedge(halfedge_t* halfedge) { halfedge_ = halfedge; }
+         int id() const { return id_; }
+         bool on_boundary() const { return boundary_; }
+         void set_boundary(bool boundary) { boundary_ = boundary; }
+         node_t* next() const { return halfedge_->next()->node(); }
+         node_t* prev() const { return halfedge_->prev()->node(); }
+ 
+         // code for conflict graph
+         void set_conflict(cell_t* triangle) { conflicting_triangle_ = triangle; }
+         cell_t* conflict() const { return conflicting_triangle_; }
+         void remove_conflict() { conflicting_triangle_ = nullptr; }
+ 
+        
+ 
+     };
+     struct halfedge_t {
+        private:
+         int id_;   // global halfedge index
+         halfedge_t *prev_, *next_, *twin_;
+         node_t* node_;
+         cell_t* cell_;   // cell to which this halfedge belongs to
+         std::list<halfedge_t>::iterator it_;   // iterator to the halfedge in the list
         public:
-
-        node_t() : coords_(), halfedge_(nullptr), boundary_(false) { }
-
-        template <typename CoordsType>
-            requires(internals::is_eigen_dense_xpr_v<CoordsType>)
-        node_t(int id, halfedge_t* halfedge, bool boundary, const CoordsType& coords) :
-            id_(id), halfedge_(halfedge), boundary_(boundary), coords_() {
-            fdapde_assert(
-              (coords.rows() == 1 && coords.cols() == embed_dim) || (coords.rows() == embed_dim && coords.cols() == 1));
-            if (coords.rows() == 1) {
-                coords_ = coords.transpose();
-            } else {
-                coords_ = coords;
-            }
-        }
-
-        template <typename CoordsType>
-            requires(internals::is_eigen_dense_xpr_v<CoordsType>)
-        node_t(int id, bool boundary, const CoordsType& coords) : node_t(id, nullptr, boundary, coords) { }
-        
-        template <typename... CoordsType>
-            requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
-        node_t(int id, halfedge_t* halfedge, bool boundary, CoordsType&&... coords) :
-            id_(id), halfedge_(halfedge), boundary_(boundary), coords_(coords...) { }
-        
-            template <typename... CoordsType>
-            requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
-        node_t(int id, bool boundary, CoordsType&&... coords) :
-            node_t(id, nullptr, boundary, coords...) { }
-
-
-        // observers and modifiers
-        const Eigen::Matrix<double, embed_dim, 1>& coords() const { return coords_; }
-        halfedge_t* halfedge() const { return halfedge_; }
-        void set_halfedge(halfedge_t* halfedge) { halfedge_ = halfedge; }
-        int id() const { return id_; }
-        bool on_boundary() const { return boundary_; }
-        void set_boundary(bool boundary) { boundary_ = boundary; }
-        node_t* next() const { return halfedge_->next()->node(); }
-        node_t* prev() const { return halfedge_->prev()->node(); }
-
-        // code for conflict graph 
-        void set_conflict(cell_t* triangle) { conflicting_triangle_ = triangle; }
-        cell_t* conflict() const { return conflicting_triangle_; }
-        void remove_conflict() { conflicting_triangle_ = nullptr; }
-
-        
-
-    };
-    struct halfedge_t {
-       private:
-        int id_;   // global halfedge index
-        halfedge_t *prev_, *next_, *twin_;
-        node_t* node_;
-        cell_t* cell_;   // cell to which this halfedge belongs to
-       public:
-        halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr) { }
-        halfedge_t(int id, halfedge_t* prev, halfedge_t* next, halfedge_t* twin, node_t* node) :
-            id_(id), prev_(prev), next_(next), twin_(twin), node_(node) { }
-        // no twin constructors
-        halfedge_t(int id, halfedge_t* prev, halfedge_t* next, node_t* node) :
-            halfedge_t(id, prev, next, nullptr, node) { }
-        // minimal constructor
-        halfedge_t(int id, node_t* node) : halfedge_t(id, nullptr, nullptr, nullptr, node) { }
-
-        // observers
-        halfedge_t* prev() const { return prev_; }
-        halfedge_t* next() const { return next_; }
-        halfedge_t* twin() const { return twin_; }
-        node_t* node() const { return node_; }
-        cell_t* cell() const { return cell_; }
-        int id() const { return id_; }
-        bool on_boundary() const { return (node_->on_boundary() && twin_->node()->on_boundary() && (cell()==nullptr || twin()->cell()==nullptr)); }
-        // modifiers
-        void set_prev(halfedge_t* prev) { prev_ = prev; }
-        void set_next(halfedge_t* next) { next_ = next; }
-        void set_twin(halfedge_t* twin) { twin_ = twin; }
-        void set_node(node_t* node) { node_ = node; }
-        void set_cell(cell_t* cell) { cell_ = cell; }
-        void set_id(int id) {id_=id;}
-
-        // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
-        struct circulator {
-            using value_type = halfedge_t;
-            using pointer = std::add_pointer_t<value_type>;
-            using reference = std::add_lvalue_reference_t<value_type>;
-            using size_type = std::size_t;
-            using difference_type = std::ptrdiff_t;
-            using iterator_category = std::forward_iterator_tag;
-
-            circulator(halfedge_t* halfedge) :
-                halfedge_(halfedge), end_(halfedge == nullptr ? nullptr : halfedge->prev()) { }
-            circulator& operator++() {
-                if (last_) { [[unlikely]]
-                    end_ = nullptr;
-                } else {
-                    halfedge_ = halfedge_->next();
-                    if (halfedge_ == end_) { last_ = true; }   // implement cyclic structure
-                }
-                return *this;
-            }
-            // access
-            pointer operator->() { return halfedge_; }
-            const pointer operator->() const { return halfedge_; }
-            reference operator*() { return *halfedge_; }
-            const reference operator*() const { return *halfedge_; }
-            operator bool() const { return end_ == nullptr; }
-            // comparison
-            friend bool operator==(const circulator& lhs, const circulator& rhs) { return lhs.end_ == rhs.end_; }
-            friend bool operator!=(const circulator& lhs, const circulator& rhs) { return lhs.end_ != rhs.end_; }
-           private:
-            bool last_ = false;
-            pointer halfedge_, end_;
-        };
-    };
-    struct cell_t {
-        cell_t() : h_(nullptr) { }
-        cell_t(int id) : id_(id), h_(nullptr) { }
-        cell_t(int id, halfedge_t* h) : id_(id), h_(h) { }
-        // observers
-        halfedge_t* halfedge() const { return h_; }
-        int id() const { return id_; }
-        void set_id(int id) {id_=id;}
-        // modifiers
-        void set_halfedge(halfedge_t* h) { h_ = h; }
+         halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr) { }
+         halfedge_t(int id, halfedge_t* prev, halfedge_t* next, halfedge_t* twin, node_t* node) :
+             id_(id), prev_(prev), next_(next), twin_(twin), node_(node) { }
+         // no twin constructors
+         halfedge_t(int id, halfedge_t* prev, halfedge_t* next, node_t* node) :
+             halfedge_t(id, prev, next, nullptr, node) { }
+         // minimal constructor
+         halfedge_t(int id, node_t* node) : halfedge_t(id, nullptr, nullptr, nullptr, node) { }
+ 
+         // observers
+         halfedge_t* prev() const { return prev_; }
+         halfedge_t* next() const { return next_; }
+         halfedge_t* twin() const { return twin_; }
+         node_t* node() const { return node_; }
+         cell_t* cell() const { return cell_; }
+         int id() const { return id_; }
+         bool on_boundary() const { return (node_->on_boundary() && twin_->node()->on_boundary() && (cell()==nullptr || twin()->cell()==nullptr)); }
+         std::list<halfedge_t>::iterator it() const { return it_; }
+         // modifiers
+         void set_prev(halfedge_t* prev) { prev_ = prev; }
+         void set_next(halfedge_t* next) { next_ = next; }
+         void set_twin(halfedge_t* twin) { twin_ = twin; }
+         void set_node(node_t* node) { node_ = node; }
+         void set_cell(cell_t* cell) { cell_ = cell; }
+         void set_id(int id) {id_=id;}
+         void set_it(std::list<halfedge_t>::iterator it) { it_ = it; }
+ 
+         // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
+         struct circulator {
+             using value_type = halfedge_t;
+             using pointer = std::add_pointer_t<value_type>;
+             using reference = std::add_lvalue_reference_t<value_type>;
+             using size_type = std::size_t;
+             using difference_type = std::ptrdiff_t;
+             using iterator_category = std::forward_iterator_tag;
+ 
+             circulator(halfedge_t* halfedge) :
+                 halfedge_(halfedge), end_(halfedge == nullptr ? nullptr : halfedge->prev()) { }
+             circulator& operator++() {
+                 if (last_) { [[unlikely]]
+                     end_ = nullptr;
+                 } else {
+                     halfedge_ = halfedge_->next();
+                     if (halfedge_ == end_) { last_ = true; }   // implement cyclic structure
+                 }
+                 return *this;
+             }
+             // access
+             pointer operator->() { return halfedge_; }
+             const pointer operator->() const { return halfedge_; }
+             reference operator*() { return *halfedge_; }
+             const reference operator*() const { return *halfedge_; }
+             operator bool() const { return end_ == nullptr; }
+             // comparison
+             friend bool operator==(const circulator& lhs, const circulator& rhs) { return lhs.end_ == rhs.end_; }
+             friend bool operator!=(const circulator& lhs, const circulator& rhs) { return lhs.end_ != rhs.end_; }
+            private:
+             bool last_ = false;
+             pointer halfedge_, end_;
+         };
+     };
+     struct cell_t {
+         cell_t() : h_(nullptr) { }
+         cell_t(int id) : id_(id), h_(nullptr) { }
+         cell_t(int id, halfedge_t* h) : id_(id), h_(h) { }
+         std::list<cell_t>::iterator it_;   // iterator to the cell in the list
+         // observers
+         halfedge_t* halfedge() const { return h_; }
+         int id() const { return id_; }
+         std::list<cell_t>::iterator it() const { return it_; }
+         // modifiers
+         void set_halfedge(halfedge_t* h) { h_ = h; }
+         void set_id(int id) {id_=id;}
+         void set_it(std::list<cell_t>::iterator it) { it_ = it; }
           
-        bool operator==(const cell_t& other) const {
-          return id_ == other.id_;  
-        }
-
-        // code for conflict graph algorithm 
-        void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
-        std::vector<node_t*>& conflicting_points() const{ return conflicting_points_; }
-        std::vector<node_t*>& conflicting_points() { return conflicting_points_; }
-        void clear_conflicts() { conflicting_points_.clear(); }
+         bool operator==(const cell_t& other) const {
+           return id_ == other.id_;  
+         }
+ 
+         // code for conflict graph algorithm
+         void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
+         std::vector<node_t*>& conflicting_points() const{ return conflicting_points_; }
+         std::vector<node_t*>& conflicting_points() { return conflicting_points_; }
+         void clear_conflicts() { conflicting_points_.clear(); }
       
-
-       private:
-        int id_;
-        halfedge_t* h_;
-        std::vector<node_t*> conflicting_points_;  // code needed for conflict graph algorithm 
-    };
+ 
+        private:
+         int id_;
+         halfedge_t* h_;
+         std::vector<node_t*> conflicting_points_;  // code needed for conflict graph algorithm
+     };
 
 
     using halfedge_iterator = std::list<halfedge_t>::iterator;
