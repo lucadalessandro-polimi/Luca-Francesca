@@ -5,7 +5,7 @@
 namespace fdapde {
   
 template <int LocalDim, int EmbedDim>
-class Delaunay : public Triangulation<LocalDim, EmbedDim> {
+class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>> {
    public:
     static constexpr int local_dim = LocalDim;
     static constexpr int embed_dim = EmbedDim;
@@ -15,7 +15,8 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
     using node_t = typename DCEL<local_dim, embed_dim>::node_t;
     using halfedge_t = typename DCEL<local_dim, embed_dim>::halfedge_t;
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
-    using triangulation_t = Triangulation<local_dim, embed_dim>;
+    using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<2,2>>;
+    using dcel_t = DCEL<local_dim, embed_dim>;
     
     //Constructors 
     // Costructor with random generated points
@@ -29,25 +30,32 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
 
 /*
     void Ruppert_refinement(double rho_bar) {
+        // Convert current triangulation to DCEL
+        DCEL<local_dim, embed_dim> dcel = Triangulation_to_DCEL(*this);
+    
         while (true) {
-            //if there is any edge of the boundary encroaching a point split and restart from same line 
-            if (split_first_encroached_segment()) {
-                continue; 
+            if (split_first_encroached_segment(dcel)) {
+                continue;
             }
-            //if there is any triangle with radius/edge > rho_bar split and restart from above
-            if (split_first_bad_triangle(rho_bar)) {
-                continue;  
-            }
+    
+            // if (split_first_bad_triangle(dcel, rho_bar)) {
+            //     continue;
+            // }
+    
             break;
         }
+    
+        // Update the internal triangulation from the refined DCEL
+        *this = DCEL_to_Triangulation(dcel);
     }*/
+     
 
     
    private:
     static triangulation_t build_triangulation_from_dcel(
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N) 
     {
-        DCEL<local_dim, embed_dim> dcel = DCEL<local_dim, embed_dim>::make_polygon(boundary);
+        dcel_t dcel = dcel_t::make_polygon(boundary);
         triangulate(dcel, N, boundary);  
         dcel.export_to_json("dcel_output.json");
         return DCEL_to_Triangulation(dcel);
@@ -58,13 +66,13 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal)
     {
-        DCEL<local_dim, embed_dim> dcel = DCEL<local_dim, embed_dim>::make_polygon(boundary);
+        dcel_t dcel = dcel_t::make_polygon(boundary);
         triangulate(dcel, internal, boundary);  
         dcel.export_to_json("dcel_output.json");
         return DCEL_to_Triangulation(dcel);
     }
 
-    static triangulation_t DCEL_to_Triangulation(DCEL<local_dim, embed_dim>& dcel) {
+    static triangulation_t DCEL_to_Triangulation(dcel_t& dcel) {
         Eigen::Matrix<double, Eigen::Dynamic, embed_dim> nodes(dcel.n_nodes(), embed_dim);
         Eigen::Matrix<int, Eigen::Dynamic, n_nodes_cell> cells(dcel.n_cells(), n_nodes_cell);
         Eigen::Matrix<int, Eigen::Dynamic, 1> boundary_markers(dcel.n_nodes());
@@ -96,7 +104,74 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         return triangulation;
     }
 
-    static void detect_conflicts(DCEL<local_dim, embed_dim>& dcel ,node_t* n, const std::vector<halfedge_t*>& cells_to_check = {}) {
+
+    static dcel_t Triangulation_to_DCEL(triangulation_t& triangulation) {
+        using MatrixType = Eigen::Matrix<double, Eigen::Dynamic, embed_dim>;
+        const auto& coords = triangulation.nodes();
+        const auto& markers = triangulation.boundary_nodes();
+    
+        int n_boundary = triangulation.n_boundary_nodes();  
+        MatrixType boundary_nodes(n_boundary, embed_dim);
+    
+        int idx = 0;
+        for (int i = 0; i < coords.rows(); ++i) {
+            if (markers(i,0) == 1) {
+                boundary_nodes.row(idx++) = coords.row(i);
+            }
+        }
+        dcel_t dcel = dcel_t::make_polygon(boundary_nodes);
+        for (int i = 0; i < coords.rows(); ++i) {
+            if (markers(i,0) == 0) {
+                dcel.insert_node(node_t(dcel.n_nodes(), false, coords.row(i)));
+            }
+        }
+
+        for (int i = 0; i < triangulation.n_cells(); ++i) {
+            int id0 = triangulation.cells()(i, 0);
+            int id1 = triangulation.cells()(i, 1);
+            int id2 = triangulation.cells()(i, 2);
+    
+            node_t* n0 = std::addressof(*std::find_if(dcel.nodes_begin(), dcel.nodes_end(),
+                                                      [&](const node_t& n) { return n.id() == id0; }));
+            node_t* n1 = std::addressof(*std::find_if(dcel.nodes_begin(), dcel.nodes_end(),
+                                                      [&](const node_t& n) { return n.id() == id1; }));
+            node_t* n2 = std::addressof(*std::find_if(dcel.nodes_begin(), dcel.nodes_end(),
+                                                      [&](const node_t& n) { return n.id() == id2; }));
+            std::cout<<n0->id()<<" "<<n1->id()<<" "<<n2->id()<<std::endl;
+            if (!fdapde::internals::are_2d_counterclockwise_sorted(n0->coords(), n1->coords(), n2->coords()))
+            std::swap(n1, n2);
+
+            halfedge_t* h = nullptr;
+
+            h = dcel.find_halfedge_between(n0, n1);  
+            if (h)
+                add_triangle(dcel, h, std::vector<node_t*> {n2});
+            else {
+                h = dcel.find_halfedge_between(n1, n2);
+                if (h)
+                    add_triangle(dcel, h, std::vector<node_t*> {n0});
+                else {
+                    h = dcel.find_halfedge_between(n2, n0);
+                    std::cout<<h->id()<<" "<<h->twin()->id()<<std::endl;
+                    if (h)
+                        add_triangle(dcel, h, std::vector<node_t*> {n1});
+                    else{
+                        halfedge_t* h0 = dcel.emplace_halfedge_(n0);
+                        halfedge_t* h1 = dcel.emplace_halfedge_(n1);
+                        dcel.insert_edge(h0, h1);
+                        add_triangle(dcel, h0, std::vector<node_t*> {n2});
+
+                    }
+                }
+            }
+        }
+    
+        dcel.export_to_json("dcel_output.json");
+        return dcel;
+    }
+
+
+    static void detect_conflicts(dcel_t& dcel ,node_t* n, const std::vector<halfedge_t*>& cells_to_check = {}) {
         bool found = false;
 
         if (cells_to_check.empty()) {  // initialization case: scan all the cells
@@ -143,11 +218,11 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         }
     }
 
-    static halfedge_t* add_triangle(DCEL<local_dim, embed_dim>& dcel ,halfedge_t* v,const std::vector<node_t*>& node){
+    static halfedge_t* add_triangle(dcel_t& dcel ,halfedge_t* v,const std::vector<node_t*>& node){
         return dcel.add_polygon(v ,node);
     }
 
-    static void add_first_triangle(DCEL<local_dim, embed_dim>& dcel, node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
+    static void add_first_triangle(dcel_t& dcel, node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
         bool concave=false;
         auto iter = dcel.halfedges_begin();
         halfedge_t* first_h= dcel.emplace_halfedge_(n);
@@ -230,7 +305,7 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         flip(dcel);
     }
 
-    static void flip(DCEL<local_dim, embed_dim>& dcel) {
+    static void flip(dcel_t& dcel) {
 
         // creating a list of halfedges to check whether they are locally delaunay or not (in this case flippable)
         std::list<halfedge_t*> halfedges_to_check;
@@ -275,7 +350,7 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
 
 
     // function to mark the cavity during insertion
-    static void mark_cavity(DCEL<local_dim, embed_dim>& dcel, node_t* u, halfedge_t* h, std::vector<halfedge_t*>& D, std::vector<halfedge_t*>& C) {
+    static void mark_cavity(dcel_t& dcel, node_t* u, halfedge_t* h, std::vector<halfedge_t*>& D, std::vector<halfedge_t*>& C) {
         if(h->on_boundary()){
             C.push_back(h);  
             return;
@@ -306,7 +381,7 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
 
 
     // Function to insert a vertex handling conflicts
-    static void insert_vertex_at_conflict(DCEL<local_dim, embed_dim>& dcel, node_t* u) {
+    static void insert_vertex_at_conflict(dcel_t& dcel, node_t* u) {
         // Retrieve the triangle in conflict with u and we marked as visited 
         cell_t* t = u->conflict(); 
         std::vector<halfedge_t*> D;
@@ -371,7 +446,7 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         }
     }  
 
-    static void triangulate(DCEL<local_dim,embed_dim>& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+    static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
 
         // Computing the bounding box
         double min_x = boundary.col(0).minCoeff();
@@ -431,7 +506,7 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
 
     //overloaded one if user wants to pass manually the internal points
     //the user must know the passed internal points lie all inside the domain 
-    static void triangulate(DCEL<local_dim,embed_dim>& dcel, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
+    static void triangulate(dcel_t& dcel, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
         
         node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, internal.row(0)));
@@ -465,21 +540,19 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
             cont_h++;
         }
     }
-    
-   
-/*   
-    void split_subsegment(halfedge_t* e) {
+       
+    static void split_subsegment(dcel_t& dcel, halfedge_t* e) {
         node_t* a = e->node();
         node_t* b = e->twin()->node();
         coords_t mid = 0.5 * (a->coords() + b->coords());
         // inserting the midpoint
         node_t* m = dcel.insert_node(node_t(dcel.n_nodes(), true, mid));
         // cutting in two the cell of the encroached segment
-        add_triangle(e->prev(), std::vector<node_t*> {m});
-        add_triangle(e->next(), std::vector<node_t*> {m});
+        add_triangle(e, std::vector<node_t*> {m});
         dcel.remove_edge(e);
+       // dcel.insert_edge(???)
     }
-
+/*
     void split_triangle(cell_t* t) {
         coords_t A = t->halfedge()->prev()->node()->coords();
         coords_t B = t->halfedge()->node()->coords();
@@ -507,16 +580,15 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         //(cioè se sta esattamente sul bordo ma non dentro al disco di diametro di un segmento).
         //dovrebbe essere la prova del fatto che c non puo mai cadere sul bordo del dominio dove ci sono tutti i segmenti della PLC
         node_t* new_node = dcel.insert_node(node_t(dcel.n_nodes(), false, c));
-    }
+    }*/
    
-    bool split_first_encroached_segment() {
+    static bool split_first_encroached_segment(dcel_t& dcel) {
         halfedge_t* encroached_edge = nullptr;
 
         for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
             halfedge_t* e = &(*it);
 
             if (!e->on_boundary()) break;
-            //PROBLEMA CON INSERT CHE SWITCHA IN PRIMA CHIAMATA 134/135 E QUINDI CONTROLLO NON VA PIU E NENACHE LE CHIAMATE AD ADD_POLYGON PERCHE DA SEGMENTATION FALUT
             if (e->id() > e->twin()->id()) break;
 
             coords_t a = e->node()->coords();
@@ -537,13 +609,13 @@ class Delaunay : public Triangulation<LocalDim, EmbedDim> {
         }
 
         if (encroached_edge != nullptr) {
-            split_subsegment(encroached_edge);
+            split_subsegment(dcel,encroached_edge);
             return true;
         }
 
         return false;
     }
-
+/*
     bool split_first_bad_triangle(double rho_bar) {
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
             cell_t* t = &(*it);

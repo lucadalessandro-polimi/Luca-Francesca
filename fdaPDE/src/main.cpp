@@ -117,10 +117,12 @@ int main() {
             //   0.5, 0.5,  
                 0.0, 10.0;*/
 
-    Delaunay<2, 2> mesh(boundary,10); 
+    Delaunay<2, 2> mesh(boundary,internal); 
+    //auto dcel = Delaunay<2, 2>::Triangulation_to_DCEL(mesh);
 
 
-    /*auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
+/*
+    auto find_halfedge_from_id = [&mesh](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 

@@ -645,6 +645,16 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }while(h!=end);
         return nullptr;
     }
+    halfedge_t* find_halfedge_between(node_t* from, node_t* to) {
+        for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
+            halfedge_t* h = &(*it);
+            if (h->node() == from && h->twin() && h->twin()->node() == to) {
+                return h;
+            }
+        }
+        return nullptr;
+    }
+    
   
 
     // internal utils
