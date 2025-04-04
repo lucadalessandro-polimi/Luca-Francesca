@@ -99,6 +99,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         halfedge_t *prev_, *next_, *twin_;
         node_t* node_;
         cell_t* cell_;   // cell to which this halfedge belongs to
+        std::list<halfedge_t>::iterator it_;   // iterator to the halfedge in the list
        public:
         halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr) { }
         halfedge_t(int id, halfedge_t* prev, halfedge_t* next, halfedge_t* twin, node_t* node) :
@@ -117,6 +118,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         cell_t* cell() const { return cell_; }
         int id() const { return id_; }
         bool on_boundary() const { return (node_->on_boundary() && twin_->node()->on_boundary() && (cell()==nullptr || twin()->cell()==nullptr)); }
+        std::list<halfedge_t>::iterator it() const { return it_; }
         // modifiers
         void set_prev(halfedge_t* prev) { prev_ = prev; }
         void set_next(halfedge_t* next) { next_ = next; }
@@ -124,6 +126,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         void set_node(node_t* node) { node_ = node; }
         void set_cell(cell_t* cell) { cell_ = cell; }
         void set_id(int id) {id_=id;}
+        void set_it(std::list<halfedge_t>::iterator it) { it_ = it; }
 
         // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
         struct circulator {
@@ -163,12 +166,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
         cell_t() : h_(nullptr) { }
         cell_t(int id) : id_(id), h_(nullptr) { }
         cell_t(int id, halfedge_t* h) : id_(id), h_(h) { }
+        std::list<cell_t>::iterator it_;   // iterator to the cell in the list
         // observers
         halfedge_t* halfedge() const { return h_; }
         int id() const { return id_; }
-        void set_id(int id) {id_=id;}
+        std::list<cell_t>::iterator it() const { return it_; }
         // modifiers
         void set_halfedge(halfedge_t* h) { h_ = h; }
+        void set_id(int id) {id_=id;}
+        void set_it(std::list<cell_t>::iterator it) { it_ = it; }
           
         bool operator==(const cell_t& other) const {
           return id_ == other.id_;  
@@ -203,6 +209,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // create polygon cell
         dcel.cells_.push_back(cell_t(0));
         cell_t* c = std::addressof(dcel.cells_.back());
+        c->set_it(std::prev(dcel.cells_.end()));
         dcel.n_cells_ = 1;
         // push nodes
         for (int i = 0; i < n_nodes; ++i) {
@@ -245,6 +252,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         int n_nodes = boundary.rows();
         dcel.cells_.push_back(cell_t(0)); // Cella principale
         cell_t* c = std::addressof(dcel.cells_.back());
+        c->set_it(std::prev(dcel.cells_.end()));
         dcel.n_cells_ = 1;
         // nodes and halfedges for external boundary
         for (int i = 0; i < n_nodes; ++i) {
@@ -372,19 +380,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
             continue;
             }
             std::cout << "Exporting cell with ID: " << it->id() << std::endl;
-            int count = 0;
             do {
                 if (!h) { 
                     std::cerr << "ERROR: null halfedge in cell " << it->id() << std::endl;
                     break;
                 }
-                if (count > 20) {
-                    std::cerr << "Infinite loop in cell " << it->id() << std::endl;
-                    break;
-                }
                 cell["edges"].push_back(h->id());
                 h = h->next();
-                count++;
             } while (h && h != it->halfedge());
             j["cells"].push_back(cell);
         }
@@ -414,7 +416,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
             (v1==v2 || v1->node()==v2->node()) ) {
             return v1;
         }
-
         // get exiting halfedges from n1 and n2
         node_t* n1 = v1->node();
         node_t* n2 = v2->node();
@@ -465,6 +466,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h1->cell()->set_halfedge(h1);
             cells_.push_back(cell_t(n_cells_++));
             cell_t* c1 = std::addressof(cells_.back());
+            c1->set_it(std::prev(cells_.end()));
             c1->set_halfedge(h2);
             halfedge_t* end = h2;
             do {         
@@ -483,6 +485,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
         return h1;
     }
+
     halfedge_t* add_polygon(halfedge_t* v, const std::vector<node_t*>& nodes){
       int nodes_polygon= nodes.size();                                                                         
         cell_t* c= v->cell();                                                                                    
@@ -549,14 +552,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 begin = begin->next();
             } while (begin != end);
             // remove v1's cell
-            cell_iterator it = cells_.begin();
-            while (it != cells_.end()) {
-                if (it->id() == c1->id()) 
-                    break;  
-                ++it;
-            }
-            if (it != cells_.end()) 
-                cells_.erase(it);
+            cells_.erase(c1->it());
         }
 
         // set next of v1_prev to v2_next
@@ -569,37 +565,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // remove v2's cell
         cell_t* c2=v2->cell();
         if (c2) {
-            cell_iterator it = cells_.begin();
-            while (it != cells_.end()) {
-                if (it->id() == c2->id()) 
-                    break;  
-                ++it;
-            }
-            if (it != cells_.end()) 
-                cells_.erase(it);
+            cells_.erase(c2->it());
         }
         // remove v1 and v2
         halfedge_t* next= v2->next();
-        if (v1 && v2) {
-            halfedge_iterator it1 = halfedges_.begin();
-            while (it1 != halfedges_.end()) {
-                if (it1->id() == v1->id()) {
-                    break;
-                }
-                ++it1;
-            }
-            halfedge_iterator it2 = halfedges_.begin();
-            while (it2 != halfedges_.end()) {
-                if (it2->id() == v2->id()) {
-                    break;
-                }
-                ++it2;
-            }
-            if (it1 != halfedges_.end() && it2 != halfedges_.end()) {
-                halfedges_.erase(it1);  
-                halfedges_.erase(it2);
-            }
-        }
+        halfedges_.erase(v1->it());  
+        halfedges_.erase(v2->it());
         return next; 
     }
 
@@ -644,6 +615,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
     // internal utils
     template <typename... Args> halfedge_t* emplace_halfedge_(Args&&... args) {
         halfedges_.emplace_back(n_halfedges_++, std::forward<Args>(args)...);
+        auto it = std::prev(halfedges_.end()); // oppure std::next(halfedges_.begin(), n_halfedges_ - 1);
+        it->set_it(it); // = it;
         return std::addressof(halfedges_.back());
     }
 
