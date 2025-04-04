@@ -24,7 +24,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-
+    /*
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -45,7 +45,7 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-
+*/
  /*   
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
@@ -64,21 +64,27 @@ int main() {
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
  */
 
-    /*
+    
     Eigen::Matrix<double, 13, 2> boundary;  //concave
-    boundary << 0.5, 1.0, 
+    boundary << 0.0, 1.3,
+                0.5, 1.0, 
                 0.3, 0.3,  
                 1.0, 0.7,  
                 1.7, 0.0, 
                 1.85, 0.15, 
                 2.0, 0.3,  
                 2.0, 1.3,  
-                2.0, 2.0,
+                1.0, 1.3,
                 1.0, 2.0,
                 0.0, 2.0,  
                 0.0, 1.7,
-                0.0, 1.5,
-                0.0, 1.3;*/
+                0.0, 1.5;
+    Eigen::Matrix<double, 4, 2> hole;
+    hole << 0.5, 1.5,
+            0.5, 1.7,
+            0.3, 1.7,
+            0.3, 1.5;
+                
     /*
     Eigen::Matrix<double, 18, 2> boundary; //scala
     boundary << 0.0, 0.0, 
@@ -108,19 +114,126 @@ int main() {
                 34.0, 8.5;
 
     Eigen::Matrix<double, 1, 2> prova;
-    prova << 3.8, 5.0;
+    prova << 2.66666666666667, -0.505;
                 
-          
-    /*    
-    Eigen::Matrix<double, 4, 2> boundary;
-    boundary <<  0.0, 0.0,  
-                10.0, 0.0,  
-                10.0, 10.0,
-            //   0.5, 0.5,  
-                0.0, 10.0;*/
+    
+    Eigen::Matrix<double, 108, 2> C_boundary;
+    C_boundary << -0.910947171536292, -0.160624564341911,
+                -0.869215674226965, -0.316368632576244,
+                -0.801073498500606, -0.4625,
+                -0.708591109885055, -0.594578538960049,
+                -0.594578538960049, -0.708591109885055,
+                -0.4625, -0.801073498500606,
+                -0.316368632576244, -0.869215674226965,
+                -0.160624564341911, -0.910947171536292,
+                5.6638043864285e-17, -0.925,
+                0.166666666666667, -0.925,
+                0.333333333333333, -0.925,
+                0.5, -0.925,
+                0.666666666666667, -0.925,
+                0.833333333333333, -0.925,
+                1, -0.925,
+                1.16666666666667, -0.925,
+                1.33333333333333, -0.925,
+                1.5, -0.925,
+                1.66666666666667, -0.925,
+                1.83333333333333, -0.925,
+                2, -0.925,
+                2.16666666666667, -0.925,
+                2.33333333333333, -0.925,
+                2.5, -0.925,
+                2.66666666666667, -0.925,
+                2.83333333333333, -0.925,
+                3, -0.925,
+                3.16072704159334, -0.89302940365474,
+                3.29698484809835, -0.80198484809835,
+                3.38802940365474, -0.665727041593338,
+                3.42, -0.505,
+                3.38802940365474, -0.344272958406662,
+                3.29698484809835, -0.20801515190165,
+                3.16072704159334, -0.11697059634526,
+                3, -0.085,
+                2.83333333333333, -0.085,
+                2.66666666666667, -0.085,
+                2.5, -0.085,
+                2.33333333333333, -0.085,
+                2.16666666666667, -0.085,
+                2, -0.085,
+                1.83333333333333, -0.085,
+                1.66666666666667, -0.085,
+                1.5, -0.085,
+                1.33333333333333, -0.085,
+                1.16666666666667, -0.085,
+                1, -0.085,
+                0.833333333333333, -0.085,
+                0.666666666666667, -0.085,
+                0.5, -0.085,
+                0.333333333333333, -0.085,
+                0.166666666666667, -0.085,
+                5.2045770037451e-18, -0.085,
+                -0.085, 1.04091540074902e-17,
+                5.2045770037451e-18, 0.085,
+                0.166666666666667, 0.085,
+                0.333333333333333, 0.085,
+                0.5, 0.085,
+                0.666666666666667, 0.085,
+                0.833333333333333, 0.085,
+                1, 0.085,
+                1.16666666666667, 0.085,
+                1.33333333333333, 0.085,
+                1.5, 0.085,
+                1.66666666666667, 0.085,
+                1.83333333333333, 0.085,
+                2, 0.085,
+                2.16666666666667, 0.085,
+                2.33333333333333, 0.085,
+                2.5, 0.085,
+                2.66666666666667, 0.085,
+                2.83333333333333, 0.085,
+                3, 0.085,
+                3.16072704159334, 0.11697059634526,
+                3.29698484809835, 0.20801515190165,
+                3.38802940365474, 0.344272958406662,
+                3.42, 0.505,
+                3.38802940365474, 0.665727041593338,
+                3.29698484809835, 0.80198484809835,
+                3.16072704159334, 0.89302940365474,
+                3, 0.925,
+                2.83333333333333, 0.925,
+                2.66666666666667, 0.925,
+                2.5, 0.925,
+                2.33333333333333, 0.925,
+                2.16666666666667, 0.925,
+                2, 0.925,
+                1.83333333333333, 0.925,
+                1.66666666666667, 0.925,
+                1.5, 0.925,
+                1.33333333333333, 0.925,
+                1.16666666666667, 0.925,
+                1, 0.925,
+                0.833333333333333, 0.925,
+                0.666666666666667, 0.925,
+                0.5, 0.925,
+                0.333333333333333, 0.925,
+                0.166666666666667, 0.925,
+                5.6638043864285e-17, 0.925,
+                -0.160624564341911, 0.910947171536292,
+                -0.316368632576244, 0.869215674226965,
+                -0.4625, 0.801073498500606,
+                -0.594578538960049, 0.708591109885055,
+                -0.708591109885055, 0.594578538960049,
+                -0.801073498500606, 0.4625,
+                -0.869215674226965, 0.316368632576244,
+                -0.910947171536292, 0.160624564341911,
+                -0.925, 1.1327608772857e-16;
+    
+   
 
-    Delaunay<2, 2> delaunay(boundary);
-  //  Delaunay<2, 2> delaunay(boundary,holes);
+    Delaunay<2, 2> delaunay(C_boundary);
+    //HOLES
+    //std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes;
+    //holes.push_back(hole);
+    //Delaunay<2, 2> delaunay(boundary,holes);
 /*
     auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -129,24 +242,27 @@ int main() {
         return nullptr; 
     };
 */
-    //delaunay.build_triangulation(internal, boundary);
-    delaunay.build_triangulation(1000,boundary);
+    
+
+    delaunay.build_triangulation(prova, C_boundary);
+    //delaunay.build_triangulation(10,boundary);
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    //delaunay.dcel().export_to_json("dcel_output.json");
+    delaunay.dcel().export_to_json("dcel_output.json");
     
 
 
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-/*
+/*   
     Delaunay<2, 2> delaunay_100(boundary); 
     Delaunay<2, 2> delaunay_1000(boundary); 
     Delaunay<2, 2> delaunay_10000(boundary); 
+    Delaunay<2, 2> delaunay_100000(boundary); 
 
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
-
+        
         int num_points = 100;
 
         auto start = high_resolution_clock::now();  // starting measuring time 
@@ -158,15 +274,16 @@ int main() {
 
         std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
         outfile << num_points << "," << duration << "\n";  
+        
+        
+        int num_points = 1000;
 
-        num_points = 1000;
-
-        start = high_resolution_clock::now();  // starting measuring time 
+        auto start = high_resolution_clock::now();  // starting measuring time 
         
         delaunay_1000.build_triangulation(num_points,boundary);   // function to test
         
-        end = high_resolution_clock::now();    // ending measuring time 
-        duration = duration_cast<milliseconds>(end - start).count();
+        auto end = high_resolution_clock::now();    // ending measuring time 
+        auto duration = duration_cast<milliseconds>(end - start).count();
 
         std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
         outfile << num_points << "," << duration << "\n";  
@@ -183,7 +300,19 @@ int main() {
         std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
         outfile << num_points << "," << duration << "\n"; 
 
+        num_points = 100000;
+
+        start = high_resolution_clock::now();  // starting measuring time 
+        
+        delaunay_100000.build_triangulation(num_points,boundary);   // function to test
+        
+        end = high_resolution_clock::now();    // ending measuring time 
+        duration = duration_cast<milliseconds>(end - start).count();
+
+        std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
+        outfile << num_points << "," << duration << "\n"; 
+
     outfile.close();
-*/  
+*/
     return 0;
 }

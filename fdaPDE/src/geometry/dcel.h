@@ -487,7 +487,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     }
 
     halfedge_t* add_polygon(halfedge_t* v, const std::vector<node_t*>& nodes){
-      int nodes_polygon= nodes.size();                                                                         
+        int nodes_polygon= nodes.size();                                                                         
         cell_t* c= v->cell();                                                                                    
     
         std::vector<halfedge_t*> halfedges_to_call(nodes_polygon +2 ); 
@@ -495,7 +495,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         halfedges_to_call[1] = v->next();
     
         // add nodes and create ghost halfedges
-       for (int i = 0; i < nodes_polygon; ++i) {
+        for (int i = 0; i < nodes_polygon; ++i) {
             halfedge_t* h = nullptr;
             if(find_halfedge(nodes[i],c))
                     h = find_halfedge(nodes[i],c);

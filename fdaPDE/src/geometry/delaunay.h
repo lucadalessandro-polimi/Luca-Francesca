@@ -4,7 +4,7 @@
 #include "header_check.h"
 namespace fdapde {
   
-template <int LocalDim = 2, int EmbedDim = 2>
+template <int LocalDim, int EmbedDim>
 class Delaunay {
    public:
     static constexpr int local_dim = LocalDim;
@@ -30,47 +30,72 @@ class Delaunay {
         dcel_ = dcel;
         flip();
     }
+
     halfedge_t* add_triangle(halfedge_t* v,const std::vector<node_t*>& node){
         return dcel_.add_polygon(v ,node);
     }
 
+
+    void initialize(const Eigen::Matrix<double, Dynamic, embed_dim>& boundary) {
+        // triangulate the polygon
+        fdapde::Polygon<local_dim, embed_dim> polygon(boundary);
+
+        // triangulation_to_DCEL  ... 
+    
+        // reference to triangulated data
+        const auto& coords = polygon.triangulation().nodes();
+        const auto& cells = polygon.triangulation().cells();
+        const auto& markers = polygon.triangulation().boundary_nodes();
+    
+        // insert nodes to dcel
+        for (int i = 0; i < coords.rows(); ++i) {
+            bool on_boundary = markers(i);
+            dcel_.insert_node(node_t(i, on_boundary, coords.row(i).transpose()));
+        }
+    
+        // create triangules
+        for (int i = 0; i < cells.rows(); ++i) {
+            node_t* a = &(*std::next(dcel_.nodes_begin(), cells(i, 0)));
+            node_t* b = &(*std::next(dcel_.nodes_begin(), cells(i, 1)));
+            node_t* c = &(*std::next(dcel_.nodes_begin(), cells(i, 2)));
+            dcel_.add_polygon(nullptr, {a, b, c});
+        }
+    
+        // flip
+        flip();
+    }    
+
+
     void add_first_triangle(node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
         bool concave=false;
         auto iter = dcel_.halfedges_begin();
+        halfedge_t* first_h= dcel_.emplace_halfedge_(n);
+        auto& cell_begin = *dcel_.cells_begin();
+        first_h->set_cell(&cell_begin);
 
         // iterate over all boundary edges to connect to node, if possible
         for (int il = 0; il < boundary.rows(); ++il, ++iter) { 
             halfedge_t* v = &(*iter);                                                                  
             cell_t* c= v->cell();                                                                                    
-            auto& cell_begin = *dcel_.cells_begin();
-            std::vector<halfedge_t*> ghost_halfedges(3); 
+            std::vector<halfedge_t*> halfedges_to_call(3); 
 
             if(dcel_.find_halfedge(n,c)){
                 halfedge_t* h = dcel_.find_halfedge(n,c);
-                ghost_halfedges[2] = h;
-            }
-            else if(dcel_.find_halfedge(n,&cell_begin)){
-                halfedge_t* h = dcel_.find_halfedge(n,&cell_begin);
-                ghost_halfedges[2] = h;
+                halfedges_to_call[2] = h;
             }
             else{  
-                ghost_halfedges[2] = dcel_.emplace_halfedge_(n);
-                ghost_halfedges[2]->set_cell(c);
+                halfedges_to_call[2]= first_h;
             }
-            ghost_halfedges[0] = v;
-            if(v->next()->cell()==ghost_halfedges[2]->cell())
-                ghost_halfedges[1] = v->next();
+            halfedges_to_call[0] = v;
+            if(v->next()->cell()==halfedges_to_call[2]->cell())
+                halfedges_to_call[1] = v->next();
             else{
-                ghost_halfedges[1] = dcel_.find_halfedge(v->next()->node(),ghost_halfedges[2]->cell());
-                if(!ghost_halfedges[1]){
-                    dcel_.insert_edge(dcel_.find_halfedge(v->prev()->prev()->node(), c),v);  //NON SICURISSIMA
-                    return;
-                }
+                halfedges_to_call[1] = dcel_.find_halfedge(v->next()->node(),halfedges_to_call[2]->cell());
             }
             // add edges
             for (int i = 0; i < 3 ; ++i) {
-                halfedge_t* h1 = ghost_halfedges[i];
-                halfedge_t* h2 = ghost_halfedges[(i + 1) % (3)];
+                halfedge_t* h1 = halfedges_to_call[i];
+                halfedge_t* h2 = halfedges_to_call[(i + 1) % (3)];
                 
                 // check for intersection with boundary edges
                 coords_t A = h1->node()->coords();
@@ -94,7 +119,7 @@ class Delaunay {
                 if(!intersect){
                     halfedge_t* h = dcel_.insert_edge(h1, h2); 
                     if(h && h!=h1)
-                        ghost_halfedges[(i + 1) % (3)] = h->next();  
+                        halfedges_to_call[(i + 1) % (3)] = h->next();  
                 } 
             }
         }
@@ -108,16 +133,26 @@ class Delaunay {
                     h=h->next();
                     i++;
                 }while(h!=&(*it));
-                if(i>3) //not a triangle yet
+                if(i>3){ //not a triangle yet
                     for(int l=0; l<i-3; ++l){
                       halfedge_t* n=h->next()->next();
-                      if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()))
-                        dcel_.insert_edge(h, n);
+                      if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() 
+                         && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords())
+                         && fdapde::internals::are_2d_counterclockwise_sorted(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()) ){
+                        halfedge_t* new_h = dcel_.insert_edge(h, n);
+                        std::cout << "node ID: " << new_h->node()->id() << std::endl;
+                        std::cout << "next ID: " << new_h->next()->node()->id() << std::endl;
+                        std::cout << "next next ID: " << new_h->next()->next()->node()->id() << std::endl;
+                      }
+                      else{
+                        h=h->next();
+                      }
                       h=n;   
                     }
+                }
             }
         }
-        flip();
+        //flip();
     }
 
 
@@ -195,7 +230,7 @@ class Delaunay {
         }
     }
 
-/*
+    /*
     // Function to insert a vertex handling conflicts
     void insert_vertex_at_conflict(node_t* u) {
         // Retrieve the triangle in conflict with u and we marked as visited 
@@ -262,6 +297,7 @@ class Delaunay {
         }
     }  */
 
+    
     void insert_vertex_at_conflict(node_t* u) {
         auto t0 = high_resolution_clock::now(); // Start totale
     
