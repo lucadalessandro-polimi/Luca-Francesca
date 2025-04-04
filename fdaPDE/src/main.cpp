@@ -108,13 +108,11 @@ int main() {
     
 
     Eigen::Matrix<double, 4, 2> internal;
-    internal << 5.0, 5.0,
-                5.0, 15.0,
+    internal << 2.0, 2.0,
+                //5.0, 15.0,
+                6.0, 15.0,
                 27.0, 11.0,
                 34.0, 8.5;
-
-    Eigen::Matrix<double, 1, 2> prova;
-    prova << 2.66666666666667, -0.505;
                 
     
     Eigen::Matrix<double, 108, 2> C_boundary;
@@ -234,8 +232,12 @@ int main() {
     //std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes;
     //holes.push_back(hole);
     //Delaunay<2, 2> delaunay(boundary,holes);
+    Delaunay<2, 2> mesh(boundary,internal); 
+    //auto dcel = Delaunay<2, 2>::Triangulation_to_DCEL(mesh);
+
+
 /*
-    auto find_halfedge_from_id = [&delaunay](int id) -> DCEL<2, 2>::halfedge_t* {
+    auto find_halfedge_from_id = [&mesh](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
@@ -246,9 +248,12 @@ int main() {
 
     delaunay.build_triangulation(prova, C_boundary);
     //delaunay.build_triangulation(10,boundary);
+    };*/
+
+
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    delaunay.dcel().export_to_json("dcel_output.json");
+    //delaunay.dcel().export_to_json("dcel_output.json");
     
 
 
