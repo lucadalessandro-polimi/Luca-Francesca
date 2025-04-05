@@ -102,7 +102,7 @@ int main() {
     
 
     Eigen::Matrix<double, 4, 2> internal;
-    internal << 2.0, 2.0,
+    internal << 2.0, 1.0,
                 //5.0, 15.0,
                 6.0, 15.0,
                 27.0, 11.0,
@@ -118,7 +118,7 @@ int main() {
                 0.0, 10.0;*/
 
     Delaunay<2, 2> mesh(boundary,internal); 
-    //auto dcel = Delaunay<2, 2>::Triangulation_to_DCEL(mesh);
+    mesh.Ruppert_refinement(2.0);
 
 
 /*
