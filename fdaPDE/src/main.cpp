@@ -24,7 +24,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-
+/*
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -45,7 +45,7 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-
+*/
  /*   
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
@@ -101,24 +101,24 @@ int main() {
                 0.0, 2.0;*/
     
 
-    Eigen::Matrix<double, 4, 2> internal;
-    internal << 2.0, 1.0,
-                //5.0, 15.0,
-                6.0, 15.0,
-                27.0, 11.0,
-                34.0, 8.5;
+    Eigen::Matrix<double, 3, 2> internal;
+    internal << 5.0, 5.0,
+                2.0, 2.0,
+                6.0, 6.0;
+                //27.0, 11.0,
+                //34.0, 8.5;
                 
           
-    /*    
+        
     Eigen::Matrix<double, 4, 2> boundary;
     boundary <<  0.0, 0.0,  
                 10.0, 0.0,  
                 10.0, 10.0,
             //   0.5, 0.5,  
-                0.0, 10.0;*/
+                0.0, 10.0;
 
     Delaunay<2, 2> mesh(boundary,internal); 
-    mesh.Ruppert_refinement(1.5);
+    //mesh.Ruppert_refinement(1.5);
 
 
 /*
@@ -132,8 +132,6 @@ int main() {
 
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
-    //PER RISOLVERE PROBLEMA CON FRANCESCA FA SOTTO CON TRIANGOLAZIONE DI PARTENZA 
-    //delaunay.split_subsegment(find_halfedge_from_id(0));
     
     
 

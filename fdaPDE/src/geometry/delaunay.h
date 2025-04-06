@@ -11,13 +11,33 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     static constexpr int embed_dim = EmbedDim;
     static constexpr int n_nodes_cell = 3;
 
+    //struct node_t;
+    //struct cell_t;
+
     using coords_t = Eigen::Matrix<double, embed_dim, 1>;
     using node_t = typename DCEL<local_dim, embed_dim>::node_t;
     using halfedge_t = typename DCEL<local_dim, embed_dim>::halfedge_t;
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
     using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<2,2>>;
     using dcel_t = DCEL<local_dim, embed_dim>;
-    
+/*
+    struct node_t : public DCEL<local_dim, embed_dim>::node_t{
+        cell_t* conflicting_triangle_=nullptr;
+
+        void set_conflict(cell_t* triangle) { conflicting_triangle_ = triangle; }
+        cell_t* conflict() const { return conflicting_triangle_; }
+        void remove_conflict() { conflicting_triangle_ = nullptr; }
+    };
+
+    struct cell_t : public DCEL<local_dim, embed_dim>::cell_t{
+        std::vector<node_t*> conflicting_points_;
+
+        void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
+        std::vector<node_t>& conflicting_points() const{ return conflicting_points_; }
+        std::vector<node_t*>& conflicting_points() { return conflicting_points_; }
+        void clear_conflicts() { conflicting_points_.clear(); }
+    };
+*/    
     //Constructors 
     // Costructor with random generated points
     Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
@@ -394,11 +414,26 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
 
     // Function to insert a vertex handling conflicts
     static void insert_vertex_at_conflict(dcel_t& dcel, node_t* u) {
-        // Retrieve the triangle in conflict with u and we marked as visited 
+        // Retrieve the triangle in conflict with u and we marked as visited
         cell_t* t = u->conflict(); 
         std::vector<halfedge_t*> D;
         std::vector<halfedge_t*> C;
 
+        //removing the edge if the point falls on it 
+        const coords_t& t1 = t->halfedge()->node()->coords();
+        const coords_t& t2 = t->halfedge()->next()->node()->coords();
+        const coords_t& t3 = t->halfedge()->prev()->node()->coords();
+        
+        if (fdapde::internals::contains(u->coords(), t1, t2)) {
+            dcel.remove_edge(t->halfedge());
+        } 
+        else if (fdapde::internals::contains(u->coords(), t2, t3)) {
+            dcel.remove_edge(t->halfedge()->next()); 
+        } 
+        else if (fdapde::internals::contains(u->coords(), t3, t1)) {
+            dcel.remove_edge(t->halfedge()->prev()); 
+        }
+        
         mark_cavity(dcel, u, t->halfedge(), D, C);
         mark_cavity(dcel, u, t->halfedge()->prev(), D, C);
         mark_cavity(dcel, u, t->halfedge()->next(), D, C);
