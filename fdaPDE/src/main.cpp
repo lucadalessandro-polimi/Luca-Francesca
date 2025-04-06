@@ -118,7 +118,7 @@ int main() {
                 0.0, 10.0;*/
 
     Delaunay<2, 2> mesh(boundary,internal); 
-    mesh.Ruppert_refinement(2.0);
+    mesh.Ruppert_refinement(1.5);
 
 
 /*
