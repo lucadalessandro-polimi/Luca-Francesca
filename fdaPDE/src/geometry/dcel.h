@@ -225,6 +225,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             node_t* n2 = std::addressof(*((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1)));
             halfedge_t* h1 = n1->halfedge();
             halfedge_t* h2 = dcel.emplace_halfedge_(n2);   // push twin edge
+            h2->set_cell(nullptr);
             h2->set_twin(h1);
             h1->set_twin(h2);
         }
@@ -268,7 +269,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             node_t* n2 = std::addressof(*((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1)));
             halfedge_t* h1 = n1->halfedge();
             halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
-    
+            h2->set_cell(nullptr);
             h2->set_twin(h1);
             h1->set_twin(h2);
         }

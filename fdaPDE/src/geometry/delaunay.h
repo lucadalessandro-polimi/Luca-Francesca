@@ -28,10 +28,10 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal) :
         triangulation_t(build_triangulation_from_dcel(boundary, internal)) {}
 
-/*
+
     void Ruppert_refinement(double rho_bar) {
         // Convert current triangulation to DCEL
-        DCEL<local_dim, embed_dim> dcel = Triangulation_to_DCEL(*this);
+        dcel_t dcel = Triangulation_to_DCEL(*this);
     
         while (true) {
             if (split_first_encroached_segment(dcel)) {
@@ -44,10 +44,11 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     
             break;
         }
+        dcel.export_to_json("dcel_output.json");
     
         // Update the internal triangulation from the refined DCEL
-        *this = DCEL_to_Triangulation(dcel);
-    }*/
+        //*this = DCEL_to_Triangulation(dcel);
+    }
      
 
     
@@ -137,7 +138,6 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
                                                       [&](const node_t& n) { return n.id() == id1; }));
             node_t* n2 = std::addressof(*std::find_if(dcel.nodes_begin(), dcel.nodes_end(),
                                                       [&](const node_t& n) { return n.id() == id2; }));
-            std::cout<<n0->id()<<" "<<n1->id()<<" "<<n2->id()<<std::endl;
             if (!fdapde::internals::are_2d_counterclockwise_sorted(n0->coords(), n1->coords(), n2->coords()))
             std::swap(n1, n2);
 
@@ -152,7 +152,6 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
                     add_triangle(dcel, h, std::vector<node_t*> {n0});
                 else {
                     h = dcel.find_halfedge_between(n2, n0);
-                    std::cout<<h->id()<<" "<<h->twin()->id()<<std::endl;
                     if (h)
                         add_triangle(dcel, h, std::vector<node_t*> {n1});
                     else{
@@ -165,8 +164,6 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
                 }
             }
         }
-    
-        dcel.export_to_json("dcel_output.json");
         return dcel;
     }
 
@@ -540,7 +537,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             cont_h++;
         }
     }
-       
+
     static void split_subsegment(dcel_t& dcel, halfedge_t* e) {
         node_t* a = e->node();
         node_t* b = e->twin()->node();
@@ -548,9 +545,48 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         // inserting the midpoint
         node_t* m = dcel.insert_node(node_t(dcel.n_nodes(), true, mid));
         // cutting in two the cell of the encroached segment
-        add_triangle(e, std::vector<node_t*> {m});
+        add_triangle(dcel, e, std::vector<node_t*> {m});
         dcel.remove_edge(e);
-       // dcel.insert_edge(???)
+        //dcel.insert_edge(m->halfedge(),e->prev());
+
+        
+            // 📍 Stampa tutti i nodi
+            std::cout << "\n🟢 NODI: \n";
+            for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+                std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                          << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+            }
+        
+            // 🔗 Stampa tutti gli Half-Edges
+            std::cout << "\n🔵 HALF-EDGES: \n";
+            for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
+                std::cout << "ID: " << it->id()
+                          << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                          << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                          << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                          << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                          << std::endl;
+            }
+        
+            // 🔳 Stampa tutte le Celle
+            std::cout << "\n🟠 CELLE: \n";
+            for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
+                std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                          << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+                if (it->halfedge()) {
+                    halfedge_t* h = it->halfedge();
+                    std::cout << "  🔗 Half-edges nella cella: ";
+                    halfedge_t* start = h;
+                    do {
+                        std::cout << h->id() << " ";
+                        h = h->next();
+                    } while (h && h != start);
+                    std::cout << std::endl;
+                }
+            }
+        
+            std::cout << "==============================\n" << std::endl;
+        
     }
 /*
     void split_triangle(cell_t* t) {
@@ -589,7 +625,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             halfedge_t* e = &(*it);
 
             if (!e->on_boundary()) break;
-            if (e->id() > e->twin()->id()) break;
+            if (e->id() > e->twin()->id()) continue;
+            std::cout<<e->id()<<std::endl;
 
             coords_t a = e->node()->coords();
             coords_t b = e->twin()->node()->coords();
