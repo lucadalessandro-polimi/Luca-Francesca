@@ -49,18 +49,18 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         triangulation_t(build_triangulation_from_dcel(boundary, internal)) {}
 
 
-    void Ruppert_refinement(double rho_bar) {
+    static void Ruppert_refinement(dcel_t& dcel, double rho_bar) {
         // Convert current triangulation to DCEL
-        dcel_t dcel = Triangulation_to_DCEL(*this);
+        //dcel_t dcel = Triangulation_to_DCEL(*this);
     
         while (true) {
             if (split_first_encroached_segment(dcel)) {
                 continue;
             }
     
-            if (split_first_bad_triangle(dcel, rho_bar)) {
+        /*    if (split_first_bad_triangle(dcel, rho_bar)) {
                 continue;
-            }
+            }*/
     
             break;
         }
@@ -81,7 +81,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         dcel.export_to_json("dcel_output.json");
     
         // Update the internal triangulation from the refined DCEL
-        this->set_from_triangulation(DCEL_to_Triangulation(dcel));
+        //this->set_from_triangulation(DCEL_to_Triangulation(dcel));
 
     }
      
@@ -105,6 +105,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         dcel_t dcel = dcel_t::make_polygon(boundary);
         triangulate(dcel, internal, boundary);  
         dcel.export_to_json("dcel_output.json");
+        //Ruppert_refinement(dcel, 2.0);
         return DCEL_to_Triangulation(dcel);
     }
 
@@ -424,19 +425,40 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         const coords_t& t2 = t->halfedge()->next()->node()->coords();
         const coords_t& t3 = t->halfedge()->prev()->node()->coords();
         
+        bool found_on_edge = false;
+
         if (fdapde::internals::contains(u->coords(), t1, t2)) {
-            dcel.remove_edge(t->halfedge());
-        } 
-        else if (fdapde::internals::contains(u->coords(), t2, t3)) {
-            dcel.remove_edge(t->halfedge()->next()); 
-        } 
-        else if (fdapde::internals::contains(u->coords(), t3, t1)) {
-            dcel.remove_edge(t->halfedge()->prev()); 
+            D.push_back(t->halfedge());
+                mark_cavity(dcel, u, t->halfedge()->next(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->prev(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->twin()->next(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->twin()->prev(), D, C);
+            found_on_edge = true;
         }
-        
-        mark_cavity(dcel, u, t->halfedge(), D, C);
-        mark_cavity(dcel, u, t->halfedge()->prev(), D, C);
-        mark_cavity(dcel, u, t->halfedge()->next(), D, C);
+    
+        else if (fdapde::internals::contains(u->coords(), t2, t3)) {
+            D.push_back(t->halfedge()->next());
+                mark_cavity(dcel, u, t->halfedge(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->prev(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->next()->twin()->next(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->next()->twin()->prev(), D, C);
+            found_on_edge = true;
+        }
+    
+        else if (fdapde::internals::contains(u->coords(), t3, t1)) {
+            D.push_back(t->halfedge()->prev());
+                mark_cavity(dcel, u, t->halfedge()->next(), D, C);
+                mark_cavity(dcel, u, t->halfedge(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->prev()->twin()->next(), D, C);
+                mark_cavity(dcel, u, t->halfedge()->prev()->twin()->prev(), D, C);
+            found_on_edge = true;
+        }
+
+        if (!found_on_edge) {
+            mark_cavity(dcel, u, t->halfedge(), D, C);
+            mark_cavity(dcel, u, t->halfedge()->next(), D, C);
+            mark_cavity(dcel, u, t->halfedge()->prev(), D, C);
+        }
   
         //invalidating the conflicts node->cell for the point of the cavity
         std::unordered_set<node_t*> invalidated_nodes;
@@ -601,12 +623,12 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         add_triangle(dcel, prev, std::vector<node_t*> {m});
     }
 
-    void split_triangle(dcel_t& dcel, cell_t* t) {
+    static void split_triangle(dcel_t& dcel, cell_t* t) {
         coords_t A = t->halfedge()->prev()->node()->coords();
         coords_t B = t->halfedge()->node()->coords();
         coords_t C = t->halfedge()->next()->node()->coords();
         coords_t c = fdapde::internals::circumcenter(A, B, C);
-
+        std::cout<<t->id()<<std::endl;
         //find if c encroaches some edge of the trinagulation
         for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
             halfedge_t* e = &(*it);
@@ -665,7 +687,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         return false;
     }
 
-    bool split_first_bad_triangle(dcel_t& dcel, double rho_bar) {
+    static bool split_first_bad_triangle(dcel_t& dcel, double rho_bar) {
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
             cell_t* t = &(*it);
 

@@ -23,29 +23,38 @@ constexpr int M = 8; // Numero di punti del buco
 constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
+double rho_from_min_angle(double theta_min_deg) {
+    if (theta_min_deg <= 0.0 || theta_min_deg >= 180.0) {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    double theta_rad = theta_min_deg * M_PI / 180.0;
+    return 1.0 / (2.0 * std::sin(theta_rad));
+}
+
 int main() {
-/*
-    Eigen::Matrix<double, 16, 2> boundary;
+
+    Eigen::Matrix<double, 4, 2> boundary;
     boundary << 0.0, 0.0,
-                10.0, 0.0,
-                20.0, 0.0,
-                30.0, 0.0,
+                //10.0, 0.0,
+                //20.0, 0.0,
+                //30.0, 0.0,
                 40.0, 0.0,  // Lato inferiore con 4 punti intermedi
     
-                40.0, 5.0,
-                40.0, 10.0,
-                40.0, 15.0,
+                //40.0, 5.0,
+                //40.0, 10.0,
+                //40.0, 15.0,
                 40.0, 20.0,  // Lato destro con 3 punti intermedi
     
-                30.0, 20.0,
-                20.0, 20.0,
-                10.0, 20.0,
-                0.0, 20.0,  // Lato superiore con 4 punti intermedi
+                //30.0, 20.0,
+                //20.0, 20.0,
+                //10.0, 20.0,
+                0.0, 20.0; // Lato superiore con 4 punti intermedi
     
-                0.0, 15.0,
-                0.0, 10.0,
-                0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-*/
+                //0.0, 15.0,
+                //0.0, 10.0,
+                //0.0, 5.0;  // Lato sinistro con 3 punti intermedi
+
  /*   
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
@@ -101,24 +110,50 @@ int main() {
                 0.0, 2.0;*/
     
 
-    Eigen::Matrix<double, 3, 2> internal;
-    internal << 5.0, 5.0,
-                2.0, 2.0,
-                6.0, 6.0;
-                //27.0, 11.0,
-                //34.0, 8.5;
+    Eigen::Matrix<double, 14, 2> internal;
+    internal << //1.0, 4.0,
+                9.0, 4.0,
+                11.0, 4.0,
+                //19.0, 1.0,
+                //21.0, 1.0,
+                29.0, 4.0,
+                31.0, 4.0,
+                39.0, 4.0,
+                1.0, 16.0,
+                9.0, 16.0,
+                11.0, 16.0,
+                //19.0, 19.0,
+                //21.0, 19.0,
+                29.0, 16.0,
+                31.0, 16.0,
+                //39.0, 16.0,
+                //1.0, 4.0,
+                //1.0, 6.0,
+                4.0, 9.0,
+                4.0, 11.0,
+                //1.0, 14.0,
+                //1.0, 16.0,
+                //1.0, 19.0,
+                //39.0, 4.0,
+                //39.0, 6.0,
+                36.0, 9.0,
+                36.0, 11.0;
+                //39.0, 14.0,
+                //39.0, 16.0,
+                //39.0, 19.0;
+                
                 
           
-        
+/*        
     Eigen::Matrix<double, 4, 2> boundary;
     boundary <<  0.0, 0.0,  
                 10.0, 0.0,  
                 10.0, 10.0,
             //   0.5, 0.5,  
-                0.0, 10.0;
+                0.0, 10.0;*/
 
     Delaunay<2, 2> mesh(boundary,internal); 
-    //mesh.Ruppert_refinement(1.5);
+    //mesh.Ruppert_refinement(rho_from_min_angle(20.0));
 
 
 /*
