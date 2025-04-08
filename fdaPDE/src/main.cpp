@@ -24,7 +24,7 @@ constexpr double r_hole = 0.4; // Raggio del buco
 constexpr double cx_hole = 1.0, cy_hole = 1.0; // Centro del buco (coincide con il dominio)
 
 int main() {
-    /*
+    
     Eigen::Matrix<double, 16, 2> boundary;
     boundary << 0.0, 0.0,
                 10.0, 0.0,
@@ -45,8 +45,8 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;  // Lato sinistro con 3 punti intermedi
-*/
- /*   
+
+    /*   
     Eigen::Matrix<double, N, 2> boundary;
     for (int i = 0; i < N; ++i) {
         double theta = 2.0 * M_PI * i / N;
@@ -62,9 +62,9 @@ int main() {
     }
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
- */
+    */
 
-    
+    /*
     Eigen::Matrix<double, 13, 2> boundary;  //concave
     boundary << 0.0, 1.3,
                 0.5, 1.0, 
@@ -84,7 +84,7 @@ int main() {
             0.5, 1.7,
             0.3, 1.7,
             0.3, 1.5;
-                
+    */           
     /*
     Eigen::Matrix<double, 18, 2> boundary; //scala
     boundary << 0.0, 0.0, 
@@ -107,12 +107,8 @@ int main() {
                 0.0, 2.0;*/
     
 
-    Eigen::Matrix<double, 4, 2> internal;
-    internal << 2.0, 1.0,
-                //5.0, 15.0,
-                6.0, 15.0,
-                27.0, 11.0,
-                34.0, 8.5;
+    Eigen::Matrix<double, 1, 2> internal;
+    internal << 0.0, 0.0;
                 
     
     Eigen::Matrix<double, 108, 2> C_boundary;
@@ -227,39 +223,58 @@ int main() {
     
    
 
-    Delaunay<2, 2> delaunay(C_boundary);
+    //Delaunay<2, 2> delaunay(C_boundary);
     //HOLES
     //std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes;
     //holes.push_back(hole);
     //Delaunay<2, 2> delaunay(boundary,holes);
-    Delaunay<2, 2> mesh(boundary,internal); 
-    mesh.Ruppert_refinement(2.0);
 
+    Eigen::Matrix<double, 4, 2> boundary1;
+    boundary1 << 0.0, 0.0,
+                40.0, 0.0,  
+                40.0, 20.0,  
+                0.0, 20.0;
 
-/*
-    auto find_halfedge_from_id = [&mesh](int id) -> DCEL<2, 2>::halfedge_t* {
-        for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
-            if (it->id() == id) 
-                return std::addressof(*it); 
-        return nullptr; 
+    Eigen::Matrix<double, 4, 2> boundary_clockwise;
+    boundary_clockwise << 0.0, 0.0,
+                        0.0, 20.0,
+                        40.0, 20.0,
+                        40.0, 0.0;
+
+    Eigen::Matrix<double, 10, 2> star;
+    star <<0.0,    1.0,        // punta in alto
+          -0.2245, 0.3090,     // interno
+          -0.9511, 0.3090,     // punta sinistra
+          -0.3633,-0.1180,     // interno
+          -0.5878,-0.8090,     // punta in basso a sinistra
+          0.0,   -0.3820,     // interno
+          0.5878,-0.8090,     // punta in basso a destra
+          0.3633,-0.1180,     // interno
+          0.9511, 0.3090,     // punta destra
+          0.2245, 0.3090;     // interno
+
+                        
+    Delaunay<2, 2> mesh(star,internal);
+    /*
+    auto dcel = Delaunay<2, 2>::Triangulation_to_DCEL(mesh); //if TRiangulation_to_DCEL is public
+    auto find_halfedge_from_id = [&dcel](int id) -> DCEL<2, 2>::halfedge_t* {
+        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it)
+            if (it->id() == id)
+                return std::addressof(*it);
+        return nullptr;
     };
-*/
-    
+    auto* he = find_halfedge_from_id(0);
+    Delaunay<2,2>::split_subsegment(dcel, he);
+    */
 
-    delaunay.build_triangulation(prova, C_boundary);
-    //delaunay.build_triangulation(10,boundary);
-    };*/
+    //mesh.Ruppert_refinement(2.0);
 
-
-    //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
-    //delaunay.flip();
-    //delaunay.dcel().export_to_json("dcel_output.json");
     
 
 
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-/*   
+    /*   
     Delaunay<2, 2> delaunay_100(boundary); 
     Delaunay<2, 2> delaunay_1000(boundary); 
     Delaunay<2, 2> delaunay_10000(boundary); 
@@ -318,6 +333,6 @@ int main() {
         outfile << num_points << "," << duration << "\n"; 
 
     outfile.close();
-*/
+    */
     return 0;
 }

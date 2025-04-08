@@ -17,20 +17,19 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
     using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<2,2>>;
     using dcel_t = DCEL<local_dim, embed_dim>;
+    using polygon_t = Polygon<local_dim, embed_dim>;
     
-    //Constructors 
-    // Costructor with random generated points
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        int N_internal = 100) :
-    triangulation_t(build_triangulation_from_dcel(boundary, N_internal)) {}
-    // Costructor with given internal points form the user
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-            const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal) :
+    // constructors 
+    // costructor with random generated points
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N_internal = 100) :
+        triangulation_t(build_triangulation_from_dcel(boundary, N_internal)) {}
+    // costructor with given internal points form the user
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal) :
         triangulation_t(build_triangulation_from_dcel(boundary, internal)) {}
 
 
     void Ruppert_refinement(double rho_bar) {
-        // Convert current triangulation to DCEL
+        // convert current triangulation to DCEL
         dcel_t dcel = Triangulation_to_DCEL(*this);
     
         while (true) {
@@ -53,8 +52,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
 
     
    private:
-    static triangulation_t build_triangulation_from_dcel(
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N) 
+    static triangulation_t build_triangulation_from_dcel(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N) 
     {
         dcel_t dcel = dcel_t::make_polygon(boundary);
         triangulate(dcel, N, boundary);  
@@ -63,11 +61,9 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     }
 
 
-    static triangulation_t build_triangulation_from_dcel(
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal)
+    static triangulation_t build_triangulation_from_dcel(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal)
     {
-        dcel_t dcel = dcel_t::make_polygon(boundary);
+        dcel_t dcel; // = dcel_t::make_polygon(boundary);
         triangulate(dcel, internal, boundary);  
         dcel.export_to_json("dcel_output.json");
         return DCEL_to_Triangulation(dcel);
@@ -142,31 +138,35 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             std::swap(n1, n2);
 
             halfedge_t* h = nullptr;
-
+            std::cout << i << std::endl;
             h = dcel.find_halfedge_between(n0, n1);  
-            if (h)
+            if (h){
+                std::cout << "h1: " <<h->id() << std::endl;
                 add_triangle(dcel, h, std::vector<node_t*> {n2});
+            }
             else {
                 h = dcel.find_halfedge_between(n1, n2);
-                if (h)
+                if (h){
+                    std::cout << "h2: " <<h->id() << std::endl;
                     add_triangle(dcel, h, std::vector<node_t*> {n0});
+                }
                 else {
                     h = dcel.find_halfedge_between(n2, n0);
-                    if (h)
+                    if (h){
+                        std::cout << "h3: " <<h->id() << std::endl;
                         add_triangle(dcel, h, std::vector<node_t*> {n1});
+                    }
                     else{
                         halfedge_t* h0 = dcel.emplace_halfedge_(n0);
                         halfedge_t* h1 = dcel.emplace_halfedge_(n1);
                         dcel.insert_edge(h0, h1);
                         add_triangle(dcel, h0, std::vector<node_t*> {n2});
-
                     }
                 }
             }
         }
         return dcel;
     }
-
 
     static void detect_conflicts(dcel_t& dcel ,node_t* n, const std::vector<halfedge_t*>& cells_to_check = {}) {
         bool found = false;
@@ -217,6 +217,18 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
 
     static halfedge_t* add_triangle(dcel_t& dcel ,halfedge_t* v,const std::vector<node_t*>& node){
         return dcel.add_polygon(v ,node);
+    }
+
+    static void initialize_triangulation(dcel_t& dcel, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){
+        polygon_t polygon(boundary);
+        auto triangulation = polygon.triangulation();
+        const auto& nodes = triangulation.nodes();   // Eigen::MatrixXd
+        const auto& cells = triangulation.cells();   // Eigen::MatrixXi
+        std::cout << "NODI (" << nodes.rows() << " x " << nodes.cols() << "):\n" << nodes << "\n\n";
+        std::cout << "CELLE (" << cells.rows() << " x " << cells.cols() << "):\n" << cells << "\n\n";
+        dcel = Triangulation_to_DCEL(triangulation);
+        std::cout << "QUI" << std::endl;
+        
     }
 
     static void add_first_triangle(dcel_t& dcel, node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
@@ -507,7 +519,9 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
         
         node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, internal.row(0)));
-        add_first_triangle(dcel, n, boundary);
+        //add_first_triangle(dcel, n, boundary);
+        initialize_triangulation(dcel, boundary);
+        flip(dcel);
         int first_internal_id = dcel.n_nodes() - 1;
 
         //inserting the remaining internal points in the triangulation
@@ -537,17 +551,20 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             cont_h++;
         }
     }
-
+                               
     static void split_subsegment(dcel_t& dcel, halfedge_t* e) {
         node_t* a = e->node();
         node_t* b = e->twin()->node();
         coords_t mid = 0.5 * (a->coords() + b->coords());
         // inserting the midpoint
         node_t* m = dcel.insert_node(node_t(dcel.n_nodes(), true, mid));
+
         // cutting in two the cell of the encroached segment
+        halfedge_t* prev = e->prev();
         add_triangle(dcel, e, std::vector<node_t*> {m});
         dcel.remove_edge(e);
         //dcel.insert_edge(m->halfedge(),e->prev());
+        add_triangle(dcel,prev,std::vector<node_t*> {m});
 
         
             // 📍 Stampa tutti i nodi
@@ -565,6 +582,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
                           << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
                           << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
                           << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                          << " | Cell: " << (it->cell() ? std::to_string(it->cell()->id()) : "NULL")
+                          << (it->on_boundary() ? " [BOUNDARY]" : "")
                           << std::endl;
             }
         
@@ -588,6 +607,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             std::cout << "==============================\n" << std::endl;
         
     }
+
 /*
     void split_triangle(cell_t* t) {
         coords_t A = t->halfedge()->prev()->node()->coords();

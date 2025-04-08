@@ -41,8 +41,8 @@
 //#include "src/geometry/interval.h"
 #include "src/geometry/linear_network.h"
 #include "src/geometry/dcel.h"
+#include "src/geometry/polygon.h"
 #include "src/geometry/delaunay.h"
-//#include "src/geometry/polygon.h"
 
 // clang-format on
 

@@ -72,7 +72,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
         std::vector<std::vector<int>> poly_partition = monotone_partition_(nodes);
         // triangulate each monotone polygon
         for (const std::vector<int>& poly : poly_partition) {
-            std::vector<int> local_cells = triangulate_monotone_(nodes(poly, Eigen::all));
+            std::vector<int> local_cells = triangulate_monotone_(nodes(poly, Eigen::placeholders::all));  //MODIFICATO
             // move local node numbering to global node numbering
             for (std::size_t i = 0; i < local_cells.size(); ++i) { local_cells[i] = poly[local_cells[i]]; }
             cells.insert(cells.end(), local_cells.begin(), local_cells.end());
