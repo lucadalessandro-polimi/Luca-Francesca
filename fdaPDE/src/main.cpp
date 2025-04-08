@@ -158,7 +158,7 @@ int main() {
             //   0.5, 0.5,  
                 0.0, 10.0;*/
 
-    Delaunay<2, 2> mesh(boundary,internal); 
+    Delaunay<2, 2> mesh(boundary,6); 
     //mesh.Ruppert_refinement(rho_from_min_angle(20.0));
 
 

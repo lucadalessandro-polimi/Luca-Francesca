@@ -96,6 +96,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         dcel_t dcel = dcel_t::make_polygon(boundary);
         triangulate(dcel, N, boundary);  
         dcel.export_to_json("dcel_output.json");
+        Ruppert_refinement(dcel, 2.0);
         return DCEL_to_Triangulation(dcel);
     }
 
@@ -531,63 +532,63 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         }
     }  
 
-    static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
-
-        // Computing the bounding box
+    static void triangulate(dcel_t& dcel, int points_per_row, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
         double min_x = boundary.col(0).minCoeff();
         double max_x = boundary.col(0).maxCoeff();
         double min_y = boundary.col(1).minCoeff();
         double max_y = boundary.col(1).maxCoeff();
     
-        // Creating the generator of causal numbers
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<double> dist_x(min_x, max_x);
-        std::uniform_real_distribution<double> dist_y(min_y, max_y);
-   
+        double dx = max_x - min_x;
+        double dy = max_y - min_y;
+        double margin_ratio = 0.05; // 5% del lato più corto
+        double epsilon = margin_ratio * std::min(dx, dy);
+    
+        double step_x = (dx - 2 * epsilon) / (points_per_row - 1);
+        double step_y = (dy - 2 * epsilon) / (points_per_row - 1);
+    
         int first_internal_id = -1;
         int generated_points = 0;
-
-        while (generated_points < N) {
-            coords_t u;
-            u << dist_x(gen), dist_y(gen);
-            // Verifiyng if the point is inside the polygon, in order to coorecty dale with concavities
-            if (!fdapde::internals::point_in_polygon(boundary, u)) 
-                continue; 
-            if (generated_points == 0) {
-                // Initialize triangulation with the first valid point
+    
+        for (int i = 0; i < points_per_row; ++i) {
+            for (int j = 0; j < points_per_row; ++j) {
+                coords_t u;
+                u << min_x + epsilon + i * step_x, min_y + epsilon + j * step_y;
+    
+                if (!fdapde::internals::point_in_polygon(boundary, u))
+                    continue;
+    
+                std::cout << "internal point: " << u.transpose() << std::endl;
+    
                 node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, u));
-                add_first_triangle(dcel, n, boundary);
-                first_internal_id = dcel.n_nodes() - 1;
-            } else {
-                // Create the node and detect the conflicts with existing cells 
-                node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, u));
-                detect_conflicts(dcel, n); 
+    
+                if (generated_points == 0) {
+                    add_first_triangle(dcel, n, boundary);
+                    first_internal_id = dcel.n_nodes() - 1;
+                } else {
+                    detect_conflicts(dcel, n);
+                }
+    
+                ++generated_points;
             }
-            ++generated_points;
         }
-        // inserting the remaining nodes in the domain 
+    
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
             node_t* u = &(*it);
-            if (!u->on_boundary() && u->id()!=first_internal_id)   
-                insert_vertex_at_conflict(dcel, u); 
+            if (!u->on_boundary() && u->id() != first_internal_id)
+                insert_vertex_at_conflict(dcel, u);
         }
-           
-        //reordering id of cells and halfedges to cover some jumps between ids after removing
+    
         int cont = 0;
-        for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
-            it->set_id(cont);
-            cont++;
-        }
-
+        for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it)
+            it->set_id(cont++);
         dcel.set_n_cells_(cont);
-
-        int cont_h = 0;
-        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
-            it->set_id(cont_h);
-            cont_h++;
-        }
+    
+        cont = 0;
+        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it)
+            it->set_id(cont++);
     }
+    
+    
 
     //overloaded one if user wants to pass manually the internal points
     //the user must know the passed internal points lie all inside the domain 
@@ -647,6 +648,17 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         coords_t B = t->halfedge()->node()->coords();
         coords_t C = t->halfedge()->next()->node()->coords();
         coords_t c = fdapde::internals::circumcenter(A, B, C);  //DA AGGIUSTARE COME EFFICIENZA
+
+        std::cout<<c[0]<<" "<<c[1]<<std::endl;
+        std::cout<<A[0]<<" "<<A[1]<<std::endl;
+        std::cout<<B[0]<<" "<<B[1]<<std::endl;
+        std::cout<<C[0]<<" "<<C[1]<<std::endl;
+        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+            if ((it->coords() - c).norm() < 1e-12) {
+                std::cout<<"NON STO DAVVERO SPLITTANDO"<<std::endl;
+                return;
+            }
+        }
         //find if c encroaches some edge of the triangulation
         for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
             halfedge_t* e = &(*it);
@@ -813,14 +825,46 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     
     
     static void insert_vertex(dcel_t& dcel, node_t* u, cell_t* triangle) {
-        
         halfedge_t* vw = triangle->halfedge();
         halfedge_t* wx = vw->next();
         halfedge_t* xv = vw->prev();
-        // expanding cavity
-        dig_cavity(dcel, u, vw);
-        dig_cavity(dcel, u, wx);
-        dig_cavity(dcel, u, xv);
+    
+        const coords_t& v = vw->node()->coords();
+        const coords_t& w = wx->node()->coords();
+        const coords_t& x = xv->node()->coords();
+        bool found_on_edge = false;
+    
+        if (fdapde::internals::contains(u->coords(), v, w)) {
+            halfedge_t* twin = vw->twin();
+            dcel.remove_edge(vw);
+            dig_cavity(dcel, u, wx);
+            dig_cavity(dcel, u, xv);
+            dig_cavity(dcel, u, twin->next());
+            dig_cavity(dcel, u, twin->prev());
+            found_on_edge = true;
+        } else if (fdapde::internals::contains(u->coords(), w, x)) {
+            halfedge_t* twin = wx->twin();
+            dcel.remove_edge(wx);
+            dig_cavity(dcel, u, vw);
+            dig_cavity(dcel, u, xv);
+            dig_cavity(dcel, u, twin->next());
+            dig_cavity(dcel, u, twin->prev());
+            found_on_edge = true;
+        } else if (fdapde::internals::contains(u->coords(), x, v)) {
+            halfedge_t* twin = xv->twin();
+            dcel.remove_edge(xv);
+            dig_cavity(dcel, u, vw);
+            dig_cavity(dcel, u, wx);
+            dig_cavity(dcel, u, twin->next());
+            dig_cavity(dcel, u, twin->prev());
+            found_on_edge = true;
+        }
+    
+        if (!found_on_edge) {
+            dig_cavity(dcel, u, vw);
+            dig_cavity(dcel, u, wx);
+            dig_cavity(dcel, u, xv);
+        }
     }
 
     void set_from_triangulation(const triangulation_t& triang) {
