@@ -196,7 +196,7 @@ constexpr double radius_edge_ratio(const PointT& A, const PointT& B, const Point
 
 // Compute circumcenter of triangle given its 2D coordinates
 //CAPIRE SE SI VUOLE RISOLVERE O MENO IL SISTEMA LINEARE (QUANTO COSTA IN EFFICIENZA?)
-template <typename PointT>
+/*template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C) {
     PointT midAB = 0.5 * (A + B);
@@ -213,6 +213,24 @@ constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C)
     Eigen::Vector2d t = M.colPivHouseholderQr().solve(rhs);
 
     return midAB + t[0] * dirAB;
+}*/
+template <typename PointT>
+requires(internals::is_subscriptable<PointT, int>)
+constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C) {
+    double x1 = A[0], y1 = A[1];
+    double x2 = B[0], y2 = B[1];
+    double x3 = C[0], y3 = C[1];
+
+    double D = 2.0 * (x1*(y2 - y3) + x2*(y3 - y1) + x3*(y1 - y2));
+    
+    double x1sq = x1 * x1 + y1 * y1;
+    double x2sq = x2 * x2 + y2 * y2;
+    double x3sq = x3 * x3 + y3 * y3;
+
+    double Ux = (x1sq*(y2 - y3) + x2sq*(y3 - y1) + x3sq*(y1 - y2)) / D;
+    double Uy = (x1sq*(x3 - x2) + x2sq*(x1 - x3) + x3sq*(x2 - x1)) / D;
+
+    return PointT(Ux, Uy);
 }
 //function detecting if p is the circle of diameter ab
 template <typename PointT>
@@ -224,8 +242,45 @@ constexpr bool is_encroached(const PointT& p, const PointT& a, const PointT& b) 
     return dist_sq < radius_sq - machine_epsilon; 
 }
 
+// function to compute the angle between two segments that share vertex p in 2D (counterclockwise)
+// the angle is in degrees
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr double angle_between(const PointT& a, const PointT& p, const PointT& b) {
+    PointT v1 = a - p;
+    PointT v2 = b - p;
+    double dot = v1.dot(v2);
+    double norm1 = std::sqrt(v1.squaredNorm());
+    double norm2 = std::sqrt(v2.squaredNorm());
 
+    double cos_theta = dot / (norm1 * norm2);
+    cos_theta = std::fmax(-1.0, std::fmin(1.0, cos_theta));  
 
+    double angle_rad = std::acos(cos_theta);
+    // 2D vector product to dtermine orientation
+    double cross = v1[0] * v2[1] - v1[1] * v2[0];
+    // if cross > 0: angle is clockwise, so we need to subtract from 2 * pi
+    // since boundary is counterclockwise oriented
+    if (cross > 0)
+        angle_rad = 2 * M_PI - angle_rad;
+
+    return angle_rad * 180.0 / M_PI;
+}
+// function to check if the angle between two segments that share vertex p in 2D is acute
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr bool is_angle_acute(const PointT& a, const PointT& p, const PointT& b, double threshold_deg = 90.0) {
+    return angle_between(a, p, b) < threshold_deg - machine_epsilon;
+}
+
+// function to calculate the length of a segment in 2D
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr double segment_length(const PointT& a, const PointT& b) {
+    const double dx = a[0] - b[0];
+    const double dy = a[1] - b[1];
+    return std::sqrt(dx * dx + dy * dy);
+}
 
 
 // then we can detect if a diagonal is fully contained in a polygon

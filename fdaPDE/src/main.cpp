@@ -158,17 +158,79 @@ int main() {
             //   0.5, 0.5,  
                 0.0, 10.0;*/
 
-    Delaunay<2, 2> mesh(boundary,6); 
-    //mesh.Ruppert_refinement(rho_from_min_angle(20.0));
+    Eigen::Matrix<double, 8, 2> boundary_concave_ref;
+    boundary_concave_ref <<  0, 0, 
+                 4, 0, 
+                 4, 2, 
+                 2.5, 1.5, 
+                 4, 4, 
+                 0, 4, 
+                 0, 2, 
+                 1.5, 2.5;
+    Eigen::Matrix<double, 1, 2> int_pt;
+    int_pt << 0., 0.;
 
+    Eigen::Matrix<double,10,2> star_points_ref;
+    star_points_ref << 
+    0.0, 1.0,               // Punto 1: punta superiore
+    -0.2245, 0.3090,        // Punto 2
+    -0.9511, 0.3090,        // Punto 3: punta sinistra
+    -0.3633, -0.1180,       // Punto 4
+    -0.5878, -0.8090,       // Punto 5: punta inferiore sinistra
+    0.0, -0.3820,           // Punto 6
+    0.5878, -0.8090,        // Punto 7: punta inferiore destra
+    0.3633, -0.1180,        // Punto 8
+    0.9511, 0.3090,         // Punto 9: punta destra
+    0.2245, 0.3090;  
+    
 
-/*
-    auto find_halfedge_from_id = [&mesh](int id) -> DCEL<2, 2>::halfedge_t* {
+    
+    //Delaunay<2, 2> mesh(star_points_ref,int_pt);  //non aggiunge nodi in più perchè sto usando initialize_internal con polygon
+    //Delaunay<2,2>::Ruppert_refinement(mesh, rho_from_min_angle(20.0));
+
+    /*
+    fdapde::DCEL<2, 2> dcel = fdapde::DCEL<2, 2>::make_polygon(boundary_concave_ref);
+    auto find_node_from_id = [&dcel](int id) -> DCEL<2, 2>::node_t* {
+        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) 
+            if (it->id() == id) 
+                return std::addressof(*it); 
+        return nullptr; 
+    };
+    std::cout << (fdapde::internals::is_angle_acute(find_node_from_id(0)->coords(),find_node_from_id(1)->coords(),find_node_from_id(2)->coords(),90.0) ? "yes" : "no") << std::endl;
+    */
+
+    //------------------------------- REFINEMENT POTENZIATO ESEMPI----------------------------------------------------------------
+    
+    Eigen::Matrix<double, 6, 2> triang_isoscele;
+    triang_isoscele << 
+    -10, 0.0,      // B
+    //-0.5, 1.,      // M_AB
+    -0.7, std::sqrt(3)/2,
+     0.0, 2.1,      // A
+     0.5, 1.,      // M_AC
+     1.1, 0.0,      // C
+     -0.55, 0.0;
+
+    Eigen::Matrix<double, 1, 2> int_is;
+    int_is << 1.0, 1.0;
+             //0.1, 1.5,
+             //0.7, 0.5;
+            //-0.6, std::sqrt(3)/20;
+    Delaunay<2, 2> mesh(triang_isoscele,int_is);
+
+    /*auto find_halfedge_from_id = [&mesh](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
             if (it->id() == id) 
                 return std::addressof(*it); 
         return nullptr; 
-    };*/
+    };
+    auto find_halfedge_from_id = [&dcel](int id) -> DCEL<2, 2>::halfedge_t* {
+            for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) 
+                if (it->id() == id) 
+                    return std::addressof(*it); 
+            return nullptr; 
+        };
+    std::cout << (is_edge_seditious(find_halfedge_from_id(10)) ? "yes" : "no") << std::endl;*/
 
 
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
