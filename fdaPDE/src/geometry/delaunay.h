@@ -44,8 +44,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     
     // constructors 
     // costructor with random generated points
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N_internal = 100) :
-        triangulation_t(build_triangulation_from_dcel(boundary, N_internal)) {}
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int n_rows = 10) :
+        triangulation_t(build_triangulation_from_dcel(boundary, n_rows)) {}
     // costructor with given internal points form the user
     Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal) :
         triangulation_t(build_triangulation_from_dcel(boundary, internal)) {}
@@ -54,14 +54,12 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     static void Ruppert_refinement(dcel_t& dcel, double rho_bar) {
         // Convert current triangulation to DCEL
         //dcel_t dcel = Triangulation_to_DCEL(*this);
-        int cont=0;
         while (true) {
             std::cout << "all'inizio" << std::endl;
             //if(cont>1) break;
             if (split_first_encroached_segment(dcel)) {
                 std::cout << "Qui" << std::endl;
                 flip(dcel);
-                cont++;
                 continue;
             }
             
@@ -72,7 +70,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             }
             break;
         }
-        /*
+        
         //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
@@ -86,7 +84,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
             it->set_id(cont_h);
             cont_h++;
-        }*/
+        }
         dcel.export_to_json("dcel_output.json");
         
         // Update the internal triangulation from the refined DCEL
@@ -99,9 +97,17 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
    private:
     static triangulation_t build_triangulation_from_dcel(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N) 
     {
-        dcel_t dcel = dcel_t::make_polygon(boundary);
-        triangulate(dcel, N, boundary);  
-        dcel.export_to_json("dcel_output.json");
+        dcel_t dcel; // = dcel_t::make_polygon(boundary);
+        
+        //auto start = high_resolution_clock::now();  // starting measuring time 
+
+        triangulate(dcel, N, boundary); 
+    /*
+        auto end = high_resolution_clock::now();    // ending measuring time 
+        auto duration = duration_cast<milliseconds>(end - start).count();
+        std::cout << "elapsed time for " << N << " points: " << duration << " ms" << std::endl;
+    */
+        //dcel.export_to_json("dcel_output.json");
         //Ruppert_refinement(dcel, 2.0);
         return DCEL_to_Triangulation(dcel);
     }
@@ -112,7 +118,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         dcel_t dcel; // = dcel_t::make_polygon(boundary);
         triangulate(dcel, internal, boundary);  
         dcel.export_to_json("dcel_output.json");
-        Ruppert_refinement(dcel, 2.0);
+        //Ruppert_refinement(dcel, 2.0);
         return DCEL_to_Triangulation(dcel);
     }
 
@@ -139,11 +145,11 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         }
         
         triangulation_t triangulation(nodes, cells, boundary_markers);
-        std::string filename = "mesh_output.txt";
-        export_triangulation_to_txt(triangulation, filename);
+        //std::string filename = "mesh_output.txt";
+        //export_triangulation_to_txt(triangulation, filename);
 
-        std::string command = "python3 fdaPDE/src/plot_mesh.py";
-        std::system(command.c_str()); 
+        //std::string command = "python3 fdaPDE/src/plot_mesh.py";
+        //std::system(command.c_str()); 
 
         return triangulation;
     }
@@ -185,22 +191,22 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             std::swap(n1, n2);
 
             halfedge_t* h = nullptr;
-            std::cout << i << std::endl;
+            //std::cout << i << std::endl;
             h = dcel.find_halfedge_between(n0, n1);  
             if (h){
-                std::cout << "h1: " <<h->id() << std::endl;
+                //std::cout << "h1: " <<h->id() << std::endl;
                 add_triangle(dcel, h, std::vector<node_t*> {n2});
             }
             else {
                 h = dcel.find_halfedge_between(n1, n2);
                 if (h){
-                    std::cout << "h2: " <<h->id() << std::endl;
+                    //std::cout << "h2: " <<h->id() << std::endl;
                     add_triangle(dcel, h, std::vector<node_t*> {n0});
                 }
                 else {
                     h = dcel.find_halfedge_between(n2, n0);
                     if (h){
-                        std::cout << "h3: " <<h->id() << std::endl;
+                        //std::cout << "h3: " <<h->id() << std::endl;
                         add_triangle(dcel, h, std::vector<node_t*> {n1});
                     }
                     else{
@@ -271,12 +277,12 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         auto triangulation = polygon.triangulation();
         const auto& nodes = triangulation.nodes();   // Eigen::MatrixXd
         const auto& cells = triangulation.cells();   // Eigen::MatrixXi
-        std::cout << "NODI (" << nodes.rows() << " x " << nodes.cols() << "):\n" << nodes << "\n\n";
-        std::cout << "CELLE (" << cells.rows() << " x " << cells.cols() << "):\n" << cells << "\n\n";
+        //std::cout << "NODI (" << nodes.rows() << " x " << nodes.cols() << "):\n" << nodes << "\n\n";
+        //std::cout << "CELLE (" << cells.rows() << " x " << cells.cols() << "):\n" << cells << "\n\n";
         dcel = Triangulation_to_DCEL(triangulation);
-        std::cout << "QUI" << std::endl;
+       // std::cout << "QUI" << std::endl;
     }
-
+/*
     static void add_first_triangle(dcel_t& dcel, node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
         bool concave=false;
         auto iter = dcel.halfedges_begin();
@@ -359,7 +365,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         }
         flip(dcel);
     }
-
+*/
     static void flip(dcel_t& dcel) {
 
         // creating a list of halfedges to check whether they are locally delaunay or not (in this case flippable)
@@ -537,37 +543,45 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         }
     }  
 
-    static void triangulate(dcel_t& dcel, int points_per_row, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+    static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
         double min_x = boundary.col(0).minCoeff();
         double max_x = boundary.col(0).maxCoeff();
         double min_y = boundary.col(1).minCoeff();
         double max_y = boundary.col(1).maxCoeff();
-    
+    /*
         double dx = max_x - min_x;
         double dy = max_y - min_y;
         double margin_ratio = 0.05; // 5% del lato più corto
         double epsilon = margin_ratio * std::min(dx, dy);
     
         double step_x = (dx - 2 * epsilon) / (points_per_row - 1);
-        double step_y = (dy - 2 * epsilon) / (points_per_row - 1);
+        double step_y = (dy - 2 * epsilon) / (points_per_row - 1);*/
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+        std::uniform_real_distribution<double> dist_y(min_y, max_y);
     
         int first_internal_id = -1;
         int generated_points = 0;
     
-        for (int i = 0; i < points_per_row; ++i) {
-            for (int j = 0; j < points_per_row; ++j) {
+        //for (int i = 0; i < points_per_row; ++i) {
+        //    for (int j = 0; j < points_per_row; ++j) {
+            while (generated_points < N) {
                 coords_t u;
-                u << min_x + epsilon + i * step_x, min_y + epsilon + j * step_y;
+                //u << min_x + epsilon + i * step_x, min_y + epsilon + j * step_y;
+                u << dist_x(gen), dist_y(gen);
     
                 if (!fdapde::internals::point_in_polygon(boundary, u))
                     continue;
     
-                std::cout << "internal point: " << u.transpose() << std::endl;
+                //std::cout << "internal point: " << u.transpose() << std::endl;
     
                 node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, u));
     
                 if (generated_points == 0) {
-                    add_first_triangle(dcel, n, boundary);
+                    //add_first_triangle(dcel, n, boundary);
+                    initialize_triangulation(dcel, boundary);
+                    flip(dcel);
                     first_internal_id = dcel.n_nodes() - 1;
                 } else {
                     detect_conflicts(dcel, n);
@@ -575,14 +589,14 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     
                 ++generated_points;
             }
-        }
+        //}
     
         for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
             node_t* u = &(*it);
             if (!u->on_boundary() && u->id() != first_internal_id)
                 insert_vertex_at_conflict(dcel, u);
         }
-    
+    /*
         int cont = 0;
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it)
             it->set_id(cont++);
@@ -591,7 +605,9 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         cont = 0;
         for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it)
             it->set_id(cont++);
+    */
     }
+
     
     
 

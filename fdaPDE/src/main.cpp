@@ -36,24 +36,9 @@ int main() {
     
     Eigen::Matrix<double, 4, 2> boundary;
     boundary << 0.0, 0.0,
-                //10.0, 0.0,
-                //20.0, 0.0,
-                //30.0, 0.0,
-                40.0, 0.0,  // Lato inferiore con 4 punti intermedi
-    
-                //40.0, 5.0,
-                //40.0, 10.0,
-                //40.0, 15.0,
-                40.0, 20.0,  // Lato destro con 3 punti intermedi
-    
-                //30.0, 20.0,
-                //20.0, 20.0,
-                //10.0, 20.0,
-                0.0, 20.0; // Lato superiore con 4 punti intermedi
-    
-                //0.0, 15.0,
-                //0.0, 10.0,
-                //0.0, 5.0;  // Lato sinistro con 3 punti intermedi
+                40.0, 0.0, 
+                40.0, 20.0,  
+                0.0, 20.0; 
 
     /*   
     Eigen::Matrix<double, N, 2> boundary;
@@ -216,7 +201,8 @@ int main() {
              //0.1, 1.5,
              //0.7, 0.5;
             //-0.6, std::sqrt(3)/20;
-    Delaunay<2, 2> mesh(triang_isoscele,int_is);
+    //Delaunay<2, 2> mesh(triang_isoscele,int_is);
+    
 
     /*auto find_halfedge_from_id = [&mesh](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = delaunay.dcel().halfedges_begin(); it != delaunay.dcel().halfedges_end(); ++it) 
@@ -239,65 +225,41 @@ int main() {
     
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-    /*   
-    Delaunay<2, 2> delaunay_100(boundary); 
-    Delaunay<2, 2> delaunay_1000(boundary); 
-    Delaunay<2, 2> delaunay_10000(boundary); 
-    Delaunay<2, 2> delaunay_100000(boundary); 
+
+    //Delaunay<2, 2> mesh(boundary,10);
 
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
-        
-        int num_points = 100;
+    
+    auto start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_1000(boundary,1000);  
+    auto end = high_resolution_clock::now();    // ending measuring time 
+    auto duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 1000 << " points: " << duration << " ms" << std::endl;
+    outfile << 1000 << "," << duration << "\n"; 
 
-        auto start = high_resolution_clock::now();  // starting measuring time 
-        
-        delaunay_100.build_triangulation(num_points,boundary);   // function to test
-        
-        auto end = high_resolution_clock::now();    // ending measuring time 
-        auto duration = duration_cast<milliseconds>(end - start).count();
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_10000(boundary,10000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 10000 << " points: " << duration << " ms" << std::endl;
+    outfile << 10000 << "," << duration << "\n"; 
 
-        std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
-        outfile << num_points << "," << duration << "\n";  
-        
-        
-        int num_points = 1000;
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_100000(boundary,100000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 100000 << " points: " << duration << " ms" << std::endl;
+    outfile << 100000 << "," << duration << "\n"; 
 
-        auto start = high_resolution_clock::now();  // starting measuring time 
-        
-        delaunay_1000.build_triangulation(num_points,boundary);   // function to test
-        
-        auto end = high_resolution_clock::now();    // ending measuring time 
-        auto duration = duration_cast<milliseconds>(end - start).count();
-
-        std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
-        outfile << num_points << "," << duration << "\n";  
-
-        num_points = 10000;
-
-        start = high_resolution_clock::now();  // starting measuring time 
-        
-        delaunay_10000.build_triangulation(num_points,boundary);   // function to test
-        
-        end = high_resolution_clock::now();    // ending measuring time 
-        duration = duration_cast<milliseconds>(end - start).count();
-
-        std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
-        outfile << num_points << "," << duration << "\n"; 
-
-        num_points = 100000;
-
-        start = high_resolution_clock::now();  // starting measuring time 
-        
-        delaunay_100000.build_triangulation(num_points,boundary);   // function to test
-        
-        end = high_resolution_clock::now();    // ending measuring time 
-        duration = duration_cast<milliseconds>(end - start).count();
-
-        std::cout << "elapsed time for " << num_points << " points: " << duration << " ms" << std::endl;
-        outfile << num_points << "," << duration << "\n"; 
-
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_1000000(boundary,1000000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 1000000 << " points: " << duration << " ms" << std::endl;
+    outfile << 1000000 << "," << duration << "\n"; 
+    
     outfile.close();
-    */
+    
     return 0;
 }
