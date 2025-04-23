@@ -37,7 +37,8 @@ int main() {
     Eigen::Matrix<double, 4, 2> boundary;
     boundary << 0.0, 0.0,
                 40.0, 0.0, 
-                40.0, 20.0,  
+                40.0, 20.0,
+               // 20.0, 10.0,  
                 0.0, 20.0; 
 
     /*   
@@ -223,11 +224,13 @@ int main() {
     //delaunay.flip();
     
     
+    Delaunay<2, 2> mesh(boundary,24);
+
+    
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
-    //Delaunay<2, 2> mesh(boundary,10);
-
+/*
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
@@ -260,6 +263,6 @@ int main() {
     outfile << 1000000 << "," << duration << "\n"; 
     
     outfile.close();
-    
+*/    
     return 0;
 }

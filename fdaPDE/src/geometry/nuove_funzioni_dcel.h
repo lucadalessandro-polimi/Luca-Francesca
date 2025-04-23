@@ -2127,3 +2127,170 @@ void print_dcel() {
         const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {})
     : dcel(holes.empty() ? DCEL<local_dim, embed_dim>::make_polygon(boundary)
                     : DCEL<local_dim, embed_dim>::make_polygon(boundary, holes)) { }
+
+
+
+
+                    static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+                        double min_x = boundary.col(0).minCoeff();
+                        double max_x = boundary.col(0).maxCoeff();
+                        double min_y = boundary.col(1).minCoeff();
+                        double max_y = boundary.col(1).maxCoeff();
+    
+                        std::random_device rd;
+                        std::mt19937 gen(rd());
+                        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+                        std::uniform_real_distribution<double> dist_y(min_y, max_y);
+                    
+                        int first_internal_id = -1;
+                        int generated_points = 0;
+            
+                        while (generated_points < N) {
+                            coords_t u;
+                            u << dist_x(gen), dist_y(gen);
+                
+                            if (!fdapde::internals::point_in_polygon(boundary, u))
+                                continue;
+                
+                            //std::cout << "internal point: " << u.transpose() << std::endl;
+                
+                            node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, u));
+                
+                            if (generated_points == 0) {
+                                //add_first_triangle(dcel, n, boundary);
+                                initialize_triangulation(dcel, boundary);
+                                flip(dcel);
+                                first_internal_id = dcel.n_nodes() - 1;
+                            } else {
+                                detect_conflicts(dcel, n);
+                            }
+                
+                            ++generated_points;
+                        }
+                        
+                    
+                        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+                            node_t* u = &(*it);
+                            if (!u->on_boundary() && u->id() != first_internal_id)
+                                insert_vertex_at_conflict(dcel, u);
+                        }
+                    
+                        int cont = 0;
+                        for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it)
+                            it->set_id(cont++);
+                        dcel.set_n_cells_(cont);
+                    
+                        cont = 0;
+                        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it)
+                            it->set_id(cont++);
+                    }
+
+
+
+
+
+
+
+
+
+                    /*
+    static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+        double min_x = boundary.col(0).minCoeff();
+        double max_x = boundary.col(0).maxCoeff();
+        double min_y = boundary.col(1).minCoeff();
+        double max_y = boundary.col(1).maxCoeff();
+    
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+        std::uniform_real_distribution<double> dist_y(min_y, max_y);
+    
+        int first_internal_id = -1;
+        int generated_points = 0;
+
+        while (generated_points < N) {
+            coords_t u;
+            u << dist_x(gen), dist_y(gen);
+
+            if (!fdapde::internals::point_in_polygon(boundary, u))
+                continue;
+
+            //std::cout << "internal point: " << u.transpose() << std::endl;
+
+            node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, u));
+
+            if (generated_points == 0) {
+                //add_first_triangle(dcel, n, boundary);
+                initialize_triangulation(dcel, boundary);
+                //FLIP SECONDO ME NON SERVE PIU VISTO CHE POLYGON LAVORA SOLO CON I PUNTI DI BORDO
+                flip(dcel);
+                first_internal_id = dcel.n_nodes() - 1;
+            } else {
+                detect_conflicts(dcel, n);
+            }
+
+            ++generated_points;
+            
+        }
+    
+        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+            node_t* u = &(*it);
+            if (!u->on_boundary() && u->id() != first_internal_id)
+                insert_vertex_at_conflict(dcel, u);
+        }*/
+    /*
+        int cont = 0;
+        for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it)
+            it->set_id(cont++);
+        dcel.set_n_cells_(cont);
+    
+        cont = 0;
+        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it)
+            it->set_id(cont++);*/
+ //   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+ std::cout << "ENCROACHED EDGES:\n";
+ std::queue<halfedge_t*> debug_edges = encroached_edges;  // copia della coda originale
+ 
+ while (!debug_edges.empty()) {
+     halfedge_t* e = debug_edges.front();
+     debug_edges.pop();
+ 
+     if (!e) continue;
+ 
+     int id = e->id();
+     int from = e->node() ? e->node()->id() : -1;
+     int to = e->twin() && e->twin()->node() ? e->twin()->node()->id() : -1;
+ 
+     std::cout << "Edge ID: " << id << ", from node " << from << " to node " << to << "\n";
+ }
+ 
+ 
+ std::cout << "BAD TRIANGLES:\n";
+ std::queue<cell_t*> debug_triangles = bad_triangles;  // copia della coda originale
+ 
+ while (!debug_triangles.empty()) {
+     cell_t* t = debug_triangles.front();
+     debug_triangles.pop();
+ 
+     if (!t || !t->halfedge()) continue;
+ 
+     halfedge_t* h = t->halfedge();
+     int id0 = h->node()->id();
+     int id1 = h->next()->node()->id();
+     int id2 = h->prev()->node()->id();
+ 
+     std::cout << "Triangle: [" << id0 << ", " << id1 << ", " << id2 << "]\n";
+ }

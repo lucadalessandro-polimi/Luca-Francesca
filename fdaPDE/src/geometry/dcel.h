@@ -409,7 +409,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     }
 
 
-    halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
+ /*   halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
 
         if( (!v1 || !v2) ||
             (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()) ||
@@ -465,6 +465,84 @@ template <int LocalDim, int EmbedDim> class DCEL {
         if(h1->next() != h2 && h1->prev() != h2){ 
             h1->set_cell(h1->prev()->cell());
             h1->cell()->set_halfedge(h1);
+            cells_.push_back(cell_t(n_cells_++));
+            cell_t* c1 = std::addressof(cells_.back());
+            c1->set_it(std::prev(cells_.end()));
+            c1->set_halfedge(h2);
+            halfedge_t* end = h2;
+            do {         
+              h2->set_cell(c1);   
+              h2 = h2->next();
+            } while (h2 != end );
+        }
+        // h1 and h2 are one after the other (e.g. an extremity of the mesh)
+        else {
+            if(h1->next()!=h2)
+                h1->set_cell(h1->next()->cell());
+            else
+                h1->set_cell(h1->prev()->cell());
+            h2->set_cell(h1->cell());
+        }
+
+        return h1;
+    }*/
+    halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
+
+        if( (!v1 || !v2) ||
+            (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()) ||
+            (v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node())) ||
+            (v1==v2 || v1->node()==v2->node()) ) {
+            return v1;
+        }
+        // get exiting halfedges from n1 and n2
+        node_t* n1 = v1->node();
+        node_t* n2 = v2->node();
+        // create a pair of twin half-edges
+        halfedge_t* h1;
+        halfedge_t* h2;
+        if(v1->twin())  // if v1 is already structured
+            h1 = emplace_halfedge_(n1);
+        else  // if v1 was created just to call insert_edge
+            h1 = v1;
+        if(v2->twin())
+            h2 = emplace_halfedge_(n2);
+        else
+            h2 = v2;
+
+        h1->set_twin(h2);
+        h2->set_twin(h1);
+
+        h2->set_next(v1);
+        if (v1->prev()){  // if v1 is already structured
+            v1->prev()->set_next(h2->twin());
+            h2->twin()->set_prev(v1->prev());
+            v1->set_prev(h2);
+        }
+        else{
+            h1->set_prev(h2);
+            h2->set_next(h1);
+        }
+        h2->next()->set_prev(h2);
+        h2->set_node(n2);
+
+        h1->set_next(v2);
+        if (v2->prev()) {  // if v2 is already structured
+            v2->prev()->set_next(h1->twin());
+            h1->twin()->set_prev(v2->prev());
+            v2->set_prev(h1);
+        }
+        else{
+            h2->set_prev(h1);
+            h1->set_next(h2);
+        }
+        h1->next()->set_prev(h1);
+        h1->set_node(n1);
+
+        // the newly created halfedges are not one after the other
+        if(h1->next() != h2 && h1->prev() != h2){ 
+            h1->set_cell(h1->prev()->cell());
+            if(h1->cell())  // h1 is not a boundary edge
+                h1->cell()->set_halfedge(h1);
             cells_.push_back(cell_t(n_cells_++));
             cell_t* c1 = std::addressof(cells_.back());
             c1->set_it(std::prev(cells_.end()));
