@@ -224,7 +224,7 @@ int main() {
     //delaunay.flip();
     
     
-    Delaunay<2, 2> mesh(boundary,24);
+    Delaunay<2, 2> mesh(boundary,1000);
 
     
 

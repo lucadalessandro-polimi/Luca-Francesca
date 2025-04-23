@@ -90,8 +90,9 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     }*/
 
     static void Ruppert_refinement(dcel_t& dcel, double rho_bar) {
-        std::queue<halfedge_t*> encroached_edges;
-        std::queue<cell_t*> bad_triangles;
+        std::unordered_set<halfedge_t*> encroached_edges;
+        std::unordered_set<cell_t*> bad_triangles;   
+        int cont = 0;     
     
         // Inizializzazione delle code
         for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
@@ -99,65 +100,64 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             //since in the previuos code we do not touch the boundary we can stop at the twin of the first boundary edge
             //thanks to how dcel.make_polygon works 
             if(e->on_boundary() && !e->cell()) break;
-            if (e->on_boundary() && check_encroachment(dcel, e))
-                encroached_edges.push(e);
+            if (e->on_boundary() && check_encroachment(dcel, e)){
+                if (encroached_edges.count(e) == 0)
+                    encroached_edges.insert(e);
+            }
         }
         
     
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
             cell_t* t = &(*it);
             if (is_bad_triangle(dcel, t, rho_bar)) {
-                bad_triangles.push(t);
+                if (bad_triangles.count(t) == 0)
+                    bad_triangles.insert(t);
             }
         }  
         while (true) {
-            std::cout << "ENCROACHED EDGES:\n";
-            std::queue<halfedge_t*> debug_edges = encroached_edges;  // copia della coda originale
-            
-            while (!debug_edges.empty()) {
-                halfedge_t* e = debug_edges.front();
-                debug_edges.pop();
-            
+        /*    std::cout << "ENCROACHED EDGES:\n";
+            std::unordered_set<halfedge_t*> debug_edges = encroached_edges;  // copia della coda originale
+
+            for (halfedge_t* e : debug_edges) {
                 if (!e) continue;
             
                 int id = e->id();
                 int from = e->node() ? e->node()->id() : -1;
-                int to = e->twin() && e->twin()->node() ? e->twin()->node()->id() : -1;
+                int to = (e->twin() && e->twin()->node()) ? e->twin()->node()->id() : -1;
             
                 std::cout << "Edge ID: " << id << ", from node " << from << " to node " << to << "\n";
-            }
+            }*/
+            
             if (split_first_encroached_segment(dcel, encroached_edges, bad_triangles, rho_bar)) {
                 //flip(dcel);
                 //break;
+                cont++;
+                std::cout<<"CONTATORE: "<<cont<<std::endl;
                 continue;
             }
-            std::cout << "BAD TRIANGLES:\n";
-            std::queue<cell_t*> debug_triangles = bad_triangles;  // copia della coda originale
+        /*    std::cout << "BAD TRIANGLES:\n";
+            std::unordered_set<cell_t*> debug_triangles = bad_triangles;  // copia della struttura originale
             
-            while (!debug_triangles.empty()) {
-                cell_t* t = debug_triangles.front();
-                debug_triangles.pop();
-            
+            for (cell_t* t : debug_triangles) {
                 if (!t || !t->halfedge()) continue;
             
                 halfedge_t* h = t->halfedge();
-                //if(h->id() > 10000) continue;
-                //std::cout<<"SONO QUA"<<std::endl;
                 int id0 = h->node()->id();
                 int id1 = h->next()->node()->id();
                 int id2 = h->prev()->node()->id();
             
                 std::cout << "Triangle: [" << id0 << ", " << id1 << ", " << id2 << "]\n";
-            }
+            }*/
+            
             if (split_first_bad_triangle(dcel, rho_bar, encroached_edges, bad_triangles)) {
                 //flip(dcel);
+                cont++;
+                std::cout<<"CONTATORE: "<<cont<<std::endl;
                 continue;
                 //break;
             }
             break;
         }
-        std::cout<<"FLIPPO PER VEDERE SE ACCADE QUALOSA"<<std::endl;
-        flip(dcel);
 
         // Riordino finale
         /*
@@ -171,6 +171,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             it->set_id(cont++);
         */
         dcel.export_to_json("dcel_output.json");
+        std::cout<<"STO PROVANDO A FLIPPARE"<<std::endl;
+        flip(dcel);
     }
     
      
@@ -211,7 +213,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         triangulate(dcel, N, boundary); 
         //dcel.export_to_json("dcel_output.json");
         //we are ensuring no angle under 10 degrees by defualt in the costructor actually
-        Ruppert_refinement(dcel, 2.0);
+        Ruppert_refinement(dcel, 5.0);
         return DCEL_to_Triangulation(dcel);
     }
 
@@ -221,7 +223,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         dcel_t dcel; // = dcel_t::make_polygon(boundary);
         triangulate(dcel, internal, boundary);  
         //dcel.export_to_json("dcel_output.json");
-        Ruppert_refinement(dcel, 2.0);
+        Ruppert_refinement(dcel, 3.0);
         return DCEL_to_Triangulation(dcel);
     }
 
@@ -647,8 +649,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     }  
 
 
-/*
-    static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
+
+ /*   static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
                             double jitter_ratio = 0.01) {
         double min_x = boundary.col(0).minCoeff();
         double max_x = boundary.col(0).maxCoeff();
@@ -797,7 +799,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         }*/
     }
                                
-    static void split_subsegment(dcel_t& dcel, halfedge_t* e, std::queue<halfedge_t*>& encroached_edges, std::queue<cell_t*>& bad_triangles, double rho_bar) {
+    static void split_subsegment(dcel_t& dcel, halfedge_t* e, std::unordered_set<halfedge_t*>& encroached_edges, std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
         node_t* a = e->node();
         node_t* b = e->twin()->node();
         node_t * c = e->prev()->node();
@@ -842,10 +844,12 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         
         flip_Ruppert(dcel, encroached_edges, bad_triangles, rho_bar);
         if (check_encroachment(dcel, h1)) {
-            encroached_edges.push(h1);
+            if (encroached_edges.count(e) == 0)
+                encroached_edges.insert(h1);
         }
         if (check_encroachment(dcel, h3->twin())) {
-            encroached_edges.push(h3->twin());
+            if (encroached_edges.count(e) == 0)
+                encroached_edges.insert(h3->twin());
         }
     }
 
@@ -894,8 +898,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     }*/
         
 
-    static bool split_triangle(dcel_t& dcel, cell_t* t, std::queue<halfedge_t*>& encroached_edges,
-                                 std::queue<cell_t*>& bad_triangles, double rho_bar) {
+    static bool split_triangle(dcel_t& dcel, cell_t* t, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
 
         // QUI CONTROLLARE SE BISOGNA FARE IL CHECK SU TUTTI I TRIANGOLI O SOLO SUI LATI DEL TRIANGOLO CORRENTE 
         // COME DICE IL LIBRO ---> DOVREBBE ESSERE LUNICO HINT UTILE 
@@ -982,31 +986,32 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         return false;
     }*/
 
-    static bool split_first_encroached_segment(dcel_t& dcel, std::queue<halfedge_t*>& encroached_edges, std::queue<cell_t*>& bad_triangles, double rho_bar) {
-        int n = encroached_edges.size();
-        for (int i = 0; i < n; ++i) {
-            halfedge_t* e = encroached_edges.front();
-            encroached_edges.pop();
-    
+    static bool split_first_encroached_segment(dcel_t& dcel, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
+        
+        for (auto it = encroached_edges.begin(); it != encroached_edges.end(); ) {
+            halfedge_t* e = *it;
+
+            // Rimuovi subito l'elemento dalla struttura (indipendentemente dall'esito)
+            it = encroached_edges.erase(it);  // avanzamento + rimozione
+
             if (!e) continue;
-            //NON LO STAI GESTENDO BENE INFATTI CRASHA CON PUNTI RANDOM
             if (!e->on_boundary() || !e->cell()) continue;
-    
-            // Ora splittiamo senza rifare il test, fidandoci della coda
+
             if (!is_edge_seditious(e->next()) && !is_edge_seditious(e->prev()) &&
-                !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
+            !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
+
                 split_subsegment(dcel, e, encroached_edges, bad_triangles, rho_bar);
-    
                 return true;
             }
         }
-    
         return false;
     }
+
     
     
 
-/*    static bool split_first_bad_triangle(dcel_t& dcel, double rho_bar, std::queue<cell_t*>& bad_triangles) {
+/*    static bool split_first_bad_triangle(dcel_t& dcel, double rho_bar, std::unordered_set<cell_t*>& bad_triangles) {
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
             cell_t* t = &(*it);
 
@@ -1025,28 +1030,32 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         return false;
     }*/
 
-    static bool split_first_bad_triangle(dcel_t& dcel, double rho_bar, std::queue<halfedge_t*>& encroached_edges,
-                         std::queue<cell_t*>& bad_triangles) {
-        int n = bad_triangles.size();
-        for (int i = 0; i < n; ++i) {
-            cell_t* t = bad_triangles.front();
-            bad_triangles.pop();
+    static bool split_first_bad_triangle(dcel_t& dcel, double rho_bar, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles) {
+        for (auto it = bad_triangles.begin(); it != bad_triangles.end(); ) {
+            cell_t* t = *it;
+            it = bad_triangles.erase(it);  // rimozione sicura e avanzamento
+    
+            if (!t || !t->halfedge()) continue;
+    
             halfedge_t* h1 = t->halfedge()->prev();
             halfedge_t* h2 = t->halfedge();
             halfedge_t* h3 = t->halfedge()->next();
-            std::cout<<"il next di h1: "<<h1->next()->id()<<std::endl;
-            std::cout<<"il next di h2: "<<h2->next()->id()<<std::endl;
-            std::cout<<"il next di h3: "<<h3->next()->id()<<std::endl;
     
-            if (!t || h1->next()!=t->halfedge() || h2->next()!=t->halfedge()->next() || h3->next()!=t->halfedge()->prev()) continue;
-            std::cout<<t->halfedge()->id()<<std::endl;
-            std::cout<<t->halfedge()->next()->id()<<std::endl;
-            std::cout<<t->halfedge()->prev()->id()<<std::endl;
-                bool split = split_triangle(dcel, t, encroached_edges, bad_triangles, rho_bar);
-                if(split)
-                    return true;
-            }
-        
+            if (h1->next() != h2 || h2->next() != h3 || h3->next() != h1) continue;
+    
+            std::cout << "il next di h1: " << h1->next()->id() << std::endl;
+            std::cout << "il next di h2: " << h2->next()->id() << std::endl;
+            std::cout << "il next di h3: " << h3->next()->id() << std::endl;
+            std::cout << t->halfedge()->id() << std::endl;
+            std::cout << t->halfedge()->next()->id() << std::endl;
+            std::cout << t->halfedge()->prev()->id() << std::endl;
+    
+            bool split = split_triangle(dcel, t, encroached_edges, bad_triangles, rho_bar);
+            if (split)
+                return true;
+        }
+    
         return false;
     }
 
@@ -1101,6 +1110,9 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
 
     static cell_t* find_triangle(dcel_t& dcel, const coords_t& P) {
         //std::cout << "N celle = " << std::distance(dcel.cells_begin(), dcel.cells_end()) << std::endl;
+        auto it_last = std::prev(dcel.cells_end());  
+        cell_t* t = &(*it_last);
+        std::cout<<"SONO QUA: "<<t->id()<<std::endl;
         for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {  //PROBLEMA CON cells_end()
             cell_t* cell = &(*it);  
             const coords_t& A = cell->halfedge()->node()->coords();
@@ -1127,18 +1139,20 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     return nullptr;
     }
 
-    static void dig_cavity(dcel_t& dcel, node_t* u, halfedge_t* vw, std::queue<halfedge_t*>& encroached_edges,
-        std::queue<cell_t*>& bad_triangles, double rho_bar) { 
+    static void dig_cavity(dcel_t& dcel, node_t* u, halfedge_t* vw, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles, double rho_bar) { 
         //if we are on the boundary we add the triangle  
         if(vw->on_boundary()){
             add_triangle(dcel, vw,std::vector<node_t*> {u});
             auto it_last = std::prev(dcel.cells_end());  
             cell_t* t = &(*it_last);
             if(is_bad_triangle(dcel, t, rho_bar)){
-              bad_triangles.push(t);
+                if (bad_triangles.count(t) == 0)
+                    bad_triangles.insert(t);
             }
             if (check_encroachment(dcel, vw)) {
-                encroached_edges.push(vw);
+                if (encroached_edges.count(vw) == 0)
+                    encroached_edges.insert(vw);
             }
             return;
         }
@@ -1170,7 +1184,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             auto it_last = std::prev(dcel.cells_end());  
             cell_t* t = &(*it_last);
             if(is_bad_triangle(dcel, t, rho_bar)){
-              bad_triangles.push(t);
+                if (bad_triangles.count(t) == 0)
+                    bad_triangles.insert(t);
             }
         /*    if (check_encroachment(dcel, t->halfedge())) {
                 encroached_edges.push(t->halfedge());
@@ -1186,8 +1201,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     }
     
     
-    static void insert_vertex(dcel_t& dcel, node_t* u, cell_t* triangle, std::queue<halfedge_t*>& encroached_edges,
-                            std::queue<cell_t*>& bad_triangles, double rho_bar) {
+    static void insert_vertex(dcel_t& dcel, node_t* u, cell_t* triangle, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
         halfedge_t* vw = triangle->halfedge();
         halfedge_t* wx = vw->next();
         halfedge_t* xv = vw->prev();
@@ -1198,32 +1213,39 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         bool found_on_edge = false;
     
         if (fdapde::internals::contains(u->coords(), v, w)) {
-            halfedge_t* twin = vw->twin();
+            std::cout<<"SONO QUI 1"<<std::endl;
+            halfedge_t* twin_next = vw->twin()->next();
+            halfedge_t* twin_prev = vw->twin()->prev();
             dcel.remove_edge(vw);
             dig_cavity(dcel, u, wx, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(dcel, u, xv, encroached_edges, bad_triangles, rho_bar);
-            dig_cavity(dcel, u, twin->next(), encroached_edges, bad_triangles, rho_bar);
-            dig_cavity(dcel, u, twin->prev(), encroached_edges, bad_triangles, rho_bar);
+            dig_cavity(dcel, u, twin_next, encroached_edges, bad_triangles, rho_bar);
+            dig_cavity(dcel, u, twin_prev, encroached_edges, bad_triangles, rho_bar);
             found_on_edge = true;
         } else if (fdapde::internals::contains(u->coords(), w, x)) {
-            halfedge_t* twin = wx->twin();
+            std::cout<<"SONO QUI 2"<<std::endl;
+            halfedge_t* twin_next = wx->twin()->next();
+            halfedge_t* twin_prev = wx->twin()->prev();
             dcel.remove_edge(wx);
             dig_cavity(dcel, u, vw, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(dcel, u, xv, encroached_edges, bad_triangles, rho_bar);
-            dig_cavity(dcel, u, twin->next(), encroached_edges, bad_triangles, rho_bar);
-            dig_cavity(dcel, u, twin->prev(), encroached_edges, bad_triangles, rho_bar);
+            dig_cavity(dcel, u, twin_next, encroached_edges, bad_triangles, rho_bar);
+            dig_cavity(dcel, u, twin_prev, encroached_edges, bad_triangles, rho_bar);
             found_on_edge = true;
         } else if (fdapde::internals::contains(u->coords(), x, v)) {
-            halfedge_t* twin = xv->twin();
+            std::cout<<"SONO QUI 3"<<std::endl;
+            halfedge_t* twin_next = xv->twin()->next();
+            halfedge_t* twin_prev = xv->twin()->prev();
             dcel.remove_edge(xv);
             dig_cavity(dcel, u, vw, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(dcel, u, wx, encroached_edges, bad_triangles, rho_bar);
-            dig_cavity(dcel, u, twin->next(), encroached_edges, bad_triangles, rho_bar);
-            dig_cavity(dcel, u, twin->prev(), encroached_edges, bad_triangles, rho_bar);
+            dig_cavity(dcel, u, twin_next, encroached_edges, bad_triangles, rho_bar);
+            dig_cavity(dcel, u, twin_prev, encroached_edges, bad_triangles, rho_bar);
             found_on_edge = true;
         }
     
         if (!found_on_edge) {
+            std::cout<<"PUNTO NON è CADUTO SUL LATO VEDIAMO CHE SUCCEDE "<<std::endl;
             dig_cavity(dcel, u, vw, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(dcel, u, wx, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(dcel, u, xv, encroached_edges, bad_triangles, rho_bar);
@@ -1231,8 +1253,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         flip_Ruppert(dcel, encroached_edges, bad_triangles, rho_bar);
     }
 
-    static void flip_Ruppert(dcel_t& dcel, std::queue<halfedge_t*>& encroached_edges,
-        std::queue<cell_t*>& bad_triangles, double rho_bar) {
+    static void flip_Ruppert(dcel_t& dcel, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
 
         // creating a list of halfedges to check whether they are locally delaunay or not (in this case flippable)
         std::list<halfedge_t*> halfedges_to_check;
@@ -1272,26 +1294,28 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
                         halfedges_to_check.push_back(new_edge->twin()->next());
 
                     if(is_bad_triangle(dcel, new_edge->cell(), rho_bar)){
-                        bad_triangles.push(new_edge->cell());
+                        if (bad_triangles.count(new_edge->cell()) == 0)
+                            bad_triangles.insert(new_edge->cell());
                         std::cout<<"SONO DENTRO CON: "<<new_edge->id()<<std::endl;
                     }
                     if(new_edge->prev()->on_boundary() && new_edge->prev()->cell() && check_encroachment(dcel, new_edge->prev())){
-                        encroached_edges.push(new_edge->prev());
+                        encroached_edges.insert(new_edge->prev());
                         std::cout<<new_edge->prev()->id()<<std::endl;
                     }
                     if(new_edge->next()->on_boundary() && new_edge->next()->cell() && check_encroachment(dcel, new_edge->next())){
-                        encroached_edges.push(new_edge->next());
+                        encroached_edges.insert(new_edge->next());
                         std::cout<<new_edge->next()->id()<<std::endl;
                     }
                     if(is_bad_triangle(dcel, new_edge->twin()->cell(), rho_bar)){
-                        bad_triangles.push(new_edge->twin()->cell());
+                        if (bad_triangles.count(new_edge->twin()->cell()) == 0)
+                            bad_triangles.insert(new_edge->twin()->cell());
                         std::cout<<"SONO DENTRO CON: "<<new_edge->twin()->id()<<std::endl;
                     }
-                    if(new_edge->twin()->prev()->on_boundary() && new_edge->twin()->prev()->cell() && check_encroachment(dcel, new_edge->twin()->prev())){
-                        encroached_edges.push(new_edge->twin()->prev());
+                   if(new_edge->twin()->prev()->on_boundary() && new_edge->twin()->prev()->cell() && check_encroachment(dcel, new_edge->twin()->prev())){
+                        encroached_edges.insert(new_edge->twin()->prev());
                     }
                     if(new_edge->twin()->next()->on_boundary() && new_edge->twin()->next()->cell() && check_encroachment(dcel, new_edge->twin()->next())){
-                        encroached_edges.push(new_edge->twin()->next());
+                        encroached_edges.insert(new_edge->twin()->next());
                     }
                 }
             }
