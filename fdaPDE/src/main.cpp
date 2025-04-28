@@ -224,22 +224,50 @@ int main() {
     //delaunay.flip();
     
     
-    Delaunay<2, 2> mesh(boundary,1000);
+    //Delaunay<2, 2> mesh(boundary,100);
 
     
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
-/*
+
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
     auto start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_1000(boundary,1000);  
+    Delaunay<2, 2> delaunay_500(boundary,500);  
     auto end = high_resolution_clock::now();    // ending measuring time 
     auto duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 500 << " points: " << duration << " ms" << std::endl;
+    outfile << 500 << "," << duration << "\n"; 
+
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_1000(boundary,1000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 1000 << " points: " << duration << " ms" << std::endl;
     outfile << 1000 << "," << duration << "\n"; 
+
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_5000(boundary,5000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 5000 << " points: " << duration << " ms" << std::endl;
+    outfile << 5000 << "," << duration << "\n"; 
+
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_7000(boundary,7000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 7000 << " points: " << duration << " ms" << std::endl;
+    outfile << 7000 << "," << duration << "\n"; 
+
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_8000(boundary,8000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 8000 << " points: " << duration << " ms" << std::endl;
+    outfile << 8000 << "," << duration << "\n"; 
 
     start = high_resolution_clock::now();  // starting measuring time 
     Delaunay<2, 2> delaunay_10000(boundary,10000);  
@@ -249,20 +277,13 @@ int main() {
     outfile << 10000 << "," << duration << "\n"; 
 
     start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_100000(boundary,100000);  
+    Delaunay<2, 2> delaunay_20000(boundary,20000);  
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << 100000 << " points: " << duration << " ms" << std::endl;
-    outfile << 100000 << "," << duration << "\n"; 
-
-    start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_1000000(boundary,1000000);  
-    end = high_resolution_clock::now();    // ending measuring time 
-    duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << 1000000 << " points: " << duration << " ms" << std::endl;
-    outfile << 1000000 << "," << duration << "\n"; 
+    std::cout << "elapsed time for " << 20000 << " points: " << duration << " ms" << std::endl;
+    outfile << 20000 << "," << duration << "\n"; 
     
     outfile.close();
-*/    
+    
     return 0;
 }
