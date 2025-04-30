@@ -104,6 +104,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
         dcel.export_to_json("dcel_output.json");
     }
     
+    
    private:
 
     // function performing a Delaunay triangulation with N uniformly random points 
@@ -695,10 +696,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
 
         // If no encroachment is detected, insert the circumcenter into the mesh
         node_t* circ = dcel.insert_node(node_t(dcel.n_nodes(), false, c));
-
         // Locate the triangle containing the new point
-        cell_t* cf = find_triangle(dcel, c);
-
+        cell_t* cf = find_triangle(dcel, c); 
         // Insert the new node into the triangulation (splitting the containing triangle)
         insert_vertex(dcel, circ, cf, encroached_edges, bad_triangles, rho_bar);
 
@@ -960,8 +959,8 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
             dig_cavity(dcel, u, wx, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(dcel, u, xv, encroached_edges, bad_triangles, rho_bar);
         }
-        //we need to flip since the Ruppert alghoritm does not preserve the Delaunay triangulation
-        flip_Ruppert(dcel, encroached_edges, bad_triangles, rho_bar);
+        //no need ti flip since Boyer-Watson mantains the Dleaunay
+        //flip_Ruppert(dcel, encroached_edges, bad_triangles, rho_bar);
     }
 
     //helper function that fills a txt in order to then graph the trinagulation
