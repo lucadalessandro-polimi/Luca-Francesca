@@ -2252,6 +2252,162 @@ void print_dcel() {
 
 
 
+ /*
+    static void add_first_triangle(dcel_t& dcel, node_t* n, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){   
+        bool concave=false;
+        auto iter = dcel.halfedges_begin();
+        halfedge_t* first_h= dcel.emplace_halfedge_(n);
+        auto& cell_begin = *dcel.cells_begin();
+        first_h->set_cell(&cell_begin);
+
+        // iterate over all boundary edges to connect to node, if possible
+        for (int il = 0; il < boundary.rows(); ++il, ++iter) { 
+            halfedge_t* v = &(*iter);                                                                  
+            cell_t* c= v->cell();                                                                                    
+            std::vector<halfedge_t*> halfedges_to_call(n_nodes_cell); 
+
+            if(dcel.find_halfedge(n,c)){
+                halfedge_t* h = dcel.find_halfedge(n,c);
+                halfedges_to_call[2] = h;
+            }
+            else{  
+                halfedges_to_call[2]= first_h;
+            }
+            halfedges_to_call[0] = v;
+            if(v->next()->cell()==halfedges_to_call[2]->cell())
+                halfedges_to_call[1] = v->next();
+            else{
+                halfedges_to_call[1] = dcel.find_halfedge(v->next()->node(),halfedges_to_call[2]->cell());
+            }
+            // add edges
+            for (int i = 0; i < n_nodes_cell ; ++i) {
+                halfedge_t* h1 = halfedges_to_call[i];
+                halfedge_t* h2 = halfedges_to_call[(i + 1) % (n_nodes_cell)];
+                
+                // check for intersection with boundary edges
+                coords_t A = h1->node()->coords();
+                coords_t B = h2->node()->coords();
+                coords_t C;
+                coords_t D;
+                node_t* node_C;
+                node_t* node_D;
+                bool intersect=false;
+                if(!(h1->on_boundary() && h2->on_boundary())) {  //if the edges are not both on the boundary
+                    for (size_t i = 0; i < boundary.rows(); ++i) {  
+                        C = boundary.row(i).transpose();
+                        D = boundary.row((i + 1) % boundary.rows()).transpose();  
+                        if (A != C && A != D && B != C && B != D && fdapde::internals::intersect(A, B, C, D)) {  
+                            intersect = true;
+                            concave=true;
+                            break; 
+                        }
+                    }
+                }
+                if(!intersect){
+                    halfedge_t* h = dcel.insert_edge(h1, h2); 
+                    if(h && h!=h1)
+                        halfedges_to_call[(i + 1) % (n_nodes_cell)] = h->next();  
+                } 
+            }
+        }
+        
+        if(concave){
+            // cycle over boundary edges only for safe handling of edges to insert
+            for(auto it=dcel.halfedges_begin(); it!=dcel.halfedges_end() && (&(*it))->cell(); ++it){
+                halfedge_t* h = &(*it);
+                int i=0;
+                do{
+                    h=h->next();
+                    i++;
+                }while(h!=&(*it));
+                if(i>n_nodes_cell){ //not a triangle yet
+                    for(int l=0; l<i-n_nodes_cell; ++l){
+                      halfedge_t* n=h->next()->next();
+                      if(h->node()->on_boundary() && h->next()->next()->node()->on_boundary() 
+                         && !fdapde::internals::collinear(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords())
+                         && fdapde::internals::are_2d_counterclockwise_sorted(h->node()->coords(),h->next()->node()->coords(),h->next()->next()->node()->coords()) ){
+                        dcel.insert_edge(h, n);
+                      }
+                      h=n;   
+                    }
+                }
+            }
+        }
+        flip(dcel);
+    }
+*/
+
+
+
+ /*   static void triangulate(dcel_t& dcel, int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
+                            double jitter_ratio = 0.01) {
+        double min_x = boundary.col(0).minCoeff();
+        double max_x = boundary.col(0).maxCoeff();
+        double min_y = boundary.col(1).minCoeff();
+        double max_y = boundary.col(1).maxCoeff();
+        int generated_points = 0;
+
+        int points_per_row = static_cast<int>(std::ceil(std::sqrt(N)));
+        double dx = (max_x - min_x) / (points_per_row + 1);
+        double dy = (max_y - min_y) / (points_per_row + 1);
+
+        // inizializza triangolazione iniziale del dominio
+        initialize_triangulation(dcel, boundary);
+        flip(dcel);
+
+        // generatore random deterministico
+        std::mt19937 gen(42); // seme fisso → riproducibile
+        std::uniform_real_distribution<double> jitter_x(-jitter_ratio * dx, jitter_ratio * dx);
+        std::uniform_real_distribution<double> jitter_y(-jitter_ratio * dy, jitter_ratio * dy);
+
+        for (int i = 1; i <= points_per_row; ++i) {
+            for (int j = 1; j <= points_per_row; ++j) {
+                coords_t u;
+                u << min_x + i * dx + jitter_x(gen),
+                min_y + j * dy + jitter_y(gen);
+
+                if (!fdapde::internals::point_in_polygon(boundary, u))
+                    continue;
+
+                node_t* n = dcel.insert_node(node_t(dcel.n_nodes(), false, u));
+                detect_conflicts(dcel, n);
+
+                ++generated_points;
+                if (generated_points >= N)
+                    break;
+            }
+            if (generated_points >= N)
+                break;
+        }
+
+        // Inserimento dei punti interni nella triangolazione
+        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+            node_t* u = &(*it);
+            if (!u->on_boundary())
+                insert_vertex_at_conflict(dcel, u);
+        }
+
+        // Riordino ID
+        int cont = 0;
+        for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it)
+            it->set_id(cont++);
+        dcel.set_n_cells_(cont);
+
+        cont = 0;
+        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it)
+            it->set_id(cont++);
+    }*/
+
+
+    void set_from_triangulation(const triangulation_t& triang) {
+        this->nodes_ = triang.nodes();
+        this->cells_ = triang.cells();
+        this->boundary_markers_ = triang.boundary_nodes();
+        this->neighbors_ = triang.neighbors();
+        this->n_nodes_ = triang.n_nodes();
+        this->n_cells_ = triang.n_cells();
+    }
+
 
 
 

@@ -83,7 +83,7 @@ def plot_dcel(filename):
             plt.gca().add_patch(circle)
             #plt.scatter(*U, color='purple', s=50, label="Circocentro")'''
     # Mostrare la mesh
-    plt.title("DCEL Mesh Visualization con Circonferenze Circumscritte")
+    plt.title("")
     plt.axis('equal')
     plt.xlabel("X")
     plt.ylabel("Y")

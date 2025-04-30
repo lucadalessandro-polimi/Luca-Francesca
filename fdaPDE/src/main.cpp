@@ -224,12 +224,14 @@ int main() {
     //delaunay.flip();
     
     
-    //Delaunay<2, 2> mesh(boundary,100);
+    Delaunay<2, 2> mesh_100(boundary,100);
+    //Delaunay<2, 2> mesh_1000(boundary,1000);
+    //Delaunay<2, 2> mesh_10000(boundary,10000);
 
     
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-
+/*
 
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
@@ -284,6 +286,6 @@ int main() {
     outfile << 20000 << "," << duration << "\n"; 
     
     outfile.close();
-    
+*/    
     return 0;
 }
