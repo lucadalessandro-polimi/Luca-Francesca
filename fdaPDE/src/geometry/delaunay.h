@@ -115,7 +115,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
 
         //clock in order to test the performance of Ruppert refinement
         auto start = high_resolution_clock::now();  
-        Ruppert_refinement(dcel, 3.0);
+        Ruppert_refinement(dcel, 2.0);
         auto end = high_resolution_clock::now();   
         auto duration = duration_cast<milliseconds>(end - start).count();
         std::cout << "elapsed REFINMENT time for " << dcel.n_nodes() << " points: " << duration << " ms" << std::endl;
@@ -129,7 +129,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     {
         dcel_t dcel; 
         triangulate(dcel, internal, boundary);  
-        Ruppert_refinement(dcel, 3.0);
+        Ruppert_refinement(dcel, 2.0);
         return DCEL_to_Triangulation(dcel);
     }
 

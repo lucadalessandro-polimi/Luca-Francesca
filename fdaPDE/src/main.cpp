@@ -224,9 +224,10 @@ int main() {
     //delaunay.flip();
     
     
-    Delaunay<2, 2> mesh_100(boundary,100);
+    Delaunay<2, 2> mesh(boundary);
     //Delaunay<2, 2> mesh_1000(boundary,1000);
     //Delaunay<2, 2> mesh_10000(boundary,10000);
+    //std::cout<<rho_from_min_angle(60.0)<<std::endl;
 
     
 
