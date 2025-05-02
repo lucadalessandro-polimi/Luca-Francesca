@@ -202,11 +202,11 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     {
         dcel_t dcel; 
         triangulate(dcel, N, boundary); 
-        //dcel.export_to_json("dcel_output.json");
-        //we are ensuring no angle under 10 degrees by defualt in the costructor actually
-        auto start = high_resolution_clock::now();  // starting measuring time 
-        Ruppert_refinement(dcel, 3.0);
-        auto end = high_resolution_clock::now();    // ending measuring time 
+
+        //clock in order to test the performance of Ruppert refinement
+        auto start = high_resolution_clock::now();  
+        Ruppert_refinement(dcel, 2.0);
+        auto end = high_resolution_clock::now();   
         auto duration = duration_cast<milliseconds>(end - start).count();
         std::cout << "elapsed REFINMENT time for " << dcel.n_nodes() << " points: " << duration << " ms" << std::endl;
         //Ruppert_refinement(dcel, 3.0);
@@ -219,8 +219,7 @@ class Delaunay : public TriangulationBase<LocalDim, EmbedDim, Triangulation<2,2>
     {
         dcel_t dcel; // = dcel_t::make_polygon(boundary);
         triangulate(dcel, internal, boundary);  
-        //dcel.export_to_json("dcel_output.json");
-        Ruppert_refinement(dcel, 3.0);
+        Ruppert_refinement(dcel, 2.0);
         return DCEL_to_Triangulation(dcel);
     }
 
