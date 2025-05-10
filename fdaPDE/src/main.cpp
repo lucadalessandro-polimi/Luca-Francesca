@@ -266,7 +266,7 @@ int main() {
     
 
     
-    Delaunay<2, 2> mesh(boundary_concave_ref,0);  //non aggiunge nodi in più perchè sto usando initialize_internal con polygon
+    //Delaunay<2, 2> mesh(boundary_concave_ref,0);  //non aggiunge nodi in più perchè sto usando initialize_internal con polygon
     //Delaunay<2,2>::Ruppert_refinement(mesh, rho_from_min_angle(20.0));
 
     /*
