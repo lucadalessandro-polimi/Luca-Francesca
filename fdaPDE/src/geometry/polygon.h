@@ -132,7 +132,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
             if (p1[1] < p2[1]) {
                 return true;
             } else if (p1[1] == p2[1]) {
-                if (p1[0] > p2[0]) { return true; }    //non dovrebbe essere p1[0] > p2[0] ?
+                if (p1[0] < p2[0]) { return true; }    
             }
             return false;	  
 	};
@@ -303,8 +303,8 @@ template <int LocalDim, int EmbedDim> class Polygon {
             }
         }
         // build right and left chains (assume counterclockwise sorting)
-	std::vector<int> node(n_nodes);
-	std::unordered_set<int> r_chain, l_chain;
+	    std::vector<int> node(n_nodes);
+	    std::unordered_set<int> r_chain, l_chain;
         {
             std::vector<int> r_chain_, l_chain_;
             for (int j = max; j != min; j = ((j + 1) % n_nodes + n_nodes) % n_nodes) { l_chain_.push_back(j); }
@@ -313,13 +313,32 @@ template <int LocalDim, int EmbedDim> class Polygon {
                  j = ((j - 1) % n_nodes + n_nodes) % n_nodes) {
                 r_chain_.push_back(j);
             }
+            
             // O(n) sorted list merge
             std::merge(
               l_chain_.begin(), l_chain_.end(), r_chain_.begin(), r_chain_.end(), node.begin(), [&](int a, int b) {
                   return nodes(a, 1) > nodes(b, 1) || (nodes(a, 1) == nodes(b, 1) && nodes(a, 0) > nodes(b, 0));
               });
+
+            /*std::vector<int> merged_chain;                                            //AGGIUNTO
+            merged_chain.insert(merged_chain.end(), l_chain_.begin(), l_chain_.end());
+            merged_chain.insert(merged_chain.end(), r_chain_.begin(), r_chain_.end());
+            std::sort(merged_chain.begin(), merged_chain.end(), [&](int a, int b) {
+                return nodes(a,1) > nodes(b,1) || (nodes(a, 1) == nodes(b, 1) && nodes(a, 0) > nodes(b, 0));
+            });
+            node=merged_chain;*/
+            
             l_chain.insert(l_chain_.begin(), l_chain_.end());
             r_chain.insert(r_chain_.begin(), r_chain_.end());
+            
+            for (int i = 0; i < nodes.rows(); ++i) {
+                auto n = nodes.row(i);  
+                std::cout << "nodes " << i << ": " << n(0) << ", " << n(1) << std::endl;
+            }
+            for(auto n:node)
+            {
+                std::cout << "node " << n << std::endl;
+            }
         }
         auto is_l_chain = [&](int i) { return l_chain.contains(i); };
         auto is_r_chain = [&](int i) { return r_chain.contains(i); };
@@ -332,9 +351,17 @@ template <int LocalDim, int EmbedDim> class Polygon {
         int node_i, node_j, node_k;
         bool on_left = is_l_chain(node[1]);   // whether the currently pointed node is on the left or right chain
         // start triangulating
+        int cont=0;
         for (std::size_t j = 2, n = node.size(); j < n; ++j) {
+            cont=0;
+            std::cout <<"------------------------------------------------" << std::endl;
+            for(auto c:reflex_chain)
+            {
+                std::cout << "reflex_chain " << c << std::endl;
+            }
             node_i = *(reflex_chain.end() - 1);
             node_j = node[j];
+            std::cout << "i " << node_i << " j " << node_j << std::endl;
             if (are_in_opposite_chains(node_i, node_j)) {   // triangulate
                 node_i = *reflex_chain.begin();
                 on_left = !on_left;
@@ -342,11 +369,25 @@ template <int LocalDim, int EmbedDim> class Polygon {
                     reflex_chain.pop_front();
                     node_k = reflex_chain.front();
                     // add triangle
-		    push_cell(node_i, node_j, node_k);
-                    node_i = node_k;
+                    std::cout << "i " << node_i << std::endl;
+                    std::cout << "k " << node_k << std::endl;
+                    if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(reflex_chain.front()))){
+		                push_cell(node_i, node_j, node_k);
+                        std::cout << "QUI ALTRO" << std::endl;
+                        node_i = node_k;   
+                    }
+                    std::cout << "sono nell' IF" << std::endl;
                 }
                 reflex_chain.push_back(node_j);
             } else {   // check if the triplet (node_i, node_j, node_k) makes a reflex turn or not
+                /*if (node_j==min){
+                    reflex_chain.clear();
+                    reflex_chain.insert(reflex_chain.begin(), node.rbegin(), node.rend());
+                    for(auto r:reflex_chain)
+                    {
+                        std::cout << "reflex_chain " << r << std::endl;
+                    }
+                }*/
                 node_k = *(reflex_chain.end() - 2);
                 double m_signed =
                   internals::signed_measure_2d_tri(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));
@@ -355,9 +396,14 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 } else {
                     do {
                         // add triangle
-                        push_cell(node_i, node_j, node_k);
-                        // triangulate until convex turn is found
-                        reflex_chain.pop_back();
+                        if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
+		                    push_cell(node_i, node_j, node_k);
+                            std::cout << "QUI" << std::endl;
+                            // triangulate until convex turn is found
+                            reflex_chain.pop_back();
+                        }
+                        std::cout <<"k " << node_k << std::endl;
+                        std::cout << "sono nell' ELSE" << std::endl;
                         if (reflex_chain.size() > 1) {
                             node_i = *(reflex_chain.end() - 1);
                             node_k = *(reflex_chain.end() - 2);
