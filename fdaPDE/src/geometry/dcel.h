@@ -713,6 +713,87 @@ template <int LocalDim, int EmbedDim> class DCEL {
         nodes_.emplace_back(n_nodes_++, std::forward<Args>(args)...);
         return std::addressof(nodes_.back());
     }  
+
+    template <typename TriangulationType>
+    TriangulationType to_triangulation() const {
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> nodes_mat(n_nodes(), embed_dim);
+        Eigen::Matrix<int, Eigen::Dynamic, 3> cells_mat(n_cells(), 3);
+        Eigen::Matrix<int, Eigen::Dynamic, 1> boundary_markers(n_nodes());
+
+        int idx = 0;
+        for (auto it = nodes_.begin(); it != nodes_.end(); ++it, ++idx) {
+            nodes_mat.row(it->id()) = it->coords().transpose();
+            boundary_markers(it->id()) = it->on_boundary() ? 1 : 0;
+        }
+
+        idx = 0;
+        for (auto it = cells_.begin(); it != cells_.end(); ++it, ++idx) {
+            halfedge_t* h = it->halfedge();
+            cells_mat(idx, 0) = h->node()->id();
+            cells_mat(idx, 1) = h->next()->node()->id();
+            cells_mat(idx, 2) = h->prev()->node()->id();
+        }
+        return TriangulationType(nodes_mat, cells_mat, boundary_markers);
+    }
+
+    template <typename TriangulationType>
+    void from_triangulation(const TriangulationType& triangulation) {
+        int n_boundary = triangulation.n_boundary_nodes();
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_nodes(n_boundary, embed_dim);
+        const auto& coords = triangulation.nodes();
+        const auto& markers = triangulation.boundary_nodes();
+
+        int idx = 0;
+        for (int i = 0; i < coords.rows(); ++i) {
+            if (markers(i, 0) == 1) {
+                boundary_nodes.row(idx++) = coords.row(i);
+            }
+        }
+
+        *this = DCEL::make_polygon(boundary_nodes);
+
+        for (int i = 0; i < coords.rows(); ++i) {
+            if (markers(i, 0) == 0) {
+                insert_node(typename DCEL::node_t(n_nodes(), false, coords.row(i)));
+            }
+        }
+
+        for (int i = 0; i < triangulation.n_cells(); ++i) {
+            int id0 = triangulation.cells()(i, 0);
+            int id1 = triangulation.cells()(i, 1);
+            int id2 = triangulation.cells()(i, 2);
+
+            auto n0 = std::find_if(nodes_.begin(), nodes_.end(),
+                [&](const node_t& n) { return n.id() == id0; });
+            auto n1 = std::find_if(nodes_.begin(), nodes_.end(),
+                [&](const node_t& n) { return n.id() == id1; });
+            auto n2 = std::find_if(nodes_.begin(), nodes_.end(),
+                [&](const node_t& n) { return n.id() == id2; });
+
+            node_t* p0 = std::addressof(*n0);
+            node_t* p1 = std::addressof(*n1);
+            node_t* p2 = std::addressof(*n2);
+
+            if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
+                std::swap(p1, p2);
+            }
+
+            halfedge_t* h = find_halfedge_between(p0, p1);
+            if (h) {
+                add_polygon(h, {p2});
+            } else if ((h = find_halfedge_between(p1, p2))) {
+                add_polygon(h, {p0});
+            } else if ((h = find_halfedge_between(p2, p0))) {
+                add_polygon(h, {p1});
+            } else {
+                halfedge_t* h0 = emplace_halfedge_(p0);
+                halfedge_t* h1 = emplace_halfedge_(p1);
+                insert_edge(h0, h1);
+                add_polygon(h0, {p2});
+            }
+        }
+    }
+
 private:
     // internal storage (use list to avoid reallocations)
     std::list<node_t> nodes_;

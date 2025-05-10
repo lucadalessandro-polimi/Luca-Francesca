@@ -319,7 +319,9 @@ int main() {
     //delaunay.flip();
     
     
-    //Delaunay<2, 2> mesh(boundary,1000);
+    Delaunay<2, 2> del(boundary);
+    del.Ruppert_refinement(2.0);
+    TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
     //Delaunay<2, 2> mesh_1000(boundary,1000);
     //Delaunay<2, 2> mesh_10000(boundary,10000);
     //std::cout<<rho_from_min_angle(60.0)<<std::endl;
