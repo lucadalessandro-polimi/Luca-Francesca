@@ -371,7 +371,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
                     // add triangle
                     std::cout << "i " << node_i << std::endl;
                     std::cout << "k " << node_k << std::endl;
-                    if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(reflex_chain.front()))){
+                    if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
 		                push_cell(node_i, node_j, node_k);
                         std::cout << "QUI ALTRO" << std::endl;
                         node_i = node_k;   
