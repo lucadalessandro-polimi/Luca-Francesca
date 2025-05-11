@@ -177,6 +177,47 @@ constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const
     return inside;
 }
 
+// Check if a point is safely inside a polygon, i.e., farther than `epsilon` from any polygon edge.
+// This is useful to prevent sampling too close to boundaries.
+// Checks whether a point `p` is inside a polygon `polygon`
+// and also at least `epsilon` distance away from any edge of the polygon.
+// This avoids placing points too close to the boundary.
+template <typename Derived, typename PointT>
+constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p, double epsilon) {
+    // First check if the point lies inside the polygon at all
+    if (!point_in_polygon(polygon, p)) return false;
+
+    const int n = polygon.rows();
+    
+    // Iterate over each edge of the polygon
+    for (int i = 0; i < n; ++i) {
+        Eigen::Vector2d a = polygon.row(i);               // Current vertex
+        Eigen::Vector2d b = polygon.row((i + 1) % n);     // Next vertex (with wrap-around)
+
+        Eigen::Vector2d ab = b - a;                       // Edge vector
+        Eigen::Vector2d ap = p - a;                       // Vector from a to the point
+
+        // Project point p onto the segment ab using dot product
+        double ab_len_sq = ab.dot(ab);                    // Squared length of edge
+        double t = ab.dot(ap) / ab_len_sq;                // Parametric projection of p on line ab
+        t = std::max(0.0, std::min(1.0, t));               // Clamp t to [0, 1] so projection stays on the segment
+
+        // Compute the actual projection point on the segment
+        Eigen::Vector2d proj = a + t * ab;
+
+        // Compute the Euclidean distance from p to its projection on the edge
+        double dist = (p - proj).norm();
+
+        // If the point is too close to any edge, reject it
+        if (dist < epsilon)
+            return false;
+    }
+
+    // Passed all checks: point is inside and not near any edge
+    return true;
+}
+
+
 // Compute radius-edge ratio of triangle given its 2D coordinates
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)

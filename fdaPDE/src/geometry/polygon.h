@@ -319,8 +319,10 @@ template <int LocalDim, int EmbedDim> class Polygon {
                     reflex_chain.pop_front();
                     node_k = reflex_chain.front();
                     // add triangle
-		    push_cell(node_i, node_j, node_k);
-                    node_i = node_k;
+                    if(!fdapde::internals::collinear(nodes.row(node_i),nodes.row(node_j), nodes.row(node_k))){
+		                push_cell(node_i, node_j, node_k);
+                        node_i = node_k;
+                    }
                 }
                 reflex_chain.push_back(node_j);
             } else {   // check if the triplet (node_i, node_j, node_k) makes a reflex turn or not
@@ -332,9 +334,11 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 } else {
                     do {
                         // add triangle
-                        push_cell(node_i, node_j, node_k);
-                        // triangulate until convex turn is found
-                        reflex_chain.pop_back();
+                        if(!fdapde::internals::collinear(nodes.row(node_i),nodes.row(node_j), nodes.row(node_k))){
+                            push_cell(node_i, node_j, node_k);
+                            // triangulate until convex turn is found
+                            reflex_chain.pop_back();
+                        }
                         if (reflex_chain.size() > 1) {
                             node_i = *(reflex_chain.end() - 1);
                             node_k = *(reflex_chain.end() - 2);

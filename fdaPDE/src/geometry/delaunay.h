@@ -91,7 +91,7 @@ class Delaunay {
             it->set_id(cont++);
         
         //json needed for debug
-        dcel_.export_to_json("dcel_output.json");
+        //dcel_.export_to_json("dcel_output.json");
     }
    private:
     dcel_t dcel_;
@@ -387,8 +387,74 @@ class Delaunay {
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
             it->set_id(cont++);
         
-        dcel_.export_to_json("dcel_output.json");
+        //dcel_.export_to_json("dcel_output.json");
     }
+/*
+    void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+        // Compute bounding box of the input polygon
+        double min_x = boundary.col(0).minCoeff();
+        double max_x = boundary.col(0).maxCoeff();
+        double min_y = boundary.col(1).minCoeff();
+        double max_y = boundary.col(1).maxCoeff();
+        int generated_points = 0;
+
+        // Estimate grid resolution based on desired number of interior points
+        int points_per_row = static_cast<int>(std::ceil(std::sqrt(N)));
+        double dx = (max_x - min_x) / (points_per_row + 1);
+        double dy = (max_y - min_y) / (points_per_row + 1);
+
+        // Use average dimension to scale the perturbation uniformly in all directions
+        double width = max_x - min_x;
+        double height = max_y - min_y;
+        double avg_dim = (width + height) / 2.0;
+
+        // Random perturbation to avoid aligned grid artifacts
+        double perturbation_scale = avg_dim / (points_per_row + 1);
+        std::mt19937 gen(42);  // Deterministic seed for reproducibility
+        std::uniform_real_distribution<double> pert_x(-perturbation_scale / 2, perturbation_scale / 2);
+        std::uniform_real_distribution<double> pert_y(-perturbation_scale / 2, perturbation_scale / 2);
+
+        // Initialize the triangulation with the boundary polygon
+        initialize_triangulation(boundary);
+        flip();  // Ensure boundary triangulation satisfies Delaunay property
+
+        // Generate and insert interior points into the DCEL
+        for (int i = 1; i <= points_per_row; ++i) {
+            for (int j = 1; j <= points_per_row; ++j) {
+                coords_t u;
+                u << min_x + i * dx + pert_x(gen),
+                    min_y + j * dy + pert_y(gen);
+
+                // Keep only points that lie inside the polygonal domain
+                if (!fdapde::internals::point_safely_in_polygon(boundary, u, perturbation_scale/4))
+                    continue;
+
+                node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, u));
+                detect_conflicts(n);
+                ++generated_points;
+            }
+        }
+
+        // Insert all internal points into the triangulation using the conflict graph
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            node_t* u = &(*it);
+            if (!u->on_boundary())
+                insert_vertex_at_conflict(u);
+        }
+
+        // Reassign consecutive IDs to all cells and half-edges for consistency
+        int cont = 0;
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
+            it->set_id(cont++);
+        dcel_.set_n_cells_(cont);
+
+        cont = 0;
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
+            it->set_id(cont++);
+
+        // Export the resulting DCEL structure to a JSON file for visualization
+        //dcel_.export_to_json("dcel_output.json");
+    }*/
     
     //overloaded one if user wants to pass manually the internal points
     //the user must know the passed internal points lie all inside the domain 
@@ -550,7 +616,7 @@ class Delaunay {
         // If no encroachment is detected, insert the circumcenter into the mesh
         node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
         // Locate the triangle containing the new point
-        cell_t* cf = find_triangle(c); 
+        cell_t* cf = find_triangle_local(c, t); 
         // Insert the new node into the triangulation (splitting the containing triangle)
         insert_vertex(circ, cf, encroached_edges, bad_triangles, rho_bar);
 
@@ -687,7 +753,7 @@ class Delaunay {
             }
         }
     }
-    //function that finds the triangle containing P scanning all the triangle of the trinagulation
+    //function that finds the triangle containing P scanning all the triangle of the trinagulation(not used in the end)
     cell_t* find_triangle(const coords_t& P) {
         
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {  
@@ -703,6 +769,38 @@ class Delaunay {
 
     return nullptr;
     }
+
+    cell_t* find_triangle_local(const coords_t& P, cell_t* start) {
+        std::unordered_set<cell_t*> visited; //storing the cell visited since it will be pushed in the queue and not analyzed immeadiatly 
+        std::queue<cell_t*> queue; //storing the cell that needs to be checked
+        queue.push(start);
+        visited.insert(start);
+
+        while (!queue.empty()) {
+            cell_t* current = queue.front();
+            queue.pop();
+
+            const coords_t& A = current->halfedge()->node()->coords();
+            const coords_t& B = current->halfedge()->next()->node()->coords();
+            const coords_t& C = current->halfedge()->prev()->node()->coords();
+
+            if (fdapde::internals::point_in_2d_tri(P, A, B, C)) {
+                return current;
+            }
+
+            for (int i = 0; i < 3; ++i) {
+                halfedge_t* e = current->halfedge();
+                for (int j = 0; j < i; ++j) e = e->next();
+                    cell_t* neighbor = e->twin()->cell();
+                if (neighbor && visited.count(neighbor) == 0) { //it exists and never visited
+                    queue.push(neighbor);
+                    visited.insert(neighbor);
+                }
+            }
+        }
+        return nullptr;  // Fallback if not found
+    }
+
     
     //function working as mark_cavity but does not take into account conflits (since implement the Boyer-Watson algorithm)
     //but keeps track of the encroached edges and bad_triangles is creating 

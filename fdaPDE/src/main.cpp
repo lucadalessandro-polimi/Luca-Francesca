@@ -36,10 +36,29 @@ int main() {
     
     Eigen::Matrix<double, 4, 2> boundary;
     boundary << 0.0, 0.0,
+        /*        5.0, 0.0,
+                10.0, 0.0,
+                15.0, 0.0,
+                20.0, 0.0,
+                25.0, 0.0,
+                30.0, 0.0,
+                35.0, 0.0,*/
                 40.0, 0.0, 
+            /*    40.0, 5.0, 
+                40.0, 10.0,
+                40.0, 15.0,  */
                 40.0, 20.0,
-               // 20.0, 10.0,  
-                0.0, 20.0; 
+            /*    35.0, 20.0,
+                30.0, 20.0,
+                25.0, 20.0,
+                20.0, 20.0,
+                15.0, 20.0,
+                10.0, 20.0,
+                5.0, 20.0,*/
+                0.0, 20.0;
+             //   0.0, 15.0,
+             //   0.0, 10.0,
+             //   0.0, 5.0; 
 
     /*   
     Eigen::Matrix<double, N, 2> boundary;
@@ -80,9 +99,9 @@ int main() {
             0.3, 1.7,
             0.3, 1.5;
     */           
-    /*
-    Eigen::Matrix<double, 18, 2> boundary; //scala
-    boundary << 0.0, 0.0, 
+    
+    Eigen::Matrix<double, 18, 2> boundary_stairs; //scala
+    boundary_stairs << 0.0, 0.0, 
                 3.0, 0.0,  
                 6.0, 0.0,  
                 9.0, 0.0, 
@@ -99,7 +118,7 @@ int main() {
                 0.0, 8.0,
                 0.0, 6.0,
                 0.0, 4.0,
-                0.0, 2.0;*/
+                0.0, 2.0;
     
 
     Eigen::Matrix<double, 14, 2> internal;
@@ -224,9 +243,9 @@ int main() {
     //delaunay.flip();
     
     
-    Delaunay<2, 2> del(boundary);
-    del.Ruppert_refinement(2.0);
-    TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
+    /*Delaunay<2, 2> del(boundary,1000);
+    del.Ruppert_refinement(1.44);
+    TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();*/
     //Delaunay<2, 2> mesh_1000(boundary,1000);
     //Delaunay<2, 2> mesh_10000(boundary,10000);
     //std::cout<<rho_from_min_angle(60.0)<<std::endl;
@@ -234,38 +253,52 @@ int main() {
     
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
-/*
+
 
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
+    Delaunay<2, 2> del_1000(boundary,1000); 
     auto start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_500(boundary,500);  
+    //Delaunay<2, 2> del_1000(boundary,1000);  
+    del_1000.Ruppert_refinement(2.0);
     auto end = high_resolution_clock::now();    // ending measuring time 
     auto duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << 500 << " points: " << duration << " ms" << std::endl;
-    outfile << 500 << "," << duration << "\n"; 
+    std::cout << "elapsed time for " << del_1000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
+    outfile << del_1000.dcel().n_nodes() << "," << duration << "\n"; 
 
+    Delaunay<2, 2> del_5000(boundary,5000);
     start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_1000(boundary,1000);  
+    //Delaunay<2, 2> del_10000(boundary,10000);  
+    del_5000.Ruppert_refinement(2.0);
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << 1000 << " points: " << duration << " ms" << std::endl;
-    outfile << 1000 << "," << duration << "\n"; 
+    std::cout << "elapsed time for " << del_5000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
+    outfile << del_5000.dcel().n_nodes() << "," << duration << "\n";
 
+    Delaunay<2, 2> del_10000(boundary,10000);
     start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_5000(boundary,5000);  
+    //Delaunay<2, 2> del_10000(boundary,10000);  
+    del_10000.Ruppert_refinement(2.0);
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << 5000 << " points: " << duration << " ms" << std::endl;
-    outfile << 5000 << "," << duration << "\n"; 
-
+    std::cout << "elapsed time for " << del_10000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
+    outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; 
+/*
     start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_7000(boundary,7000);  
+    Delaunay<2, 2> del_100000(boundary,100000);  
+    //del_100000.Ruppert_refinement(2.0);
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << 7000 << " points: " << duration << " ms" << std::endl;
-    outfile << 7000 << "," << duration << "\n"; 
+    std::cout << "elapsed time for " << 100000 << " points: " << duration << " ms" << std::endl;
+    outfile << 100000 << "," << duration << "\n"; */
+/*
+    start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_1000000(boundary,1000000);  
+    end = high_resolution_clock::now();    // ending measuring time 
+    duration = duration_cast<milliseconds>(end - start).count();
+    std::cout << "elapsed time for " << 1000000 << " points: " << duration << " ms" << std::endl;
+    outfile << 1000000 << "," << duration << "\n"; 
 
     start = high_resolution_clock::now();  // starting measuring time 
     Delaunay<2, 2> delaunay_8000(boundary,8000);  
@@ -286,9 +319,9 @@ int main() {
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 20000 << " points: " << duration << " ms" << std::endl;
-    outfile << 20000 << "," << duration << "\n"; 
+    outfile << 20000 << "," << duration << "\n"; */
     
     outfile.close();
-*/    
+    
     return 0;
 }
