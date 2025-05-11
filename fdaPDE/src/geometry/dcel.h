@@ -330,8 +330,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         for (int i = 0; i < n_nodes_; ++i) { coords.row(nodes[i].id()) = nodes[i].coords(); }
         return coords;
     }
-    //int n_nodes() const { return n_nodes_; }
-    int n_nodes() const { return nodes_.size(); }
+    int n_nodes() const { return n_nodes_; }
     int n_halfedges() const { return n_halfedges_; }   //USE size() ?? since we are not changing them
     int n_cells() const { return n_cells_; }
     int n_edges() const { return n_halfedges_ / 2; }
