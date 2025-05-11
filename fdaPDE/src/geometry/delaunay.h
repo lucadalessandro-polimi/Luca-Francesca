@@ -1,5 +1,5 @@
-#ifndef __FDAPDE_DELAUNAY_H__
-#define __FDAPDE_DELAUNAY_H__
+#ifndef _FDAPDE_DELAUNAY_H_
+#define _FDAPDE_DELAUNAY_H_
 
 //Delaunay class build a triangulation and refine (using Ruppert algorithm) a generic connected domain 
 //including concavities 
@@ -20,6 +20,57 @@ class Delaunay {
     using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<2,2>>;
     using dcel_t = DCEL<local_dim, embed_dim>;
     using polygon_t = Polygon<local_dim, embed_dim>;
+
+    
+    /*  DECORATOR
+    struct node_t_;
+    struct cell_t_;
+
+    struct node_t_ : public DCEL<local_dim, embed_dim>::node_t {
+
+        using Base = typename DCEL<local_dim, embed_dim>::node_t;
+
+        node_t_() noexcept = default;
+        template <typename CoordsType>
+             requires(internals::is_eigen_dense_xpr_v<CoordsType>)
+        node_t_(int id, halfedge_t* halfedge, bool boundary, const CoordsType& coords) : Base(id, halfedge, boundary, coords), conflicting_triangle_(nullptr) {}
+        template <typename CoordsType>
+             requires(internals::is_eigen_dense_xpr_v<CoordsType>)
+        node_t_(int id, bool boundary, const CoordsType& coords) : Base(id, boundary, coords), conflicting_triangle_(nullptr) {}
+        template <typename... CoordsType>
+            requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
+        node_t_(int id, halfedge_t* halfedge, bool boundary, CoordsType&&... coords) : Base(id, halfedge, boundary, coords...), conflicting_triangle_(nullptr) {}
+        template <typename... CoordsType>
+            requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
+        node_t_(int id, bool boundary, CoordsType&&... coords) :  Base(id, nullptr, boundary, coords...), conflicting_triangle_(nullptr) { }
+
+        void set_conflict(cell_t_* triangle) { conflicting_triangle_ = triangle; }
+        cell_t_* conflict() const { return conflicting_triangle_; }
+        void remove_conflict() { conflicting_triangle_ = nullptr; }
+
+       private:
+        cell_t_* conflicting_triangle_; 
+    };
+
+    struct cell_t_ : public DCEL<local_dim, embed_dim>::cell_t {
+
+        using Base = typename DCEL<local_dim, embed_dim>::cell_t;
+        
+        cell_t_() : Base() { }
+        cell_t_(int id) : Base(id) { }
+        cell_t_(int id, halfedge_t* h) : Base(id, h) { }
+        cell_t_(const cell_t& base) : Base(base.id(), base.halfedge()) { }
+        
+        void add_conflict(node_t_* point) { conflicting_points_.push_back(point); }
+        const std::vector<node_t_*>& conflicting_points() const{ return conflicting_points_; }
+        std::vector<node_t_*>& conflicting_points() { return conflicting_points_; }
+        void clear_conflicts() { conflicting_points_.clear(); }
+
+       private:
+        std::vector<node_t_*> conflicting_points_;
+    };
+    */
+
     
     
     // constructors 
@@ -93,6 +144,8 @@ class Delaunay {
         //json needed for debug
         //dcel_.export_to_json("dcel_output.json");
     }
+
+    
    private:
     dcel_t dcel_;
 
@@ -341,7 +394,7 @@ class Delaunay {
     }
     
     //trinagulating the domain in a Delaunay fashion with N random points 
-    void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+    /*void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
         double min_x = boundary.col(0).minCoeff();
         double max_x = boundary.col(0).maxCoeff();
         double min_y = boundary.col(1).minCoeff();
@@ -910,7 +963,7 @@ class Delaunay {
             dig_cavity(u, wx, encroached_edges, bad_triangles, rho_bar);
             dig_cavity(u, xv, encroached_edges, bad_triangles, rho_bar);
         }
-        //no need ti flip since Boyer-Watson mantains the Dleaunay
+        //no need to flip since Boyer-Watson mantains the Dleaunay
         //flip_Ruppert(dcel, encroached_edges, bad_triangles, rho_bar);
     }
     
@@ -918,4 +971,4 @@ class Delaunay {
   
 }  // namespace fdapde
 
-#endif // __DELAUNAY_H__
+#endif // _DELAUNAY_H_
