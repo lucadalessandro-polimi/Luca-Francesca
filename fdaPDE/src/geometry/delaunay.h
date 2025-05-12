@@ -145,7 +145,6 @@ class Delaunay {
         //dcel_.export_to_json("dcel_output.json");
     }
 
-    
    private:
     dcel_t dcel_;
 
@@ -441,8 +440,8 @@ class Delaunay {
             it->set_id(cont++);
         
         //dcel_.export_to_json("dcel_output.json");
-    }
-/*
+    }*/
+
     void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
         // Compute bounding box of the input polygon
         double min_x = boundary.col(0).minCoeff();
@@ -507,7 +506,7 @@ class Delaunay {
 
         // Export the resulting DCEL structure to a JSON file for visualization
         //dcel_.export_to_json("dcel_output.json");
-    }*/
+    }
     
     //overloaded one if user wants to pass manually the internal points
     //the user must know the passed internal points lie all inside the domain 
@@ -555,6 +554,17 @@ class Delaunay {
         double angle = fdapde::internals::angle_between(B, C, A);
         return angle >= 90.0;
     }
+    
+    //modified function needed to test the encorachment with circumencenter without actually insert it
+    bool check_encroachment(halfedge_t* e, const coords_t& c) {
+        //extracting verticies of the adjacent triangle to the edge e 
+        coords_t A = e->node()->coords();
+        coords_t B = e->twin()->node()->coords();         
+        //computing the opposite angle to the edge e 
+        double angle = fdapde::internals::angle_between(B, c, A);
+        return angle >= 90.0;
+    }
+
     //function needed to perform the test of badly shaped triangle 
     //using the ratio betwwen the radius of the circumcircle and the longest edge
     //the convergence of the algorithm is proved for rho_bar >=sqrt(2)
@@ -630,26 +640,19 @@ class Delaunay {
         coords_t C = t->halfedge()->next()->node()->coords();
 
         // Compute the circumcenter of triangle ABC
-        coords_t c = fdapde::internals::circumcenter(A, B, C);  
+        coords_t c = fdapde::internals::circumcenter(A, B, C); 
 
-        // Check if a node already exists at the circumcenter (avoid duplicates)
-        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
-            if ((it->coords() - c).norm() < 1e-12) {
-                return false;  // Do not insert if a node is already at c
-            }
-        }
+        // Understanding where the circumcenter is actually falling 
+        cell_t* cf = find_triangle_local(c, t); 
+        halfedge_t* e1 = cf->halfedge()->prev();
+        halfedge_t* e2 = cf->halfedge();
+        halfedge_t* e3 = cf->halfedge()->next();
+        
+        // Check whether the circumcenter c encroaches any boundary segment of the triangle cf
+        for (halfedge_t* e : {e1, e2, e3}) {
 
-        // Check whether the circumcenter c encroaches any boundary segment
-        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
-            halfedge_t* e = &(*it);
-
-            // We only care about edges that are part of the PLC (on the boundary)
             if (e->on_boundary() && e->cell()) {
-                coords_t a = e->node()->coords();
-                coords_t b = e->twin()->node()->coords();
-
-                // If the circumcenter c encroaches the boundary segment ab
-                if (fdapde::internals::is_encroached(c, a, b)) {
+                if (check_encroachment(e, c)) {
                     // Only split if the edge and its neighborhood is not marked as "seditious"
                     if (!is_edge_seditious(e) && !is_edge_seditious(e->twin()) &&
                         !is_edge_seditious(e->next()) && !is_edge_seditious(e->prev()) &&
@@ -668,14 +671,11 @@ class Delaunay {
 
         // If no encroachment is detected, insert the circumcenter into the mesh
         node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
-        // Locate the triangle containing the new point
-        cell_t* cf = find_triangle_local(c, t); 
         // Insert the new node into the triangulation (splitting the containing triangle)
         insert_vertex(circ, cf, encroached_edges, bad_triangles, rho_bar);
 
         return true;
     }
-
 
     // Attempts to split the first non-seditious encroached edge.
     // Returns true if a segment was successfully split.
@@ -699,6 +699,7 @@ class Delaunay {
 
         return false;  // No suitable edge was found for splitting
     }
+
 
 
     // Attempts to split the first bad triangle (with small angle or poor aspect ratio).

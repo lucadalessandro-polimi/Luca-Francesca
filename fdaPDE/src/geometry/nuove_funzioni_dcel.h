@@ -2294,3 +2294,66 @@ void print_dcel() {
  
      std::cout << "Triangle: [" << id0 << ", " << id1 << ", " << id2 << "]\n";
  }
+
+
+
+
+
+
+ 
+    // Attempts to split a bad triangle by inserting its circumcenter.
+    // If the circumcenter encroaches a segment of the PLC, it splits that segment instead.
+    // Returns true if a refinement was performed.
+    /*bool split_triangle(cell_t* t, std::unordered_set<halfedge_t*>& encroached_edges,
+        std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
+        // Get triangle vertices A, B, C
+        coords_t A = t->halfedge()->prev()->node()->coords();
+        coords_t B = t->halfedge()->node()->coords();
+        coords_t C = t->halfedge()->next()->node()->coords();
+
+        // Compute the circumcenter of triangle ABC
+        coords_t c = fdapde::internals::circumcenter(A, B, C);  
+
+        // Check if a node already exists at the circumcenter (avoid duplicates)
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            if ((it->coords() - c).norm() < 1e-12) {
+                return false;  // Do not insert if a node is already at c
+            }
+        }
+
+        // Check whether the circumcenter c encroaches any boundary segment
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            halfedge_t* e = &(*it);
+
+            // We only care about edges that are part of the PLC (on the boundary)
+            if (e->on_boundary() && e->cell()) {
+                coords_t a = e->node()->coords();
+                coords_t b = e->twin()->node()->coords();
+
+                // If the circumcenter c encroaches the boundary segment ab
+                if (fdapde::internals::is_encroached(c, a, b)) {
+                    // Only split if the edge and its neighborhood is not marked as "seditious"
+                    if (!is_edge_seditious(e) && !is_edge_seditious(e->twin()) &&
+                        !is_edge_seditious(e->next()) && !is_edge_seditious(e->prev()) &&
+                        !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
+                        
+                        // Split the encroached subsegment instead of inserting the circumcenter
+                        split_subsegment(e, encroached_edges, bad_triangles, rho_bar);
+                        return true;
+                    }
+
+                    // If the segment is seditious, do nothing now (will be retried later)
+                    return false;
+                }
+            }
+        }
+
+        // If no encroachment is detected, insert the circumcenter into the mesh
+        node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
+        // Locate the triangle containing the new point
+        cell_t* cf = find_triangle_local(c, t); 
+        // Insert the new node into the triangulation (splitting the containing triangle)
+        insert_vertex(circ, cf, encroached_edges, bad_triangles, rho_bar);
+
+        return true;
+    }*/
