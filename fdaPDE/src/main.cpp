@@ -355,16 +355,80 @@ int main() {
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
     
-    
-    //Delaunay<2, 2> del(boundary,1000);
-    //del.Ruppert_refinement(2.0);
+    Eigen::Matrix<double, 4, 2> hole;
+    hole << 10., 5.,
+    10., 15.,
+    30., 15.,
+    30., 5.;
+    Eigen::Matrix<double, 4, 2> hole2;
+    hole2 << 3.,4.,
+    3., 11.,
+    6., 11.,
+    6., 4.;
+    Eigen::Matrix<double, 4, 2> internal1;
+    internal1 << 1.,1.,
+                35., 11.,
+                21., 17.,
+                10., 4.;
+            
+    //PER ORA NON FUNZIONA CON PIù DI UN BUCO
+    Delaunay<2, 2> del(boundary, internal1, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2});
+    del.Ruppert_refinement(2.0);
     //TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
+    /*auto find_halfedge_from_id = [&del](int id) -> DCEL<2, 2>::halfedge_t* {
+        for (auto it = del.dcel().halfedges_begin(); it != del.dcel().halfedges_end(); ++it) 
+            if (it->id() == id) 
+                return std::addressof(*it); 
+        return nullptr; 
+    };*/
+    del.dcel().export_to_json("dcel_output.json");
+    
+    //DCEL<2,2> dcel= DCEL<2,2>::make_polygon(boundary, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole});
+    //dcel.export_to_json("dcel_output.json");
+
+    // 📍 Stampa tutti i nodi
+    /*std::cout << "\n🟢 NODI: \n";
+    for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+        std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                  << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+    }
+
+    // 🔗 Stampa tutti gli Half-Edges
+    std::cout << "\n🔵 HALF-EDGES: \n";
+    for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
+        std::cout << "ID: " << it->id()
+                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                  << " | Cell: " << (it->cell() ? std::to_string(it->cell()->id()) : "NULL")
+                  << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
+                  << std::endl;
+    }
+
+    // 🔳 Stampa tutte le Celle
+    std::cout << "\n🟠 CELLE: \n";
+    for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
+        std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                  << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+        if (it->halfedge()) {
+            DCEL<2, 2>::halfedge_t* h = it->halfedge();
+            std::cout << "  🔗 Half-edges nella cella: ";
+            DCEL<2, 2>::halfedge_t* start = h;
+            do {
+                std::cout << h->id() << " ";
+                h = h->next();
+            } while (h && h != start);
+            std::cout << std::endl;
+        }
+    }*/
+
 
     
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
-
+/*
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
@@ -377,15 +441,6 @@ int main() {
     std::cout << "elapsed time for " << del_10000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
     outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; 
 
-    /*Delaunay<2, 2> del_5000(boundary,5000);
-    start = high_resolution_clock::now();  // starting measuring time 
-    //Delaunay<2, 2> del_10000(boundary,10000);  
-    del_5000.Ruppert_refinement(2.0);
-    end = high_resolution_clock::now();    // ending measuring time 
-    duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << del_5000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
-    outfile << del_5000.dcel().n_nodes() << "," << duration << "\n";*/
-
     Delaunay<2, 2> del_100000(boundary,100000);
     start = high_resolution_clock::now();  // starting measuring time 
     //Delaunay<2, 2> del_10000(boundary,10000);  
@@ -393,7 +448,7 @@ int main() {
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << del_100000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
-    outfile << del_100000.dcel().n_nodes() << "," << duration << "\n"; 
+    outfile << del_100000.dcel().n_nodes() << "," << duration << "\n"; */
 /*
     Delaunay<2, 2> del_100000(boundary,100000);
     start = high_resolution_clock::now();  // starting measuring time 
@@ -440,7 +495,7 @@ int main() {
     std::cout << "elapsed time for " << 20000 << " points: " << duration << " ms" << std::endl;
     outfile << 20000 << "," << duration << "\n"; */
     
-    outfile.close();
+    //outfile.close();
     
     return 0;
 }

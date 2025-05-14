@@ -287,8 +287,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
         int node_offset = n_nodes; 
         int hole_index = 1;
     
+        cell_t* c_new=c;
+        halfedge_t* h0= std::addressof(*dcel.halfedges_begin());
+        halfedge_t* h1=nullptr;
         for (const auto& hole : holes) {
             int hole_nodes = hole.rows();
+            
             // dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
             // cell_t* hole_cell = std::addressof(dcel.cells_.back());
             // nodes and halfedges for the hole
@@ -296,9 +300,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
                 halfedge_t* h = dcel.emplace_halfedge_(n);
                 n->set_halfedge(h);
-                h->set_cell(c);
+                h->set_cell(c_new);
                // std::cout << "HALF CHE STO CREANDO: " << h->id() << " ASSEGNATO A CELLA: " << h->cell()->id() << std::endl;
             }
+            
+            halfedge_t* h1= std::addressof(*(std::prev(dcel.halfedges_end())));
+            std::cout << "h0: " << h0->id() << " h1: " << h1->id() << std::endl;
+            cell_t* c_old= h0->cell();
+            std::cout << "c_old: " << c_old->id() << std::endl;
+            
             // hole_cell->set_halfedge(std::next(dcel.nodes_begin(), node_offset)->halfedge());
             // twin halfedges for the hole
             for (int i = 0; i < hole_nodes; ++i) {
@@ -318,6 +328,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h1->twin()->set_prev(h2->twin());
                 h2->twin()->set_next(h1->twin());
             }
+            //c_new= dcel.insert_edge(h0,h1)->cell();
+            //dcel.cells_.erase(c_old->it());
+            h0=h1;
             node_offset += hole_nodes; 
         }
         return dcel;
@@ -631,7 +644,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 begin = begin->next();
             } while (begin != end);
             // remove v1's cell
-            cells_.erase(c1->it());
+            //cells_.erase(c1->it());  DA DECOMMENTARE
         }
 
         // set next of v1_prev to v2_next
@@ -737,20 +750,31 @@ template <int LocalDim, int EmbedDim> class DCEL {
     }
 
     template <typename TriangulationType>
-    void from_triangulation(const TriangulationType& triangulation) {
-        int n_boundary = triangulation.n_boundary_nodes();
+    void from_triangulation(const TriangulationType& triangulation, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
+        int n_hole_nodes = 0;
+        for (const auto& hole : holes) n_hole_nodes += hole.rows();
+        int n_boundary = triangulation.n_boundary_nodes() - n_hole_nodes;
         Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_nodes(n_boundary, embed_dim);
         const auto& coords = triangulation.nodes();
         const auto& markers = triangulation.boundary_nodes();
-
+        int n = boundary_nodes.rows();
+        
+        /*int mid = n / 2;  // punto di taglio (metà inferiore se dispari)
+        // Prima metà
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> part1 = boundary_nodes.topRows(mid);
+        // Seconda metà
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> part2 = boundary_nodes.bottomRows(n - mid);*/
+        
         int idx = 0;
-        for (int i = 0; i < coords.rows(); ++i) {
+        for (int i = 0; i < n_boundary; ++i) {
             if (markers(i, 0) == 1) {
                 boundary_nodes.row(idx++) = coords.row(i);
             }
         }
+        //*this = DCEL::make_polygon(part1, std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>{part2});
+       
+        *this = DCEL::make_polygon(boundary_nodes, holes);
 
-        *this = DCEL::make_polygon(boundary_nodes);
 
         for (int i = 0; i < coords.rows(); ++i) {
             if (markers(i, 0) == 0) {

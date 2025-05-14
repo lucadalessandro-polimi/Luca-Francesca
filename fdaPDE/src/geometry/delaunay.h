@@ -75,13 +75,50 @@ class Delaunay {
     
     // constructors 
     // costructor with random generated points
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, int N = 100) {
-        triangulate(N, boundary);
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,  int N=100, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {}){
+        triangulate(N, boundary, holes);
+
+        
+            // 📍 Stampa tutti i nodi
+            std::cout << "\n🟢 NODI: \n";
+            for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+                std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                          << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+            }
+        
+            // 🔗 Stampa tutti gli Half-Edges
+            std::cout << "\n🔵 HALF-EDGES: \n";
+            for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+                std::cout << "ID: " << it->id()
+                          << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                          << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                          << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                          << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                          << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
+                          << std::endl;
+            }
+        
+            // 🔳 Stampa tutte le Celle
+            std::cout << "\n🟠 CELLE: \n";
+            for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+                std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                          << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+                if (it->halfedge()) {
+                    halfedge_t* h = it->halfedge();
+                    std::cout << "  🔗 Half-edges nella cella: ";
+                    halfedge_t* start = h;
+                    do {
+                        std::cout << h->id() << " ";
+                        h = h->next();
+                    } while (h && h != start);
+                    std::cout << std::endl;
+                }
+            }
     }    
     // costructor with given internal points form the user
     // user needs to provide internal points correctly located inside the domain 
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal) {
-        triangulate(internal, boundary);
+    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {}) {
+        triangulate(internal, boundary, holes);
     }
 
     // Getter const
@@ -202,13 +239,13 @@ class Delaunay {
     }
 
     //function performing the first raw triangulation of the domain using the polygon.h class
-    void initialize_triangulation(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary){
-        polygon_t polygon(boundary);
+    void initialize_triangulation(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
+        polygon_t polygon(boundary, holes);
         auto triangulation = polygon.triangulation();
         const auto& nodes = triangulation.nodes();  
         const auto& cells = triangulation.cells();   
         //we manage our input dcel to be the traslation of the trinagulation object from polygon 
-        dcel_.from_triangulation(triangulation);
+        dcel_.from_triangulation(triangulation, holes);
     }
 
     //function perfoming the flip alghoritm to tranform every non-Delaunay triangulation into a Delaunay one
@@ -240,7 +277,7 @@ class Delaunay {
                 halfedge_t* e = edge;
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(e->prev(), e->twin()->prev());
-                //std::cout << "FLIP" << std::endl;
+                std::cout << "FLIP" << std::endl;
             
                 if (new_edge) {
                     // Inserting the new halfedges created by the flip into the list to check
@@ -442,7 +479,7 @@ class Delaunay {
         //dcel_.export_to_json("dcel_output.json");
     }*/
 
-    void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+    void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes ) {
         // Compute bounding box of the input polygon
         double min_x = boundary.col(0).minCoeff();
         double max_x = boundary.col(0).maxCoeff();
@@ -467,9 +504,9 @@ class Delaunay {
         std::uniform_real_distribution<double> pert_y(-perturbation_scale / 2, perturbation_scale / 2);
 
         // Initialize the triangulation with the boundary polygon
-        initialize_triangulation(boundary);
+        initialize_triangulation(boundary, holes);
         flip();  // Ensure boundary triangulation satisfies Delaunay property
-
+        
         // Generate and insert interior points into the DCEL
         for (int i = 1; i <= points_per_row; ++i) {
             for (int j = 1; j <= points_per_row; ++j) {
@@ -505,15 +542,15 @@ class Delaunay {
             it->set_id(cont++);
 
         // Export the resulting DCEL structure to a JSON file for visualization
-        //dcel_.export_to_json("dcel_output.json");
+        dcel_.export_to_json("dcel_output.json");
     }
     
     //overloaded one if user wants to pass manually the internal points
     //the user must know the passed internal points lie all inside the domain 
     void triangulate(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
         
-        initialize_triangulation(boundary);
+        initialize_triangulation(boundary, holes);
         flip();
 
         //inserting the internal points in the triangulation
@@ -772,7 +809,9 @@ class Delaunay {
                 bad_triangles.erase(e->twin()->cell());
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(e->prev(), e->twin()->prev());
-            
+
+                std::cout << "FLIP RUPPERT" << std::endl;
+
                 if (new_edge) {
                     if(!new_edge->prev()->on_boundary())
                         halfedges_to_check.push_back(new_edge->prev());
