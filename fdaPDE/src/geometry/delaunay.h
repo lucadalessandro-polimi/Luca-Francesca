@@ -142,7 +142,7 @@ class Delaunay {
             it->set_id(cont++);
         
         //json needed for debug
-        //dcel_.export_to_json("dcel_output.json");
+        dcel_.export_to_json("dcel_output.json");
     }
 
    private:

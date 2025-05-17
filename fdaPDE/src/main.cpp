@@ -356,15 +356,15 @@ int main() {
     //delaunay.flip();
     
     
-    //Delaunay<2, 2> del(boundary,1000);
-    //del.Ruppert_refinement(2.0);
-    //TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
+    Delaunay<2, 2> del(boundary);
+    del.Ruppert_refinement(2.0);
+    TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
 
     
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
-
+/*
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
@@ -375,7 +375,7 @@ int main() {
     auto end = high_resolution_clock::now();    // ending measuring time 
     auto duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << del_10000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
-    outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; 
+    outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; */
 
     /*Delaunay<2, 2> del_5000(boundary,5000);
     start = high_resolution_clock::now();  // starting measuring time 
@@ -386,14 +386,14 @@ int main() {
     std::cout << "elapsed time for " << del_5000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
     outfile << del_5000.dcel().n_nodes() << "," << duration << "\n";*/
 
-    Delaunay<2, 2> del_100000(boundary,100000);
+    /*Delaunay<2, 2> del_100000(boundary,100000);
     start = high_resolution_clock::now();  // starting measuring time 
     //Delaunay<2, 2> del_10000(boundary,10000);  
     del_100000.Ruppert_refinement(2.0);
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << del_100000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
-    outfile << del_100000.dcel().n_nodes() << "," << duration << "\n"; 
+    outfile << del_100000.dcel().n_nodes() << "," << duration << "\n"; */
 /*
     Delaunay<2, 2> del_100000(boundary,100000);
     start = high_resolution_clock::now();  // starting measuring time 
@@ -440,7 +440,7 @@ int main() {
     std::cout << "elapsed time for " << 20000 << " points: " << duration << " ms" << std::endl;
     outfile << 20000 << "," << duration << "\n"; */
     
-    outfile.close();
+    //outfile.close();
     
     return 0;
 }
