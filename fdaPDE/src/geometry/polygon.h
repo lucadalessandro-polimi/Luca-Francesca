@@ -29,18 +29,72 @@ template <int LocalDim, int EmbedDim> class Polygon {
 
     // constructors
     Polygon() noexcept = default;
-    Polygon(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes) noexcept : triangulation_() {
+    Polygon(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) noexcept : triangulation_() {
         fdapde_assert(nodes.rows() > 0 && nodes.cols() == embed_dim);
         if (internals::are_2d_counterclockwise_sorted(nodes)) {
-            triangulate_(nodes);
+            triangulate_(nodes, holes);
         } else {   // nodes are in clocwise order, reverse node ordering
             int n_nodes = nodes.rows();
             Eigen::Matrix<double, Dynamic, Dynamic> reversed_nodes(n_nodes, embed_dim);
             for (int i = 0; i < n_nodes; ++i) { reversed_nodes.row(i) = nodes.row(n_nodes - 1 - i); }
-            triangulate_(reversed_nodes);
+            triangulate_(reversed_nodes, holes);
         }
     }
-  
+
+    /*template <typename... Matrices>
+    Polygon(const Matrices&... boundaries) noexcept : triangulation_() {
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> all_nodes;
+        bool is_first = true;
+        (
+            (
+                process_contour(boundaries, all_nodes, is_first),
+                is_first = false
+            ),
+            ...
+        );
+        triangulate_(all_nodes);
+    }
+
+    /*void process_contour(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& nodes,
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& all_nodes,
+        bool is_outer_boundary) {
+        fdapde_assert(nodes.cols() == embed_dim && nodes.rows() >= 3);
+
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> nodes_to_add = nodes;
+
+        bool ccw = internals::are_2d_counterclockwise_sorted(nodes);
+
+        // Correggi orientamento
+        if (is_outer_boundary && !ccw) {
+        reverse_nodes_in_place(nodes_to_add);  // → CCW
+        } else if (!is_outer_boundary && ccw) {
+        reverse_nodes_in_place(nodes_to_add);  // → CW
+        }
+
+        // Duplica il primo nodo come ultimo per chiudere il contorno
+        int n = nodes_to_add.rows();
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> closed_nodes(n + 1, embed_dim);
+        closed_nodes.topRows(n) = nodes_to_add;
+        closed_nodes.row(n)     = nodes_to_add.row(0);  // chiusura
+
+        // Concatenazione
+        if (all_nodes.size() == 0) {
+        all_nodes = closed_nodes;
+        } else {
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> tmp(all_nodes.rows() + closed_nodes.rows(), embed_dim);
+        tmp << all_nodes, closed_nodes;
+        all_nodes = std::move(tmp);
+        }
+    }
+
+    void reverse_nodes_in_place(Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& mat) {
+        int n = mat.rows();
+        for (int i = 0; i < n / 2; ++i) {
+            mat.row(i).swap(mat.row(n - 1 - i));
+        }
+    }*/
+    
+
     Polygon(const Polygon&) noexcept = default;
     Polygon(Polygon&&) noexcept = default;  
     // observers
@@ -66,28 +120,42 @@ template <int LocalDim, int EmbedDim> class Polygon {
     }
    private:
     // perform polygon triangulation
-    void triangulate_(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes) {
+    void triangulate_(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes= {}) {
         std::vector<int> cells;
         // perform monotone partitioning
-        std::vector<std::vector<int>> poly_partition = monotone_partition_(nodes);
+        std::vector<std::vector<int>> poly_partition = monotone_partition_(nodes, holes);
         std::cout << "poly_partition.size() = " << poly_partition.size() << std::endl;
         // triangulate each monotone polygon
+        Eigen::Matrix<double, Dynamic, embed_dim> all_nodes;
+        int total_rows = nodes.rows();
+        for (const auto& hole : holes) {
+            total_rows += hole.rows();
+        }
+        all_nodes.resize(total_rows, embed_dim);
+        // Copia del bordo esterno
+        all_nodes.topRows(nodes.rows()) = nodes;
+        // Copia dei buchi
+        int row_offset = nodes.rows();
+        for (const auto& hole : holes) {
+            all_nodes.middleRows(row_offset, hole.rows()) = hole;
+            row_offset += hole.rows();
+        }
         for (const std::vector<int>& poly : poly_partition) {
             std::cout << "LOOP" << std::endl;
-            std::vector<int> local_cells = triangulate_monotone_(nodes(poly, Eigen::placeholders::all));  //MODIFICATO
+            std::vector<int> local_cells = triangulate_monotone_(all_nodes(poly, Eigen::placeholders::all));  //MODIFICATO
             // move local node numbering to global node numbering
             for (std::size_t i = 0; i < local_cells.size(); ++i) { local_cells[i] = poly[local_cells[i]]; }
             cells.insert(cells.end(), local_cells.begin(), local_cells.end());
         }
         // set-up face-based data structure
         triangulation_ = Triangulation<LocalDim, EmbedDim>(
-          nodes, Eigen::Map<Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>>(cells.data(), cells.size() / 3, 3),
-          Eigen::Matrix<int, Dynamic, 1>::Ones(nodes.rows()));
+          all_nodes, Eigen::Map<Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>>(cells.data(), cells.size() / 3, 3),
+          Eigen::Matrix<int, Dynamic, 1>::Ones(all_nodes.rows()));
     }
 
     // partition an arbitrary polygon P into a set of monotone polygons (plane sweep approach, section 3.2 of De Berg,
     // M. (2000). Computational geometry: algorithms and applications. Springer Science & Business Media.)
-    std::vector<std::vector<int>> monotone_partition_(const Eigen::Matrix<double, Dynamic, Dynamic>& coords) {      
+    std::vector<std::vector<int>> monotone_partition_(const Eigen::Matrix<double, Dynamic, Dynamic>& coords, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& coords_holes) {
         using poly_t = DCEL<local_dim, embed_dim>;
 	using halfedge_t = typename poly_t::halfedge_t;
 	using halfedge_ptr_t = std::add_pointer_t<halfedge_t>;
@@ -137,8 +205,10 @@ template <int LocalDim, int EmbedDim> class Polygon {
             return false;	  
 	};
     
+
         // O(n) polygon construction as Doubly Connected Edge List
-        poly_t dcel = DCEL<local_dim, embed_dim>::make_polygon(coords);
+        poly_t dcel = DCEL<local_dim, embed_dim>::make_polygon(coords, coords_holes);
+    
         int n_nodes = dcel.n_nodes();
         int n_edges = dcel.n_edges();
         std::set<edge_t> sweep_line;   // edges pierced by sweep line, sorted by x-coord
@@ -173,11 +243,29 @@ template <int LocalDim, int EmbedDim> class Polygon {
             }
         }
         
+        Eigen::Matrix<double, Dynamic, embed_dim> all_coords;
+        int total_rows = coords.rows();
+        for (const auto& hole : coords_holes) {
+            total_rows += hole.rows();
+        }
+        all_coords.resize(total_rows, embed_dim);
+        // Copia del bordo esterno
+        all_coords.topRows(coords.rows()) = coords;
+        // Copia dei buchi
+        int row_offset = coords.rows();
+        for (const auto& hole : coords_holes) {
+            all_coords.middleRows(row_offset, hole.rows()) = hole;
+            row_offset += hole.rows();
+        }
+        
         // O(nlog(n)) y-coordinate sort (break tiles using x-coordinate)
         std::sort(nodes.begin(), nodes.end(), [&](halfedge_ptr_t n, halfedge_ptr_t m) {
             int i = n->node()->id(), j = m->node()->id();
-            return coords(i, 1) > coords(j, 1) || (coords(i, 1) == coords(j, 1) && coords(i, 0) > coords(j, 0));
+            std::cout << "i_id: " << n->id() << ", j_id: " << m->id() << std::endl;
+            std::cout << "i = " << i << ", j = " << j << std::endl;
+            return all_coords(i, 1) > all_coords(j, 1) || (all_coords(i, 1) == all_coords(j, 1) && all_coords(i, 0) > all_coords(j, 0));
         });
+        
         // monotone partitioning algorithm (details in section 3.2 of De Berg, M. (2000). Computational geometry:
         // algorithms and applications. Springer Science & Business Media.)
         std::vector<typename std::set<edge_t>::iterator> sweep_line_it(n_nodes);
@@ -186,35 +274,41 @@ template <int LocalDim, int EmbedDim> class Polygon {
             int prev = v->node()->prev()->id();
             int curr = v->node()->id();
 	        int next = v->node()->next()->id();
+            std::cout << "curr = " << curr << ", prev = " << prev << ", next = " << next << std::endl;
             // process i-th node
             switch (node_category[v]) {
             case node_category_t::start: {
-                auto ref = sweep_line.emplace(curr, coords(curr, 0), coords(curr, 1), coords(next, 0), coords(next, 1));
+                std::cout << "caso 1" << std::endl;
+                auto ref = sweep_line.emplace(curr, all_coords(curr, 0), all_coords(curr, 1), all_coords(next, 0), all_coords(next, 1));
                 sweep_line_it[curr] = ref.first;
                 helper[curr] = v;
                 break;
             }
             case node_category_t::end: {
+                std::cout << "caso 2" << std::endl;
                 if (node_category[helper[prev]] == node_category_t::merge) { dcel.insert_edge(v, helper[prev]); }
                 sweep_line.erase(sweep_line_it[prev]);
+                std::cout << "QUI" << std::endl;
                 break;
             }
             case node_category_t::split: {
+                std::cout << "caso 3" << std::endl;
                 // search edge in sweep line directly left to curr
-                edge_t edge(coords(curr, 0), coords(curr, 1), coords(curr, 0), coords(curr, 1));
+                edge_t edge(all_coords(curr, 0), all_coords(curr, 1), all_coords(curr, 0), all_coords(curr, 1));
                 auto it = sweep_line.lower_bound(edge);
                 // insert diagonal (update v to point to the inserted diagonal)
                 helper[it->id] = dcel.insert_edge(v, helper[it->id]);
-                auto ref = sweep_line.emplace(curr, coords(curr, 0), coords(curr, 1), coords(next, 0), coords(next, 1));
+                auto ref = sweep_line.emplace(curr, all_coords(curr, 0), all_coords(curr, 1), all_coords(next, 0), all_coords(next, 1));
                 sweep_line_it[curr] = ref.first;
                 helper[curr] = v;
                 break;
             }
             case node_category_t::merge: {
+                std::cout << "caso 4" << std::endl;
                 if (node_category[helper[prev]] == node_category_t::merge) { dcel.insert_edge(v, helper[prev]); }
                 sweep_line.erase(sweep_line_it[prev]);
                 // search edge in sweep line directly left to curr
-                edge_t edge(coords(curr, 0), coords(curr, 1), coords(curr, 0), coords(curr, 1));
+                edge_t edge(all_coords(curr, 0), all_coords(curr, 1), all_coords(curr, 0), all_coords(curr, 1));
                 auto it = sweep_line.lower_bound(edge);
                 if (node_category[helper[it->id]] == node_category_t::merge) {
                     v = dcel.insert_edge(v, helper[it->id]);   // update v to point to the inserted diagonal
@@ -223,17 +317,18 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 break;
             }
             case node_category_t::regular: {
-                if (!below(coords.row(curr), coords.row(next))) {
+                std::cout << "caso 5" << std::endl;
+                if (!below(all_coords.row(curr), all_coords.row(next))) {
                     // polygon interior is on the right of this halfedge
                     if (node_category[helper[prev]] == node_category_t::merge) { dcel.insert_edge(v, helper[prev]); }
                     sweep_line.erase(sweep_line_it[prev]);
                     auto ref =
-                      sweep_line.emplace(curr, coords(curr, 0), coords(curr, 1), coords(next, 0), coords(next, 1));
+                      sweep_line.emplace(curr, all_coords(curr, 0), all_coords(curr, 1), all_coords(next, 0), all_coords(next, 1));
                     sweep_line_it[curr] = ref.first;
                     helper[curr] = v;
                 } else {
                     // search edge in sweep line directly left to curr
-                    edge_t edge(coords(curr, 0), coords(curr, 1), coords(curr, 0), coords(curr, 1));
+                    edge_t edge(all_coords(curr, 0), all_coords(curr, 1), all_coords(curr, 0), all_coords(curr, 1));
                     auto it = sweep_line.lower_bound(edge);
                     if (node_category[helper[it->id]] == node_category_t::merge) {
                         v = dcel.insert_edge(v, helper[it->id]);
@@ -248,19 +343,38 @@ template <int LocalDim, int EmbedDim> class Polygon {
         // recover from the DCEL structure the node numbering of each monotone polygon
         std::vector<bool> visited(dcel.n_halfedges(), false);
         std::vector<std::vector<int>> monotone_partition;
+
+        std::set<std::set<int>> unique_cells;
         if (dcel.n_cells() == 1) {   // polygon was already monotone
 	        auto& it = monotone_partition.emplace_back();
 	        it.resize(n_nodes);
 	        std::iota(it.begin(), it.end(), 0);
         } 
         else {
-            for (auto cell = dcel.cells_begin(); cell != dcel.cells_end(); ++cell) {
+            /*for (auto cell = dcel.cells_begin(); cell != dcel.cells_end(); ++cell) {
                 auto& it = monotone_partition.emplace_back();
                 halfedge_t *chain = cell->halfedge(), *end = chain;
                 do {
                     it.push_back(chain->node()->id());
                     chain = chain->next();
                 } while (end != chain);
+            }*/
+            for (auto cell = dcel.cells_begin(); cell != dcel.cells_end(); ++cell) {
+                std::vector<int> ids;
+                std::set<int> ids_set;
+                halfedge_t* chain = cell->halfedge();
+                halfedge_t* end = chain;
+                do {
+                    int id = chain->node()->id();
+                    ids.push_back(id);
+                    ids_set.insert(id);
+                    chain = chain->next();
+                } while (chain != end);
+                if (unique_cells.count(ids_set) > 0) {
+                    continue;
+                }
+                unique_cells.insert(std::move(ids_set));
+                monotone_partition.emplace_back(std::move(ids));
             }
         }
         std::cout << "Stampo monotone_partition:" << std::endl;
@@ -275,17 +389,20 @@ template <int LocalDim, int EmbedDim> class Polygon {
         std::cout << "Fatto stampa monotone_partition." << std::endl;
         return monotone_partition;
     }
+
     // triangulate monotone polygon (returns a RowMajor ordered matrix of cells).
     std::vector<int> triangulate_monotone_(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes) {
         // every triangulation of a polygon of n points has n - 2 triangles (lemma 1.2.2 of (1))
         std::vector<int> cells;
 	    int n_nodes = nodes.rows();
         cells.reserve(3 * (n_nodes - 2));
+        std::cout << "nodes.rows() = " << nodes.rows() << std::endl;
         auto push_cell = [&](int i, int j, int k) {   // convinient lambda to add a triangle
             cells.push_back(i);
             cells.push_back(j);
             cells.push_back(k);
         };
+        
         if (nodes.rows() == 3) {   // already a triangle, stop
             push_cell(0, 1, 2);
             return cells;
@@ -330,7 +447,16 @@ template <int LocalDim, int EmbedDim> class Polygon {
             
             l_chain.insert(l_chain_.begin(), l_chain_.end());
             r_chain.insert(r_chain_.begin(), r_chain_.end());
-            
+            if (r_chain.size() == 0) { 
+                r_chain.insert(min);
+                l_chain.erase(min);
+            }
+            for (auto l: l_chain) {
+                std::cout << "l_chain_ " << l << std::endl;
+            }
+            for (auto r: r_chain) {
+                std::cout << "r_chain_ " << r << std::endl;
+            }
             for (int i = 0; i < nodes.rows(); ++i) {
                 auto n = nodes.row(i);  
                 std::cout << "nodes " << i << ": " << n(0) << ", " << n(1) << std::endl;
@@ -339,6 +465,8 @@ template <int LocalDim, int EmbedDim> class Polygon {
             {
                 std::cout << "node " << n << std::endl;
             }
+            
+            
         }
         auto is_l_chain = [&](int i) { return l_chain.contains(i); };
         auto is_r_chain = [&](int i) { return r_chain.contains(i); };
@@ -417,6 +545,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
         }
         return cells;
     }
+
     // internal face-based storage
     Triangulation<LocalDim, EmbedDim> triangulation_;
 };

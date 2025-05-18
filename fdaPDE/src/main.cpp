@@ -34,31 +34,31 @@ double rho_from_min_angle(double theta_min_deg) {
 
 int main() {
     
-    Eigen::Matrix<double, 4, 2> boundary;
+    Eigen::Matrix<double, 24, 2> boundary;
     boundary << 0.0, 0.0,
-        /*        5.0, 0.0,
+                5.0, 0.0,
                 10.0, 0.0,
                 15.0, 0.0,
                 20.0, 0.0,
                 25.0, 0.0,
                 30.0, 0.0,
-                35.0, 0.0,*/
+                35.0, 0.0,
                 40.0, 0.0, 
-            /*    40.0, 5.0, 
+                40.0, 5.0, 
                 40.0, 10.0,
-                40.0, 15.0,  */
+                40.0, 15.0,  
                 40.0, 20.0,
-            /*    35.0, 20.0,
+                35.0, 20.0,
                 30.0, 20.0,
                 25.0, 20.0,
                 20.0, 20.0,
                 15.0, 20.0,
                 10.0, 20.0,
-                5.0, 20.0,*/
-                0.0, 20.0;
-             //   0.0, 15.0,
-             //   0.0, 10.0,
-             //   0.0, 5.0; 
+                5.0, 20.0,
+                0.0, 20.0,
+                0.0, 15.0,
+                0.0, 10.0,
+                0.0, 5.0; 
 
     /*   
     Eigen::Matrix<double, N, 2> boundary;
@@ -355,12 +355,34 @@ int main() {
     //std::cout<<"-------------------------------FLIP DI CONTROLLO-------------------------------"<<std::endl;
     //delaunay.flip();
     
-    
-    Delaunay<2, 2> del(boundary);
-    del.Ruppert_refinement(2.0);
-    TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
-
-    
+    Eigen::Matrix<double, 4, 2> hole;
+    hole << 10., 5.,
+    10., 15.,
+    30., 15.,
+    30., 5.;
+    Eigen::Matrix<double, 8, 2> hole3;
+    hole3 << 10., 5.,
+    10., 10.,
+    10., 15.,
+    20., 15.,
+    30., 15.,
+    30., 10.,
+    30., 5.,
+    20., 5.;
+    Eigen::Matrix<double, 4, 2> hole2;
+    hole2 << 3.,4.,
+    3., 11.,
+    6., 11.,
+    6., 4.;
+    Eigen::Matrix<double, 1, 2> internal1;
+    internal1 << 18.9533, 16.7049;
+                //35., 11.,
+                //21., 17.,
+                //10., 4.;
+            
+    //PER ORA NON FUNZIONA CON PIù DI UN BUCO
+    Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole3});
+    //del.Ruppert_refinement(2.0);
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
@@ -375,16 +397,7 @@ int main() {
     auto end = high_resolution_clock::now();    // ending measuring time 
     auto duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << del_10000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
-    outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; */
-
-    /*Delaunay<2, 2> del_5000(boundary,5000);
-    start = high_resolution_clock::now();  // starting measuring time 
-    //Delaunay<2, 2> del_10000(boundary,10000);  
-    del_5000.Ruppert_refinement(2.0);
-    end = high_resolution_clock::now();    // ending measuring time 
-    duration = duration_cast<milliseconds>(end - start).count();
-    std::cout << "elapsed time for " << del_5000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
-    outfile << del_5000.dcel().n_nodes() << "," << duration << "\n";*/
+    outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; 
 
     /*Delaunay<2, 2> del_100000(boundary,100000);
     start = high_resolution_clock::now();  // starting measuring time 

@@ -183,39 +183,52 @@ constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const
 // and also at least `epsilon` distance away from any edge of the polygon.
 // This avoids placing points too close to the boundary.
 template <typename Derived, typename PointT>
-constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p, double epsilon) {
-    // First check if the point lies inside the polygon at all
-    if (!point_in_polygon(polygon, p)) return false;
+constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
+                                       const std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>& holes,
+                                       const PointT& p, double epsilon) {
+    // 1. Deve essere dentro il boundary principale
+    if (!point_in_polygon(boundary, p)) return false;
 
-    const int n = polygon.rows();
-    
-    // Iterate over each edge of the polygon
-    for (int i = 0; i < n; ++i) {
-        Eigen::Vector2d a = polygon.row(i);               // Current vertex
-        Eigen::Vector2d b = polygon.row((i + 1) % n);     // Next vertex (with wrap-around)
-
-        Eigen::Vector2d ab = b - a;                       // Edge vector
-        Eigen::Vector2d ap = p - a;                       // Vector from a to the point
-
-        // Project point p onto the segment ab using dot product
-        double ab_len_sq = ab.dot(ab);                    // Squared length of edge
-        double t = ab.dot(ap) / ab_len_sq;                // Parametric projection of p on line ab
-        t = std::max(0.0, std::min(1.0, t));               // Clamp t to [0, 1] so projection stays on the segment
-
-        // Compute the actual projection point on the segment
-        Eigen::Vector2d proj = a + t * ab;
-
-        // Compute the Euclidean distance from p to its projection on the edge
-        double dist = (p - proj).norm();
-
-        // If the point is too close to any edge, reject it
-        if (dist < epsilon)
+    // 2. Non deve essere dentro nessun buco
+    for (const auto& hole : holes) {
+        if (point_in_polygon(hole, p)){
+            std::cout<<"SONO NEL BUCO"<<std::endl;
             return false;
+        }
     }
 
-    // Passed all checks: point is inside and not near any edge
+    // 3. Deve essere lontano da tutti i bordi del boundary
+    auto is_far_from_edges = [&](const Eigen::MatrixBase<Derived>& polygon) {
+        const int n = polygon.rows();
+        for (int i = 0; i < n; ++i) {
+            Eigen::Vector2d a = polygon.row(i);
+            Eigen::Vector2d b = polygon.row((i + 1) % n);
+
+            Eigen::Vector2d ab = b - a;
+            Eigen::Vector2d ap = p - a;
+
+            double ab_len_sq = ab.dot(ab);
+            double t = std::max(0.0, std::min(1.0, ab.dot(ap) / ab_len_sq));
+            Eigen::Vector2d proj = a + t * ab;
+
+            double dist = (p - proj).norm();
+            if (dist < epsilon)
+                return false;
+        }
+        return true;
+    };
+
+    // Controlla distanza dai bordi del boundary
+    if (!is_far_from_edges(boundary)) return false;
+
+    // Controlla distanza dai bordi dei buchi
+    for (const auto& hole : holes) {
+        if (!is_far_from_edges(hole)) return false;
+    }
+
     return true;
 }
+
 
 
 // Compute radius-edge ratio of triangle given its 2D coordinates
