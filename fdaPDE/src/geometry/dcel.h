@@ -244,7 +244,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     // overloading of make_polygon to also add holes
     static DCEL<local_dim, embed_dim> make_polygon(
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes={}) {
     
         fdapde_assert(boundary.cols() == embed_dim);
         DCEL<local_dim, embed_dim> dcel;
@@ -307,7 +307,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             halfedge_t* h1= std::addressof(*(std::prev(dcel.halfedges_end())));
             std::cout << "h0: " << h0->id() << " h1: " << h1->id() << std::endl;
             cell_t* c_old= h0->cell();
-            std::cout << "c_old: " << c_old->id() << std::endl;
+            std::cout << "c_new: " << c_new->id() << std::endl;
             
             // hole_cell->set_halfedge(std::next(dcel.nodes_begin(), node_offset)->halfedge());
             // twin halfedges for the hole
@@ -318,6 +318,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
                 h2->set_twin(h1);
                 h1->set_twin(h2);
+                h2->set_cell(nullptr);
             }
             // connect hole's nodes
             for (int i = 0; i < hole_nodes; ++i) {
@@ -328,11 +329,25 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h1->twin()->set_prev(h2->twin());
                 h2->twin()->set_next(h1->twin());
             }
-            //c_new= dcel.insert_edge(h0,h1)->cell();
+            
             //dcel.cells_.erase(c_old->it());
-            h0=h1;
+            //h0=h1;
             node_offset += hole_nodes; 
         }
+        c_new= dcel.insert_edge(h0,h1)->cell();
+
+        std::cout << "\n🔵 HALF-EDGES: \n";
+        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
+        std::cout << "ID: " << it->id()
+                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                  << " | Cell: " << (it->cell() ? std::to_string(it->cell()->id()) : "NULL")
+                  << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
+                  << std::endl;
+    }
+
         return dcel;
     }
 
@@ -507,6 +522,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             (v1==v2 || v1->node()==v2->node()) ) {
             return v1;
         }
+        
         // get exiting halfedges from n1 and n2
         node_t* n1 = v1->node();
         node_t* n2 = v2->node();

@@ -372,8 +372,8 @@ int main() {
                 10., 4.;
             
     //PER ORA NON FUNZIONA CON PIù DI UN BUCO
-    Delaunay<2, 2> del(boundary, internal1, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2});
-    del.Ruppert_refinement(2.0);
+    Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole});
+    //del.Ruppert_refinement(2.0);
     //TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
     /*auto find_halfedge_from_id = [&del](int id) -> DCEL<2, 2>::halfedge_t* {
         for (auto it = del.dcel().halfedges_begin(); it != del.dcel().halfedges_end(); ++it) 
@@ -382,10 +382,7 @@ int main() {
         return nullptr; 
     };*/
     del.dcel().export_to_json("dcel_output.json");
-    
-    //DCEL<2,2> dcel= DCEL<2,2>::make_polygon(boundary, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole});
-    //dcel.export_to_json("dcel_output.json");
-
+    auto dcel= del.dcel();
     // 📍 Stampa tutti i nodi
     /*std::cout << "\n🟢 NODI: \n";
     for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {

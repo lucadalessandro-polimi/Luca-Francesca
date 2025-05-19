@@ -77,48 +77,44 @@ class Delaunay {
     // costructor with random generated points
     Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,  int N=100, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {}){
         triangulate(N, boundary, holes);
-
-        
-            // 📍 Stampa tutti i nodi
-            std::cout << "\n🟢 NODI: \n";
-            for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
-                std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
-                          << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
-            }
-        
-            // 🔗 Stampa tutti gli Half-Edges
-            std::cout << "\n🔵 HALF-EDGES: \n";
-            for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
-                std::cout << "ID: " << it->id()
-                          << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
-                          << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
-                          << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
-                          << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
-                          << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
-                          << std::endl;
-            }
-        
-            // 🔳 Stampa tutte le Celle
-            std::cout << "\n🟠 CELLE: \n";
-            for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-                std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
-                          << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
-                if (it->halfedge()) {
-                    halfedge_t* h = it->halfedge();
-                    std::cout << "  🔗 Half-edges nella cella: ";
-                    halfedge_t* start = h;
-                    do {
-                        std::cout << h->id() << " ";
-                        h = h->next();
-                    } while (h && h != start);
-                    std::cout << std::endl;
-                }
-            }
     }    
     // costructor with given internal points form the user
     // user needs to provide internal points correctly located inside the domain 
     Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {}) {
         triangulate(internal, boundary, holes);
+        // 📍 Stampa tutti i nodi
+        std::cout << "\n🟢 NODI: \n";
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                      << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+        }
+        // 🔗 Stampa tutti gli Half-Edges
+        std::cout << "\n🔵 HALF-EDGES: \n";
+        for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
+            std::cout << "ID: " << it->id()
+                      << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                      << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                      << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                      << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                      << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
+                      << std::endl;
+        } 
+        // 🔳 Stampa tutte le Celle
+        std::cout << "\n🟠 CELLE: \n";
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                      << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+            if (it->halfedge()) {
+                halfedge_t* h = it->halfedge();
+                std::cout << "  🔗 Half-edges nella cella: ";
+                halfedge_t* start = h;
+                do {
+                    std::cout << h->id() << " ";
+                    h = h->next();
+                } while (h && h != start);
+                std::cout << std::endl;
+            }
+        }
     }
 
     // Getter const
