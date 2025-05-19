@@ -34,31 +34,31 @@ double rho_from_min_angle(double theta_min_deg) {
 
 int main() {
     
-    Eigen::Matrix<double, 4, 2> boundary;
+    Eigen::Matrix<double, 24, 2> boundary;
     boundary << 0.0, 0.0,
-        /*        5.0, 0.0,
+                5.0, 0.0,
                 10.0, 0.0,
                 15.0, 0.0,
                 20.0, 0.0,
                 25.0, 0.0,
                 30.0, 0.0,
-                35.0, 0.0,*/
+                35.0, 0.0,
                 40.0, 0.0, 
-            /*    40.0, 5.0, 
+                40.0, 5.0, 
                 40.0, 10.0,
-                40.0, 15.0,  */
+                40.0, 15.0,  
                 40.0, 20.0,
-            /*    35.0, 20.0,
+                35.0, 20.0,
                 30.0, 20.0,
                 25.0, 20.0,
                 20.0, 20.0,
                 15.0, 20.0,
                 10.0, 20.0,
-                5.0, 20.0,*/
-                0.0, 20.0;
-             //   0.0, 15.0,
-             //   0.0, 10.0,
-             //   0.0, 5.0; 
+                5.0, 20.0,
+                0.0, 20.0,
+                0.0, 15.0,
+                0.0, 10.0,
+                0.0, 5.0; 
 
     /*   
     Eigen::Matrix<double, N, 2> boundary;
@@ -360,68 +360,29 @@ int main() {
     10., 15.,
     30., 15.,
     30., 5.;
+    Eigen::Matrix<double, 8, 2> hole3;
+    hole3 << 10., 5.,
+    10., 10.,
+    10., 15.,
+    20., 15.,
+    30., 15.,
+    30., 10.,
+    30., 5.,
+    20., 5.;
     Eigen::Matrix<double, 4, 2> hole2;
     hole2 << 3.,4.,
     3., 11.,
     6., 11.,
     6., 4.;
-    Eigen::Matrix<double, 4, 2> internal1;
-    internal1 << 1.,1.,
-                35., 11.,
-                21., 17.,
-                10., 4.;
+    Eigen::Matrix<double, 1, 2> internal1;
+    internal1 << 18.9533, 16.7049;
+                //35., 11.,
+                //21., 17.,
+                //10., 4.;
             
     //PER ORA NON FUNZIONA CON PIù DI UN BUCO
-    Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole});
+    Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole3});
     //del.Ruppert_refinement(2.0);
-    //TriangulationBase<2, 2, Triangulation<2,2>> mesh = del.triangulation();
-    /*auto find_halfedge_from_id = [&del](int id) -> DCEL<2, 2>::halfedge_t* {
-        for (auto it = del.dcel().halfedges_begin(); it != del.dcel().halfedges_end(); ++it) 
-            if (it->id() == id) 
-                return std::addressof(*it); 
-        return nullptr; 
-    };*/
-    del.dcel().export_to_json("dcel_output.json");
-    auto dcel= del.dcel();
-    // 📍 Stampa tutti i nodi
-    /*std::cout << "\n🟢 NODI: \n";
-    for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
-        std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
-                  << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
-    }
-
-    // 🔗 Stampa tutti gli Half-Edges
-    std::cout << "\n🔵 HALF-EDGES: \n";
-    for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
-        std::cout << "ID: " << it->id()
-                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
-                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
-                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
-                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
-                  << " | Cell: " << (it->cell() ? std::to_string(it->cell()->id()) : "NULL")
-                  << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
-                  << std::endl;
-    }
-
-    // 🔳 Stampa tutte le Celle
-    std::cout << "\n🟠 CELLE: \n";
-    for (auto it = dcel.cells_begin(); it != dcel.cells_end(); ++it) {
-        std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
-                  << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
-        if (it->halfedge()) {
-            DCEL<2, 2>::halfedge_t* h = it->halfedge();
-            std::cout << "  🔗 Half-edges nella cella: ";
-            DCEL<2, 2>::halfedge_t* start = h;
-            do {
-                std::cout << h->id() << " ";
-                h = h->next();
-            } while (h && h != start);
-            std::cout << std::endl;
-        }
-    }*/
-
-
-    
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
@@ -438,7 +399,7 @@ int main() {
     std::cout << "elapsed time for " << del_10000.dcel().n_nodes() << " points: " << duration << " ms" << std::endl;
     outfile << del_10000.dcel().n_nodes() << "," << duration << "\n"; 
 
-    Delaunay<2, 2> del_100000(boundary,100000);
+    /*Delaunay<2, 2> del_100000(boundary,100000);
     start = high_resolution_clock::now();  // starting measuring time 
     //Delaunay<2, 2> del_10000(boundary,10000);  
     del_100000.Ruppert_refinement(2.0);

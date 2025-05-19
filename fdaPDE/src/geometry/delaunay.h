@@ -175,7 +175,7 @@ class Delaunay {
             it->set_id(cont++);
         
         //json needed for debug
-        //dcel_.export_to_json("dcel_output.json");
+        dcel_.export_to_json("dcel_output.json");
     }
 
    private:
@@ -239,7 +239,7 @@ class Delaunay {
         polygon_t polygon(boundary, holes);
         auto triangulation = polygon.triangulation();
         const auto& nodes = triangulation.nodes();  
-        const auto& cells = triangulation.cells();   
+        const auto& cells = triangulation.cells();
         //we manage our input dcel to be the traslation of the trinagulation object from polygon 
         dcel_.from_triangulation(triangulation, holes);
     }
@@ -509,10 +509,11 @@ class Delaunay {
                 coords_t u;
                 u << min_x + i * dx + pert_x(gen),
                     min_y + j * dy + pert_y(gen);
-
                 // Keep only points that lie inside the polygonal domain
-                if (!fdapde::internals::point_safely_in_polygon(boundary, u, perturbation_scale/4))
+                if (!fdapde::internals::point_safely_in_polygon(boundary, holes, u, perturbation_scale/16)){
+                    std::cout<<"SCARTO PUNTO CON COORDINATE: "<<u<<std::endl;
                     continue;
+                }
 
                 node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, u));
                 detect_conflicts(n);
@@ -523,8 +524,10 @@ class Delaunay {
         // Insert all internal points into the triangulation using the conflict graph
         for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
             node_t* u = &(*it);
-            if (!u->on_boundary())
+            if (!u->on_boundary()){
+                std::cout<<u->coords()<<std::endl;
                 insert_vertex_at_conflict(u);
+            }
         }
 
         // Reassign consecutive IDs to all cells and half-edges for consistency
@@ -536,7 +539,7 @@ class Delaunay {
         cont = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
             it->set_id(cont++);
-
+        
         // Export the resulting DCEL structure to a JSON file for visualization
         dcel_.export_to_json("dcel_output.json");
     }

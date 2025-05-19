@@ -568,7 +568,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
         h1->set_node(n1);
 
         // the newly created halfedges are not one after the other
-        if(h1->next() != h2 && h1->prev() != h2){ 
+        //if(h1->next() != h2 && h1->prev() != h2){ 
+        halfedge_t* l=h1;
+        do{
+            l=l->next();
+        }while(l!=h1 && l!=h2);
+        if(l==h1){
             h1->set_cell(h1->prev()->cell());
             if(h1->cell())  // h1 is not a boundary edge
                 h1->cell()->set_halfedge(h1);
@@ -775,28 +780,20 @@ template <int LocalDim, int EmbedDim> class DCEL {
         const auto& markers = triangulation.boundary_nodes();
         int n = boundary_nodes.rows();
         
-        /*int mid = n / 2;  // punto di taglio (metà inferiore se dispari)
-        // Prima metà
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> part1 = boundary_nodes.topRows(mid);
-        // Seconda metà
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> part2 = boundary_nodes.bottomRows(n - mid);*/
-        
         int idx = 0;
         for (int i = 0; i < n_boundary; ++i) {
             if (markers(i, 0) == 1) {
                 boundary_nodes.row(idx++) = coords.row(i);
             }
         }
-        //*this = DCEL::make_polygon(part1, std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>{part2});
-       
-        *this = DCEL::make_polygon(boundary_nodes, holes);
-
+       *this = DCEL::make_polygon(boundary_nodes, holes);
 
         for (int i = 0; i < coords.rows(); ++i) {
             if (markers(i, 0) == 0) {
                 insert_node(typename DCEL::node_t(n_nodes(), false, coords.row(i)));
             }
         }
+
 
         for (int i = 0; i < triangulation.n_cells(); ++i) {
             int id0 = triangulation.cells()(i, 0);
@@ -817,7 +814,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
                 std::swap(p1, p2);
             }
-
+            std::cout<<p0->id()<<" "<<p1->id()<<" "<<p2->id()<<std::endl;
             halfedge_t* h = find_halfedge_between(p0, p1);
             if (h) {
                 add_polygon(h, {p2});
@@ -825,6 +822,41 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 add_polygon(h, {p0});
             } else if ((h = find_halfedge_between(p2, p0))) {
                 add_polygon(h, {p1});
+                    // 📍 Stampa tutti i nodi
+    std::cout << "\n🟢 NODI: \n";
+    for (auto it = nodes_begin(); it != nodes_end(); ++it) {
+        std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
+                  << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
+    }
+
+    // 🔗 Stampa tutti gli Half-Edges
+    std::cout << "\n🔵 HALF-EDGES: \n";
+    for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
+        std::cout << "ID: " << it->id()
+                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
+                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
+                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
+                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
+                  << std::endl;
+    }
+
+    // 🔳 Stampa tutte le Celle
+    std::cout << "\n🟠 CELLE: \n";
+    for (auto it = cells_begin(); it != cells_end(); ++it) {
+        std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
+                  << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
+        if (it->halfedge()) {
+            halfedge_t* h = it->halfedge();
+            std::cout << "  🔗 Half-edges nella cella: ";
+            halfedge_t* start = h;
+            do {
+                std::cout << h->id() << " ";
+                h = h->next();
+            } while (h && h != start);
+            std::cout << std::endl;
+        }
+    }
+
             } else {
                 halfedge_t* h0 = emplace_halfedge_(p0);
                 halfedge_t* h1 = emplace_halfedge_(p1);
