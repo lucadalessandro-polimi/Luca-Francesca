@@ -139,7 +139,7 @@ class Delaunay {
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
             halfedge_t* e = &(*it);
             //since in the previuos code we do not touch the boundary we can stop at the twin of the first boundary edge
-            if(e->on_boundary() && !e->cell()) break;
+            if(e->on_boundary() && !e->cell()) continue;  //otherwise it doesn't do the holes
             if (e->on_boundary() && check_encroachment(e)){
                 //to make sure the set saves only one copy of the edge
                 if (encroached_edges.count(e) == 0)
@@ -155,11 +155,18 @@ class Delaunay {
         }  
         //while keeps running until the two set are empty and every time a bad triangle is exiting the triangulation
         //the test of the encroached edges runs in order to keep track of the newly created triangulation
+        int cont1=0, cont2=0;
         while (true) {
             if (split_first_encroached_segment(encroached_edges, bad_triangles, rho_bar)) {
+                cont1++;
+                std::cout << "cont:   " << cont1 << std::endl;
+                //if(cont1==1) break;
                 continue;
             }
+            dcel_.export_to_json("dcel_output.json");
             if (split_first_bad_triangle(rho_bar, encroached_edges, bad_triangles)) {
+                cont2++;
+                std::cout << "cont 2:   " << cont2 << std::endl;
                 continue;
             }
             break;
@@ -647,10 +654,11 @@ class Delaunay {
         // Remove both affected triangles from the set of bad triangles
         bad_triangles.erase(e->cell());
         bad_triangles.erase(e->twin()->cell());
-        // Remove the encroached edge from the DCEL
-        dcel_.remove_edge(e);
+        
         // Subdivide the opposite triangle (twin) by connecting m
         add_triangle(prev, std::vector<node_t*> {m});
+        // Remove the encroached edge from the DCEL
+        dcel_.remove_edge(e);
         // Perform local flips if necessary to maintain Delaunay property
         flip_Ruppert(encroached_edges, bad_triangles, rho_bar);
 
@@ -677,8 +685,10 @@ class Delaunay {
 
         // Compute the circumcenter of triangle ABC
         coords_t c = fdapde::internals::circumcenter(A, B, C); 
-
+        
         // Understanding where the circumcenter is actually falling 
+        std::cout << "Circumcenter: " << c.transpose() << std::endl;
+        std::cout << "Triangle edges: " << t->halfedge()->id() << " " << t->halfedge()->next()->id() << " " << t->halfedge()->prev()->id() << std::endl;
         cell_t* cf = find_triangle_local(c, t); 
         halfedge_t* e1 = cf->halfedge()->prev();
         halfedge_t* e2 = cf->halfedge();

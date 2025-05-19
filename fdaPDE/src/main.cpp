@@ -34,31 +34,31 @@ double rho_from_min_angle(double theta_min_deg) {
 
 int main() {
     
-    Eigen::Matrix<double, 24, 2> boundary;
+    Eigen::Matrix<double, 4, 2> boundary; 
     boundary << 0.0, 0.0,
-                5.0, 0.0,
+                /*5.0, 0.0,  //24
                 10.0, 0.0,
                 15.0, 0.0,
                 20.0, 0.0,
                 25.0, 0.0,
                 30.0, 0.0,
-                35.0, 0.0,
+                35.0, 0.0,*/
                 40.0, 0.0, 
-                40.0, 5.0, 
+                /*40.0, 5.0, 
                 40.0, 10.0,
-                40.0, 15.0,  
+                40.0, 15.0,*/  
                 40.0, 20.0,
-                35.0, 20.0,
+                /*35.0, 20.0,
                 30.0, 20.0,
                 25.0, 20.0,
                 20.0, 20.0,
                 15.0, 20.0,
                 10.0, 20.0,
-                5.0, 20.0,
-                0.0, 20.0,
-                0.0, 15.0,
+                5.0, 20.0,*/
+                0.0, 20.0;
+                /*0.0, 15.0,
                 0.0, 10.0,
-                0.0, 5.0; 
+                0.0, 5.0;*/
 
     /*   
     Eigen::Matrix<double, N, 2> boundary;
@@ -381,8 +381,8 @@ int main() {
                 //10., 4.;
             
     //PER ORA NON FUNZIONA CON PIù DI UN BUCO
-    Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole3});
-    //del.Ruppert_refinement(2.0);
+    Delaunay<2, 2> del(boundary, 100, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole});
+    del.Ruppert_refinement(1.4);
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 

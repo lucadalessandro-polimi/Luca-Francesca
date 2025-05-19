@@ -636,7 +636,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
         if(!v1->cell()) // v1 external halfedge on boundary (null cell)
             v1=v1->twin();
-
         halfedge_t* v2 = v1->twin();
 
         halfedge_t* end;
@@ -665,7 +664,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 begin = begin->next();
             } while (begin != end);
             // remove v1's cell
-            //cells_.erase(c1->it());  DA DECOMMENTARE
+            cells_.erase(c1->it());  
         }
 
         // set next of v1_prev to v2_next
