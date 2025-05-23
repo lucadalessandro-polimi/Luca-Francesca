@@ -534,6 +534,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
                         std::cout << "sono nell' ELSE" << std::endl;
                         if (reflex_chain.size() > 1) {
                             node_i = *(reflex_chain.end() - 1);
+                            std::cout << "new node i: " << node_i <<std::endl;
                             node_k = *(reflex_chain.end() - 2);
                             m_signed =
                               internals::signed_measure_2d_tri(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));

@@ -522,6 +522,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             (v1==v2 || v1->node()==v2->node()) ) {
             return v1;
         }
+        std::cout << "v1: " << v1->id() << "  v2: " << v2->id() << std::endl;
         
         // get exiting halfedges from n1 and n2
         node_t* n1 = v1->node();
@@ -618,6 +619,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             } 
             halfedges_to_call[i+2] = h;
         }
+        std::cout << "H2: " << halfedges_to_call[2]->id()<< std::endl;
         // add edges
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = halfedges_to_call[i];
@@ -772,15 +774,16 @@ template <int LocalDim, int EmbedDim> class DCEL {
     template <typename TriangulationType>
     void from_triangulation(const TriangulationType& triangulation, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
         int n_hole_nodes = 0;
-        for (const auto& hole : holes) n_hole_nodes += hole.rows();
-        int n_boundary = triangulation.n_boundary_nodes() - n_hole_nodes;
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_nodes(n_boundary, embed_dim);
+        for (const auto& hole : holes)
+            n_hole_nodes += hole.rows();
+        int n_boundary_external = triangulation.n_boundary_nodes() - n_hole_nodes;
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_nodes(n_boundary_external, embed_dim);
         const auto& coords = triangulation.nodes();
         const auto& markers = triangulation.boundary_nodes();
         int n = boundary_nodes.rows();
         
         int idx = 0;
-        for (int i = 0; i < n_boundary; ++i) {
+        for (int i = 0; i < n_boundary_external; ++i) {
             if (markers(i, 0) == 1) {
                 boundary_nodes.row(idx++) = coords.row(i);
             }
@@ -793,11 +796,83 @@ template <int LocalDim, int EmbedDim> class DCEL {
             }
         }
 
+        auto cells= triangulation.cells();
 
+        // Step 1: Mappa nodo → buco (-1 se non buco)
+        /*std::unordered_map<int, int> hole_id_map;
+        for (int k = 0; k < holes.size(); ++k) {
+            const auto& hole = holes[k];
+            for (int i = 0; i < hole.rows(); ++i) {
+                const auto& pt = hole.row(i);
+                for (int j = 0; j < triangulation.nodes().rows(); ++j) {
+                    if ((triangulation.nodes().row(j) - pt).norm() < 1e-10) {
+                        hole_id_map[j] = k;
+                        break;
+                    }
+                }
+            }
+        }
+        // Step 2: Per ogni buco, trova il triangolo giusto
+        int insert_row = 0;
+
+        for (int k = 0; k < holes.size(); ++k) {
+            int found_idx = -1;
+
+            for (int i = insert_row; i < cells.rows(); ++i) {
+                int count_in_hole = 0;
+                int other_hole_or_free = 0;
+                int third_node = -1;
+                std::vector<int> local_hole_ids;
+
+                for (int j = 0; j < 3; ++j) {
+                    int node_id = cells(i, j);
+                    auto it = hole_id_map.find(node_id);
+                    if (it != hole_id_map.end() && it->second == k) {
+                        count_in_hole++;
+                    } else if (it == hole_id_map.end()) {
+                        // Nodo non appartiene ad alcun buco
+                        other_hole_or_free++;
+                        third_node = node_id;
+                    } else {
+                        // Nodo di un altro buco → rifiuta
+                        count_in_hole = -999;
+                        break;
+                    }
+                }
+
+                if (count_in_hole == 2 && other_hole_or_free == 1) {
+                    found_idx = i;
+                    break;
+                }
+            }
+
+            if (found_idx != -1 && found_idx != insert_row) {
+                for (int j = 0; j < 3; ++j)
+                    std::swap(cells(insert_row, j), cells(found_idx, j));
+            }
+
+            insert_row++;
+        }*/
+
+        std::unordered_map<int, int> node_to_hole;
+        for (int k = 0; k < holes.size(); ++k) {
+            const auto& hole = holes[k];
+            for (int i = 0; i < hole.rows(); ++i) {
+                const auto& pt = hole.row(i);
+                for (int j = 0; j < triangulation.nodes().rows(); ++j) {
+                    if ((triangulation.nodes().row(j) - pt).norm() < 1e-10) {
+                        node_to_hole[j] = k;
+                        break;
+                    }
+                }
+            }
+        }
+        std::vector<bool> is_connected(holes.size(),false);
+        int cont=0;
         for (int i = 0; i < triangulation.n_cells(); ++i) {
-            int id0 = triangulation.cells()(i, 0);
-            int id1 = triangulation.cells()(i, 1);
-            int id2 = triangulation.cells()(i, 2);
+            int id0 = cells(i, 0);
+            int id1 = cells(i, 1);
+            int id2 = cells(i, 2);
 
             auto n0 = std::find_if(nodes_.begin(), nodes_.end(),
                 [&](const node_t& n) { return n.id() == id0; });
@@ -805,6 +880,20 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 [&](const node_t& n) { return n.id() == id1; });
             auto n2 = std::find_if(nodes_.begin(), nodes_.end(),
                 [&](const node_t& n) { return n.id() == id2; });
+
+            auto h0 = node_to_hole.find(id0);
+            auto h1 = node_to_hole.find(id1);
+            auto h2 = node_to_hole.find(id2);
+            
+            if (h0 != node_to_hole.end() && h1 != node_to_hole.end() && h0->second == h1->second) {
+                is_connected[h0->second] = true;
+            }
+            if (h1 != node_to_hole.end() && h2 != node_to_hole.end() && h1->second == h2->second) {
+                is_connected[h1->second] = true;
+            }
+            if (h2 != node_to_hole.end() && h0 != node_to_hole.end() && h2->second == h0->second) {
+                is_connected[h2->second] = true;
+            }
 
             node_t* p0 = std::addressof(*n0);
             node_t* p1 = std::addressof(*n1);
@@ -814,54 +903,63 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 std::swap(p1, p2);
             }
             std::cout<<p0->id()<<" "<<p1->id()<<" "<<p2->id()<<std::endl;
+
             halfedge_t* h = find_halfedge_between(p0, p1);
+            cont++;
+            if(h)
+               std::cout << "trovato: " << h->id() << std::endl;
             if (h) {
                 add_polygon(h, {p2});
             } else if ((h = find_halfedge_between(p1, p2))) {
                 add_polygon(h, {p0});
             } else if ((h = find_halfedge_between(p2, p0))) {
                 add_polygon(h, {p1});
-                    // 📍 Stampa tutti i nodi
-    std::cout << "\n🟢 NODI: \n";
-    for (auto it = nodes_begin(); it != nodes_end(); ++it) {
-        std::cout << "ID: " << it->id() << " | Coords: (" << it->coords()(0) << ", " << it->coords()(1) << ")"
-                  << (it->on_boundary() ? " [BOUNDARY]" : "") << std::endl;
-    }
-
-    // 🔗 Stampa tutti gli Half-Edges
-    std::cout << "\n🔵 HALF-EDGES: \n";
-    for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
-        std::cout << "ID: " << it->id()
-                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
-                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
-                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
-                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
-                  << std::endl;
-    }
-
-    // 🔳 Stampa tutte le Celle
-    std::cout << "\n🟠 CELLE: \n";
-    for (auto it = cells_begin(); it != cells_end(); ++it) {
-        std::cout << "Cella ID: " << it->id() << " | Half-edge di riferimento: "
-                  << (it->halfedge() ? std::to_string(it->halfedge()->id()) : "NULL") << std::endl;
-        if (it->halfedge()) {
-            halfedge_t* h = it->halfedge();
-            std::cout << "  🔗 Half-edges nella cella: ";
-            halfedge_t* start = h;
-            do {
-                std::cout << h->id() << " ";
-                h = h->next();
-            } while (h && h != start);
-            std::cout << std::endl;
-        }
-    }
-
             } else {
                 halfedge_t* h0 = emplace_halfedge_(p0);
                 halfedge_t* h1 = emplace_halfedge_(p1);
                 insert_edge(h0, h1);
                 add_polygon(h0, {p2});
             }
+            
+            cell_t* longest_cell = nullptr;  // oppure usa un riferimento al risultato di add_polygon se lo ritorna
+            for(auto it = cells_begin(); it!= cells_end(); ++it){
+                int cont=0;
+                halfedge_t* h= it->halfedge();
+                do{
+                    cont++;
+                    h=h->next();
+                }while(h!=it->halfedge());
+                if(cont>3){
+                    longest_cell= &(*it);
+                    break;
+                }
+
+            }
+
+            // Assegna questa cella agli half-edge del buco non connesso
+            int offset = n_boundary_external;  // parte dopo i nodi del bordo esterno
+
+            auto it = halfedges_.begin();
+
+            // Avanza fino alla fine del bordo esterno
+            for (int i = 0; i < n_boundary_external; ++i)
+                ++it;
+
+            // Ora sei sul primo half-edge del primo buco
+            for (int k = 0; k < holes.size()*2; ++k) {
+                if (is_connected[k]) {
+                    for (int h = 0; h < holes[k].rows(); ++h) {
+                        it->set_cell(longest_cell);  
+                        ++it;
+                    }
+                } else {
+                    // Skip gli half-edges di questo buco
+                    for (int h = 0; h < holes[k].rows()*2; ++h)
+                        ++it;
+                }
+            }
+
+            //if(cont==10) break;
         }
     }
 

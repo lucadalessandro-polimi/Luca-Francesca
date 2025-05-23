@@ -163,7 +163,6 @@ class Delaunay {
                 //if(cont1==1) break;
                 continue;
             }
-            dcel_.export_to_json("dcel_output.json");
             if (split_first_bad_triangle(rho_bar, encroached_edges, bad_triangles)) {
                 cont2++;
                 std::cout << "cont 2:   " << cont2 << std::endl;
