@@ -287,29 +287,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
         int node_offset = n_nodes; 
         int hole_index = 1;
     
-        cell_t* c_new=c;
-        halfedge_t* h0= std::addressof(*dcel.halfedges_begin());
-        halfedge_t* h1=nullptr;
         for (const auto& hole : holes) {
             int hole_nodes = hole.rows();
             
-            // dcel.cells_.push_back(cell_t(hole_index++)); // Nuova cella per il buco
-            // cell_t* hole_cell = std::addressof(dcel.cells_.back());
             // nodes and halfedges for the hole
             for (int i = 0; i < hole_nodes; ++i) {
                 node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
                 halfedge_t* h = dcel.emplace_halfedge_(n);
                 n->set_halfedge(h);
-                h->set_cell(c_new);
-               // std::cout << "HALF CHE STO CREANDO: " << h->id() << " ASSEGNATO A CELLA: " << h->cell()->id() << std::endl;
+                h->set_cell(c);
             }
             
-            halfedge_t* h1= std::addressof(*(std::prev(dcel.halfedges_end())));
-            std::cout << "h0: " << h0->id() << " h1: " << h1->id() << std::endl;
-            cell_t* c_old= h0->cell();
-            std::cout << "c_new: " << c_new->id() << std::endl;
-            
-            // hole_cell->set_halfedge(std::next(dcel.nodes_begin(), node_offset)->halfedge());
             // twin halfedges for the hole
             for (int i = 0; i < hole_nodes; ++i) {
                 node_t* n1 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + i)));
@@ -330,23 +318,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h2->twin()->set_next(h1->twin());
             }
             
-            //dcel.cells_.erase(c_old->it());
-            //h0=h1;
             node_offset += hole_nodes; 
         }
-        c_new= dcel.insert_edge(h0,h1)->cell();
-
-        std::cout << "\n🔵 HALF-EDGES: \n";
-        for (auto it = dcel.halfedges_begin(); it != dcel.halfedges_end(); ++it) {
-        std::cout << "ID: " << it->id()
-                  << " | Nodo Origine: " << (it->node() ? std::to_string(it->node()->id()) : "NULL")
-                  << " | Twin: " << (it->twin() ? std::to_string(it->twin()->id()) : "NULL")
-                  << " | Next: " << (it->next() ? std::to_string(it->next()->id()) : "NULL")
-                  << " | Prev: " << (it->prev() ? std::to_string(it->prev()->id()) : "NULL")
-                  << " | Cell: " << (it->cell() ? std::to_string(it->cell()->id()) : "NULL")
-                  << " | Boundary: " << (it->on_boundary() ? "YES" : "NO")
-                  << std::endl;
-    }
 
         return dcel;
     }
@@ -522,7 +495,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
             (v1==v2 || v1->node()==v2->node()) ) {
             return v1;
         }
-        std::cout << "v1: " << v1->id() << "  v2: " << v2->id() << std::endl;
         
         // get exiting halfedges from n1 and n2
         node_t* n1 = v1->node();
@@ -600,7 +572,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return h1;
     }
 
-    halfedge_t* add_polygon(halfedge_t* v, const std::vector<node_t*>& nodes){
+    halfedge_t* add_polygon(halfedge_t* v, const std::vector<node_t*>& nodes, bool building_dcel=false){
         int nodes_polygon= nodes.size();                                                                         
         cell_t* c= v->cell();                                                                                    
     
@@ -611,15 +583,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // add nodes and create ghost halfedges
         for (int i = 0; i < nodes_polygon; ++i) {
             halfedge_t* h = nullptr;
-            if(find_halfedge(nodes[i],c))
-                    h = find_halfedge(nodes[i],c);
+            if(find_halfedge(nodes[i],c, building_dcel)) // if the halfedge already exists
+                    h = find_halfedge(nodes[i],c, building_dcel);
             else{
                     h = emplace_halfedge_(nodes[i]);
                     h->set_cell(c);
             } 
             halfedges_to_call[i+2] = h;
         }
-        std::cout << "H2: " << halfedges_to_call[2]->id()<< std::endl;
+        
         // add edges
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = halfedges_to_call[i];
@@ -714,16 +686,27 @@ template <int LocalDim, int EmbedDim> class DCEL {
     node_t* adjacent(halfedge_t* h) const {return (h->twin()) ? h->twin()->prev()->node() : nullptr;  }
 
     // find the halfedge given its node and cell
-    halfedge_t* find_halfedge(node_t* n, cell_t* cell) {
-        halfedge_t* h= cell->halfedge();
-        halfedge_t* end=h;
-        do{
-            if(h->node()==n)
-                return h;
-            h = h->next();
-        }while(h!=end);
+    halfedge_t* find_halfedge(node_t* n, cell_t* cell, bool building_dcel=false) {
+        if(!building_dcel){
+            halfedge_t* h= cell->halfedge();
+            halfedge_t* end=h;
+            do{
+                if(h->node()==n)
+                    return h;
+                h = h->next();
+            }while(h!=end);
+        }
+        else{
+            for(auto it = halfedges_begin(); it != halfedges_end(); ++it) {
+                halfedge_t* h = &(*it);
+                if (h->node() == n && h->cell() == cell) {
+                    return h;
+                }
+            }
+        }
         return nullptr;
     }
+
     halfedge_t* find_halfedge_between(node_t* from, node_t* to) {
         for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
             halfedge_t* h = &(*it);
@@ -788,7 +771,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 boundary_nodes.row(idx++) = coords.row(i);
             }
         }
-       *this = DCEL::make_polygon(boundary_nodes, holes);
+        *this = DCEL::make_polygon(boundary_nodes, holes);
 
         for (int i = 0; i < coords.rows(); ++i) {
             if (markers(i, 0) == 0) {
@@ -798,62 +781,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
         auto cells= triangulation.cells();
 
-        // Step 1: Mappa nodo → buco (-1 se non buco)
-        /*std::unordered_map<int, int> hole_id_map;
-        for (int k = 0; k < holes.size(); ++k) {
-            const auto& hole = holes[k];
-            for (int i = 0; i < hole.rows(); ++i) {
-                const auto& pt = hole.row(i);
-                for (int j = 0; j < triangulation.nodes().rows(); ++j) {
-                    if ((triangulation.nodes().row(j) - pt).norm() < 1e-10) {
-                        hole_id_map[j] = k;
-                        break;
-                    }
-                }
-            }
-        }
-        // Step 2: Per ogni buco, trova il triangolo giusto
-        int insert_row = 0;
-
-        for (int k = 0; k < holes.size(); ++k) {
-            int found_idx = -1;
-
-            for (int i = insert_row; i < cells.rows(); ++i) {
-                int count_in_hole = 0;
-                int other_hole_or_free = 0;
-                int third_node = -1;
-                std::vector<int> local_hole_ids;
-
-                for (int j = 0; j < 3; ++j) {
-                    int node_id = cells(i, j);
-                    auto it = hole_id_map.find(node_id);
-                    if (it != hole_id_map.end() && it->second == k) {
-                        count_in_hole++;
-                    } else if (it == hole_id_map.end()) {
-                        // Nodo non appartiene ad alcun buco
-                        other_hole_or_free++;
-                        third_node = node_id;
-                    } else {
-                        // Nodo di un altro buco → rifiuta
-                        count_in_hole = -999;
-                        break;
-                    }
-                }
-
-                if (count_in_hole == 2 && other_hole_or_free == 1) {
-                    found_idx = i;
-                    break;
-                }
-            }
-
-            if (found_idx != -1 && found_idx != insert_row) {
-                for (int j = 0; j < 3; ++j)
-                    std::swap(cells(insert_row, j), cells(found_idx, j));
-            }
-
-            insert_row++;
-        }*/
-
+        // creating a map to associate nodes to holes
         std::unordered_map<int, int> node_to_hole;
         for (int k = 0; k < holes.size(); ++k) {
             const auto& hole = holes[k];
@@ -867,8 +795,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 }
             }
         }
+        // vector of bools to understand if an edge of a hole has been connected to the rest of the dcel being created
         std::vector<bool> is_connected(holes.size(),false);
-        int cont=0;
+        
         for (int i = 0; i < triangulation.n_cells(); ++i) {
             int id0 = cells(i, 0);
             int id1 = cells(i, 1);
@@ -885,6 +814,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             auto h1 = node_to_hole.find(id1);
             auto h2 = node_to_hole.find(id2);
             
+            // if 2 of the nodes are in the same hole, mark the hole as connected
             if (h0 != node_to_hole.end() && h1 != node_to_hole.end() && h0->second == h1->second) {
                 is_connected[h0->second] = true;
             }
@@ -902,26 +832,24 @@ template <int LocalDim, int EmbedDim> class DCEL {
             if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
                 std::swap(p1, p2);
             }
-            std::cout<<p0->id()<<" "<<p1->id()<<" "<<p2->id()<<std::endl;
 
             halfedge_t* h = find_halfedge_between(p0, p1);
-            cont++;
-            if(h)
-               std::cout << "trovato: " << h->id() << std::endl;
+            bool building_dcel = true; 
             if (h) {
-                add_polygon(h, {p2});
+                add_polygon(h, {p2}, building_dcel);
             } else if ((h = find_halfedge_between(p1, p2))) {
-                add_polygon(h, {p0});
+                add_polygon(h, {p0}, building_dcel);
             } else if ((h = find_halfedge_between(p2, p0))) {
-                add_polygon(h, {p1});
+                add_polygon(h, {p1}, building_dcel);
             } else {
                 halfedge_t* h0 = emplace_halfedge_(p0);
                 halfedge_t* h1 = emplace_halfedge_(p1);
                 insert_edge(h0, h1);
-                add_polygon(h0, {p2});
+                add_polygon(h0, {p2}, building_dcel);
             }
             
-            cell_t* longest_cell = nullptr;  // oppure usa un riferimento al risultato di add_polygon se lo ritorna
+            // find the cell that connects all the halfedges that don't belong to triangles yet
+            cell_t* longest_cell = nullptr;  
             for(auto it = cells_begin(); it!= cells_end(); ++it){
                 int cont=0;
                 halfedge_t* h= it->halfedge();
@@ -929,37 +857,35 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     cont++;
                     h=h->next();
                 }while(h!=it->halfedge());
-                if(cont>3){
+                if(cont>3){  // cell is not a triangle
                     longest_cell= &(*it);
                     break;
                 }
 
             }
 
-            // Assegna questa cella agli half-edge del buco non connesso
-            int offset = n_boundary_external;  // parte dopo i nodi del bordo esterno
-
             auto it = halfedges_.begin();
-
-            // Avanza fino alla fine del bordo esterno
-            for (int i = 0; i < n_boundary_external; ++i)
+            // Go to the first half-edge of the internal boundary (hole)
+            for (int i = 0; i < n_boundary_external*2; ++i)
                 ++it;
-
-            // Ora sei sul primo half-edge del primo buco
-            for (int k = 0; k < holes.size()*2; ++k) {
-                if (is_connected[k]) {
+            for (int k = 0; k < holes.size(); ++k) {
+                // if the hole is not connected yet, change the cell of the halfedges to longest_cell
+                if (!is_connected[k]) { 
                     for (int h = 0; h < holes[k].rows(); ++h) {
                         it->set_cell(longest_cell);  
                         ++it;
                     }
+                    // disregard the twins since they must have null cell
+                    for (int h = 0; h < holes[k].rows(); ++h) {
+                        it++;
+                    }
                 } else {
-                    // Skip gli half-edges di questo buco
+                    // skip halfedges of the hole
                     for (int h = 0; h < holes[k].rows()*2; ++h)
                         ++it;
                 }
             }
-
-            //if(cont==10) break;
+            
         }
     }
 

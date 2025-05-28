@@ -380,9 +380,9 @@ int main() {
                 //21., 17.,
                 //10., 4.;
             
-    //PER ORA NON FUNZIONA CON PIù DI UN BUCO
+    
     Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2,hole3});
-    //del.Ruppert_refinement(2.0);
+    del.Ruppert_refinement(2.0);
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 

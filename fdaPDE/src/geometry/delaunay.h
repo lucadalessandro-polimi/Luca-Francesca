@@ -155,17 +155,11 @@ class Delaunay {
         }  
         //while keeps running until the two set are empty and every time a bad triangle is exiting the triangulation
         //the test of the encroached edges runs in order to keep track of the newly created triangulation
-        int cont1=0, cont2=0;
         while (true) {
             if (split_first_encroached_segment(encroached_edges, bad_triangles, rho_bar)) {
-                cont1++;
-                std::cout << "cont:   " << cont1 << std::endl;
-                //if(cont1==1) break;
                 continue;
             }
             if (split_first_bad_triangle(rho_bar, encroached_edges, bad_triangles)) {
-                cont2++;
-                std::cout << "cont 2:   " << cont2 << std::endl;
                 continue;
             }
             break;
