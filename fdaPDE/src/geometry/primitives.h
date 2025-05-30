@@ -192,7 +192,6 @@ constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundar
     // 2. Non deve essere dentro nessun buco
     for (const auto& hole : holes) {
         if (point_in_polygon(hole, p)){
-            std::cout<<"SONO NEL BUCO"<<std::endl;
             return false;
         }
     }

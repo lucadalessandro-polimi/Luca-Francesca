@@ -240,6 +240,7 @@ class Delaunay {
         auto triangulation = polygon.triangulation();
         const auto& nodes = triangulation.nodes();  
         const auto& cells = triangulation.cells();
+        std::cout << "Celle " << cells << std::endl;
         //we manage our input dcel to be the traslation of the trinagulation object from polygon 
         dcel_.from_triangulation(triangulation, holes);
     }
@@ -273,7 +274,7 @@ class Delaunay {
                 halfedge_t* e = edge;
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(e->prev(), e->twin()->prev());
-                std::cout << "FLIP" << std::endl;
+                //std::cout << "FLIP" << std::endl;
             
                 if (new_edge) {
                     // Inserting the new halfedges created by the flip into the list to check
@@ -511,7 +512,7 @@ class Delaunay {
                     min_y + j * dy + pert_y(gen);
                 // Keep only points that lie inside the polygonal domain
                 if (!fdapde::internals::point_safely_in_polygon(boundary, holes, u, perturbation_scale/16)){
-                    std::cout<<"SCARTO PUNTO CON COORDINATE: "<<u<<std::endl;
+                    //std::cout<<"SCARTO PUNTO CON COORDINATE: "<<u<<std::endl;
                     continue;
                 }
 
@@ -525,7 +526,7 @@ class Delaunay {
         for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
             node_t* u = &(*it);
             if (!u->on_boundary()){
-                std::cout<<u->coords()<<std::endl;
+                //std::cout<<u->coords()<<std::endl;
                 insert_vertex_at_conflict(u);
             }
         }

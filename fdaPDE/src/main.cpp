@@ -59,32 +59,15 @@ int main() {
                 0.0, 15.0,
                 0.0, 10.0,
                 0.0, 5.0;
+   
 
-    /*   
-    Eigen::Matrix<double, N, 2> boundary;
-    for (int i = 0; i < N; ++i) {
-        double theta = 2.0 * M_PI * i / N;
-        boundary(i, 0) = cx + R * cos(theta);
-        boundary(i, 1) = cy + R * sin(theta);
-    }
-
-    Eigen::Matrix<double, M, 2> hole;
-    for (int i = 0; i < M; ++i) {
-        double theta = -2.0 * M_PI * i / M; 
-        hole(i, 0) = cx_hole + r_hole * cos(theta);
-        hole(i, 1) = cy_hole + r_hole * sin(theta);
-    }
-
-    std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> holes = {hole};
-    */
-
-    /*
-    Eigen::Matrix<double, 13, 2> boundary;  //concave
-    boundary << 0.0, 1.3,
+    
+    Eigen::Matrix<double, 13, 2> boundary_concave;  
+    boundary_concave << 0.0, 1.3,
                 0.5, 1.0, 
                 0.3, 0.3,  
                 1.0, 0.7,  
-                1.7, 0.0, 
+                1.0, 0.0, 
                 1.85, 0.15, 
                 2.0, 0.3,  
                 2.0, 1.3,  
@@ -93,33 +76,38 @@ int main() {
                 0.0, 2.0,  
                 0.0, 1.7,
                 0.0, 1.5;
-    Eigen::Matrix<double, 4, 2> hole;
-    hole << 0.5, 1.5,
+    Eigen::Matrix<double, 4, 2> hole_concave1;
+    hole_concave1 << 0.5, 1.5,
             0.5, 1.7,
             0.3, 1.7,
             0.3, 1.5;
-    */           
+            
+
+    Eigen::Matrix<double, 4, 2> hole_concave2;
+    hole_concave2 << 1.3, 1.2,
+            1.6, 1.2,
+            1.6, 0.5,
+            1.3, 0.5;    
     
-    Eigen::Matrix<double, 18, 2> boundary_stairs; //scala
+    Eigen::Matrix<double, 10, 2> boundary_stairs; //scala
     boundary_stairs << 0.0, 0.0, 
-                3.0, 0.0,  
-                6.0, 0.0,  
-                9.0, 0.0, 
+                //3.0, 0.0,  
+                //6.0, 0.0,  
+                //9.0, 0.0, 
                 12.0, 0.0,
                 12.0, 2.0, 
                 9.0, 2.0,  
                 9.0, 4.0,
-                8.0, 4.0,
-                7.0, 4.0,
+                //8.0, 4.0,
+                //7.0, 4.0,
                 6.0, 4.0,  
                 6.0, 6.0,
                 3.0, 6.0,
                 3.0, 8.0,
-                0.0, 8.0,
-                0.0, 6.0,
-                0.0, 4.0,
-                0.0, 2.0;
-                0.0, 2.0;
+                0.0, 8.0;
+                //0.0, 6.0,
+                //0.0, 4.0,
+                //0.0, 3.0;
     
 
     Eigen::Matrix<double, 14, 2> internal;
@@ -302,20 +290,6 @@ int main() {
 
     
 
-    
-    //Delaunay<2, 2> mesh(boundary_concave_ref,0);  //non aggiunge nodi in più perchè sto usando initialize_internal con polygon
-    //Delaunay<2,2>::Ruppert_refinement(mesh, rho_from_min_angle(20.0));
-
-    /*
-    fdapde::DCEL<2, 2> dcel = fdapde::DCEL<2, 2>::make_polygon(boundary_concave_ref);
-    auto find_node_from_id = [&dcel](int id) -> DCEL<2, 2>::node_t* {
-        for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) 
-            if (it->id() == id) 
-                return std::addressof(*it); 
-        return nullptr; 
-    };
-    std::cout << (fdapde::internals::is_angle_acute(find_node_from_id(0)->coords(),find_node_from_id(1)->coords(),find_node_from_id(2)->coords(),90.0) ? "yes" : "no") << std::endl;
-    */
 
     //------------------------------- REFINEMENT POTENZIATO ESEMPI----------------------------------------------------------------
     
@@ -374,23 +348,44 @@ int main() {
     3., 11.,
     6., 11.,
     6., 4.;
+    Eigen::Matrix<double, 5, 2> hole4;
+    hole4 << 36.5, 15.,
+    37.5, 16.5,
+    36.5, 18.,
+    38.5, 18.,
+    38.5, 15.;
+    
     Eigen::Matrix<double, 1, 2> internal1;
     internal1 << 18.9533, 16.7049;
-                //35., 11.,
-                //21., 17.,
-                //10., 4.;
+    
+    Eigen::Matrix<double, 6, 2> hole_stairs;
+    hole_stairs << 4.0, 2.5,   
+         5.0, 2.5,   
+         5.3, 3.0,   
+         5.0, 3.5,   
+         4.0, 3.5,   
+         3.7, 3.0; 
+    Eigen::Matrix<double, 6, 2> heart_hole;
+    heart_hole <<  
+    1.5, 6.6,     // punta inferiore
+    2.1, 7.1,     // lato curvo destro
+    1.8, 7.6,     // top destro
+    1.5, 7.4,     // vertice superiore centrale
+    1.2, 7.6,     // top sinistro
+    0.9, 7.1;     // lato curvo sinistro
+
             
     
-    Delaunay<2, 2> del(boundary, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2,hole3});
-    del.Ruppert_refinement(2.0);
+    Delaunay<2, 2> del(boundary_stairs, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole_stairs, heart_hole});
+    //del.Ruppert_refinement(2.0);  //COSA NON VA  ?????
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
-/*
+
     std::ofstream outfile("fdaPDE/src/timing_results.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
-    Delaunay<2, 2> del_10000(boundary,10000); 
+    /*Delaunay<2, 2> del_10000(boundary,10000); 
     auto start = high_resolution_clock::now();  // starting measuring time 
     //Delaunay<2, 2> del_1000(boundary,1000);  
     del_10000.Ruppert_refinement(2.0);
@@ -424,36 +419,36 @@ int main() {
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 100000 << " points: " << duration << " ms" << std::endl;
     outfile << 100000 << "," << duration << "\n"; */
-/*
-    start = high_resolution_clock::now();  // starting measuring time 
+
+    /*start = high_resolution_clock::now();  // starting measuring time 
     Delaunay<2, 2> delaunay_1000000(boundary,1000000);  
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 1000000 << " points: " << duration << " ms" << std::endl;
-    outfile << 1000000 << "," << duration << "\n"; 
+    outfile << 1000000 << "," << duration << "\n"; */
 
-    start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_8000(boundary,8000);  
-    end = high_resolution_clock::now();    // ending measuring time 
-    duration = duration_cast<milliseconds>(end - start).count();
+    /*auto start = high_resolution_clock::now();  // starting measuring time 
+    Delaunay<2, 2> delaunay_8000(boundary,1000, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> { hole2, hole3});  
+    auto end = high_resolution_clock::now();    // ending measuring time 
+    auto duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 8000 << " points: " << duration << " ms" << std::endl;
     outfile << 8000 << "," << duration << "\n"; 
 
     start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_10000(boundary,10000);  
+    Delaunay<2, 2> delaunay_10000(boundary,5000, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> { hole2, hole3});  
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 10000 << " points: " << duration << " ms" << std::endl;
     outfile << 10000 << "," << duration << "\n"; 
 
     start = high_resolution_clock::now();  // starting measuring time 
-    Delaunay<2, 2> delaunay_20000(boundary,20000);  
+    Delaunay<2, 2> delaunay_20000(boundary,10000, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> { hole2, hole3});  
     end = high_resolution_clock::now();    // ending measuring time 
     duration = duration_cast<milliseconds>(end - start).count();
     std::cout << "elapsed time for " << 20000 << " points: " << duration << " ms" << std::endl;
-    outfile << 20000 << "," << duration << "\n"; */
+    outfile << 20000 << "," << duration << "\n"; 
     
-    //outfile.close();
+    outfile.close();*/
     
     return 0;
 }

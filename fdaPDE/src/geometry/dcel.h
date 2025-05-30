@@ -201,8 +201,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
     // constructors
     DCEL() : nodes_(), halfedges_(), n_nodes_(0), n_halfedges_(0), n_cells_(0) { }
     // constructs a closed loop structure linking nodes one after the other
-    static DCEL<local_dim, embed_dim> make_polygon(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes) {
-        fdapde_assert(nodes.cols() == embed_dim);
+    static DCEL<local_dim, embed_dim> make_polygon(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes_entry) {
+        fdapde_assert(nodes_entry.cols() == embed_dim);
+        Eigen::Matrix<double, Dynamic, Dynamic> nodes=nodes_entry;
+        if (!internals::are_2d_counterclockwise_sorted(nodes_entry)) {
+            int n_nodes = nodes_entry.rows();
+            for (int i = 0; i < n_nodes; ++i)
+                nodes.row(i) = nodes_entry.row(n_nodes - 1 - i);
+        }
+
         int n_nodes = nodes.rows();
         int n_halfedges = 2 * (n_nodes);
         DCEL<local_dim, embed_dim> dcel;
@@ -243,15 +250,33 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
     // overloading of make_polygon to also add holes
     static DCEL<local_dim, embed_dim> make_polygon(
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes={}) {
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_entry,
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes_entry={}) {
     
-        fdapde_assert(boundary.cols() == embed_dim);
+        fdapde_assert(boundary_entry.cols() == embed_dim);
         DCEL<local_dim, embed_dim> dcel;
+
+        Eigen::Matrix<double, Dynamic, Dynamic> boundary=boundary_entry;
+        if (!internals::are_2d_counterclockwise_sorted(boundary_entry)) {
+            int n_nodes = boundary_entry.rows();
+            for (int i = 0; i < n_nodes; ++i)
+                boundary.row(i) = boundary_entry.row(n_nodes - 1 - i);
+        }
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes;
+        for (const auto& hole : holes_entry) {
+            if (internals::are_2d_counterclockwise_sorted(hole)) {
+                Eigen::Matrix<double, Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
+                for (int i = 0; i < hole.rows(); ++i)
+                    reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
+                holes.push_back(reversed_hole);
+            } else {
+                holes.push_back(hole);
+            }
+        }
     
         // external boundary
         int n_nodes = boundary.rows();
-        dcel.cells_.push_back(cell_t(0)); // Cella principale
+        dcel.cells_.push_back(cell_t(0)); 
         cell_t* c = std::addressof(dcel.cells_.back());
         c->set_it(std::prev(dcel.cells_.end()));
         dcel.n_cells_ = 1;
@@ -487,10 +512,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
         return h1;
     }*/
-    halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
+    halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2, bool ignore_diff_cells=false) {
 
         if( (!v1 || !v2) ||
-            (v1->cell() && v2-> cell() && v1->cell()!=v2->cell()) ||
+            (v1->cell() && v2-> cell() && v1->cell()!=v2->cell() && !ignore_diff_cells) ||
             (v2->next() && v1->next() && ( v1->node() == v2->next()->node() || v2->node()==v1->next()->node())) ||
             (v1==v2 || v1->node()==v2->node()) ) {
             return v1;
@@ -502,11 +527,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // create a pair of twin half-edges
         halfedge_t* h1;
         halfedge_t* h2;
-        if(v1->twin())  // if v1 is already structured
+        if(v1->twin()!=nullptr)  // if v1 is already structured
             h1 = emplace_halfedge_(n1);
         else  // if v1 was created just to call insert_edge
             h1 = v1;
-        if(v2->twin())
+        if(v2->twin()!=nullptr)
             h2 = emplace_halfedge_(n2);
         else
             h2 = v2;
@@ -540,7 +565,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         h1->next()->set_prev(h1);
         h1->set_node(n1);
 
-        // the newly created halfedges are not one after the other
+        // the newly created halfedges don't belong to the same cell
         //if(h1->next() != h2 && h1->prev() != h2){ 
         halfedge_t* l=h1;
         do{
@@ -588,19 +613,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
             else{
                     h = emplace_halfedge_(nodes[i]);
                     h->set_cell(c);
-            } 
+            }
             halfedges_to_call[i+2] = h;
         }
-        
         // add edges
         for (int i = 0; i < nodes_polygon+2 ; ++i) {
             halfedge_t* h1 = halfedges_to_call[i];
             halfedge_t* h2 = halfedges_to_call[(i + 1) % (nodes_polygon + 2)];
             halfedges_to_call[(i + 1) % (nodes_polygon + 2)] = insert_edge(h1, h2)->next();
         }
-
         c->set_halfedge(v);
-        return c->halfedge();
+        return v;
     }
 
 
@@ -783,25 +806,83 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
         // creating a map to associate nodes to holes
         std::unordered_map<int, int> node_to_hole;
+        std::vector<std::set<std::pair<int, int>>> hole_edges(holes.size());
         for (int k = 0; k < holes.size(); ++k) {
             const auto& hole = holes[k];
+            std::vector<int> hole_node_ids;  
             for (int i = 0; i < hole.rows(); ++i) {
                 const auto& pt = hole.row(i);
                 for (int j = 0; j < triangulation.nodes().rows(); ++j) {
                     if ((triangulation.nodes().row(j) - pt).norm() < 1e-10) {
                         node_to_hole[j] = k;
+                        hole_node_ids.push_back(j);
                         break;
                     }
                 }
             }
+            int m = hole_node_ids.size();
+            for (int i = 0; i < m; ++i) {
+                int a = hole_node_ids[i];
+                int b = hole_node_ids[(i + 1) % m];  
+                hole_edges[k].insert({a, b});  
+            }
         }
+
         // vector of bools to understand if an edge of a hole has been connected to the rest of the dcel being created
         std::vector<bool> is_connected(holes.size(),false);
+        int cont=0;
+        cell_t* longest_cell = nullptr;
+        std::list< Eigen::Matrix<int, Eigen::Dynamic, 3> > cells_list;
+        for(int i = 0; i < triangulation.n_cells(); ++i) {
+            cells_list.push_back(Eigen::Matrix<int, Eigen::Dynamic, 3>(triangulation.cells().row(i)));
+        }
         
-        for (int i = 0; i < triangulation.n_cells(); ++i) {
-            int id0 = cells(i, 0);
-            int id1 = cells(i, 1);
-            int id2 = cells(i, 2);
+        while(!cells_list.empty()) {
+
+            auto cell = cells_list.front();
+            cells_list.pop_front();
+
+            int id0 = cell(0, 0);
+            int id1 = cell(0, 1);
+            int id2 = cell(0, 2);
+
+            // first, connect for each hole a triangle that has an edge on the hole, to better deal with the new cells being created 
+            bool all_connected = std::all_of(is_connected.begin(), is_connected.end(), [](bool v) { return v; });
+            if (!all_connected){
+                // map node -> hole (-1 if external)
+                int h0 = node_to_hole.count(id0) ? node_to_hole.at(id0) : -1;
+                int h1 = node_to_hole.count(id1) ? node_to_hole.at(id1) : -1;
+                int h2 = node_to_hole.count(id2) ? node_to_hole.at(id2) : -1;
+
+                // verify if it's a priority triangle (one that connects the hole to the boundary)
+                bool is_priority = false;
+                int hole_to_connect = -1;
+
+                // to check if 2 nodes in same hole are actually consecutive
+                auto is_consecutive_in_hole = [&](int a, int b, int hole_id) {
+                    return hole_edges[hole_id].count({a, b}) || hole_edges[hole_id].count({b, a});
+                };
+
+                if (h0 == h1 && h0 != -1 && h2 == -1 && !is_connected[h0] && is_consecutive_in_hole(id0, id1, h0)) {
+                    is_priority = true;
+                    hole_to_connect = h0;
+                }
+                else if (h1 == h2 && h1 != -1 && h0 == -1 && !is_connected[h1] && is_consecutive_in_hole(id1, id2, h1)) {
+                    is_priority = true;
+                    hole_to_connect = h1;
+                }
+                else if (h2 == h0 && h2 != -1 && h1 == -1 && !is_connected[h2] && is_consecutive_in_hole(id2, id0, h2)) {
+                    is_priority = true;
+                    hole_to_connect = h2;
+                }
+                
+                if (!is_priority) {
+                    // go to the next cell
+                    cells_list.push_back(cell);
+                    continue;
+                }
+                is_connected[hole_to_connect] = true;
+            }
 
             auto n0 = std::find_if(nodes_.begin(), nodes_.end(),
                 [&](const node_t& n) { return n.id() == id0; });
@@ -809,21 +890,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 [&](const node_t& n) { return n.id() == id1; });
             auto n2 = std::find_if(nodes_.begin(), nodes_.end(),
                 [&](const node_t& n) { return n.id() == id2; });
-
-            auto h0 = node_to_hole.find(id0);
-            auto h1 = node_to_hole.find(id1);
-            auto h2 = node_to_hole.find(id2);
-            
-            // if 2 of the nodes are in the same hole, mark the hole as connected
-            if (h0 != node_to_hole.end() && h1 != node_to_hole.end() && h0->second == h1->second) {
-                is_connected[h0->second] = true;
-            }
-            if (h1 != node_to_hole.end() && h2 != node_to_hole.end() && h1->second == h2->second) {
-                is_connected[h1->second] = true;
-            }
-            if (h2 != node_to_hole.end() && h0 != node_to_hole.end() && h2->second == h0->second) {
-                is_connected[h2->second] = true;
-            }
 
             node_t* p0 = std::addressof(*n0);
             node_t* p1 = std::addressof(*n1);
@@ -835,6 +901,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
             halfedge_t* h = find_halfedge_between(p0, p1);
             bool building_dcel = true; 
+            std::cout << "Adding polygon with nodes: " << p0->id() << ", " << p1->id() << ", " << p2->id() << std::endl;
             if (h) {
                 add_polygon(h, {p2}, building_dcel);
             } else if ((h = find_halfedge_between(p1, p2))) {
@@ -842,51 +909,56 @@ template <int LocalDim, int EmbedDim> class DCEL {
             } else if ((h = find_halfedge_between(p2, p0))) {
                 add_polygon(h, {p1}, building_dcel);
             } else {
-                halfedge_t* h0 = emplace_halfedge_(p0);
-                halfedge_t* h1 = emplace_halfedge_(p1);
-                insert_edge(h0, h1);
-                add_polygon(h0, {p2}, building_dcel);
+                // there might be 2 or more halfedges departing from same node and belonging to same cell
+                // e.g. if edges belong to boundary, hole and another hole
+                cells_list.push_back(cell);
+                continue;
             }
-            
-            // find the cell that connects all the halfedges that don't belong to triangles yet
-            cell_t* longest_cell = nullptr;  
-            for(auto it = cells_begin(); it!= cells_end(); ++it){
-                int cont=0;
-                halfedge_t* h= it->halfedge();
-                do{
-                    cont++;
-                    h=h->next();
-                }while(h!=it->halfedge());
-                if(cont>3){  // cell is not a triangle
-                    longest_cell= &(*it);
-                    break;
+              
+            if(!all_connected){
+                // find the cell that connects all the halfedges that don't belong to triangles yet 
+                for(auto it = cells_begin(); it!= cells_end(); ++it){
+                    int cont=0;
+                    halfedge_t* h= it->halfedge();
+                    do{
+                        cont++;
+                        h=h->next();
+                    }while(h!=it->halfedge());
+                    if(cont>3){  // cell is not a triangle
+                        longest_cell= &(*it);
+                        break;
+                    }
+
                 }
 
-            }
-
-            auto it = halfedges_.begin();
-            // Go to the first half-edge of the internal boundary (hole)
-            for (int i = 0; i < n_boundary_external*2; ++i)
-                ++it;
-            for (int k = 0; k < holes.size(); ++k) {
-                // if the hole is not connected yet, change the cell of the halfedges to longest_cell
-                if (!is_connected[k]) { 
-                    for (int h = 0; h < holes[k].rows(); ++h) {
-                        it->set_cell(longest_cell);  
-                        ++it;
+                auto it = halfedges_.begin();
+                // go to the first half-edge of the internal boundary (hole)
+                for (int i = 0; i < n_boundary_external*2; ++i)
+                    ++it;
+                for (int k = 0; k < holes.size(); ++k) {
+                    // if the hole is not connected yet, change the cell of the halfedges to longest_cell
+                    if (!is_connected[k]) { 
+                        for (int h = 0; h < holes[k].rows(); ++h) {
+                            it->set_cell(longest_cell);  
+                            ++it;
+                        }
+                        // disregard the twins since they must have null cell
+                        for (int h = 0; h < holes[k].rows(); ++h) {
+                            it++;
+                        }
+                    } else {
+                        // skip halfedges of the hole
+                        for (int h = 0; h < holes[k].rows()*2; ++h)
+                            ++it;
                     }
-                    // disregard the twins since they must have null cell
-                    for (int h = 0; h < holes[k].rows(); ++h) {
-                        it++;
-                    }
-                } else {
-                    // skip halfedges of the hole
-                    for (int h = 0; h < holes[k].rows()*2; ++h)
-                        ++it;
                 }
             }
+
+            cont++;
+            //if(cont==10) break;
             
         }
+        export_to_json("dcel_output.json");
     }
 
 private:

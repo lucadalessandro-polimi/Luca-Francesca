@@ -55,16 +55,16 @@ def plot_dcel(filename):
 
     # Disegna gli archi
     pos = {node_id: (coords[0], coords[1]) for node_id, coords in nodes.items()}
-    #nx.draw(G, pos, with_labels=True, node_size=100, node_color='black', edge_color='gray', font_color='white', font_size=8)
+    nx.draw(G, pos, with_labels=True, node_size=100, node_color='black', edge_color='gray', font_color='white', font_size=8)
 
 
     # Disegna gli ID degli half-edges sugli archi
-    #nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8, font_color='red')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8, font_color='red')
 
     # Disegna i nodi di bordo in blu
     for node_id in boundary_nodes:
         x, y = nodes[node_id]
-        #plt.scatter(x, y, color='blue', s=10, edgecolors='black', linewidths=1.5)
+        plt.scatter(x, y, color='blue', s=10, edgecolors='black', linewidths=1.5)
 
     # Disegna le celle (triangoli)
     for cell in data["cells"]:
@@ -83,7 +83,7 @@ def plot_dcel(filename):
             plt.gca().add_patch(circle)
             #plt.scatter(*U, color='purple', s=50, label="Circocentro")'''
     # Mostrare la mesh
-    plt.title("DCEL Mesh Visualization con Circonferenze Circumscritte")
+    plt.title("DCEL Mesh Visualization")
     plt.axis('equal')
     plt.xlabel("X")
     plt.ylabel("Y")
