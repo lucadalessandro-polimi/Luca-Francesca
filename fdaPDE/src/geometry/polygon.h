@@ -242,39 +242,32 @@ template <int LocalDim, int EmbedDim> class Polygon {
             int prev = v->node()->prev()->id();
             int curr = v->node()->id();
 	        int next = v->node()->next()->id();
-            std::cout << "curr = " << curr << ", prev = " << prev << ", next = " << next << std::endl;
+            //std::cout << "curr = " << curr << ", prev = " << prev << ", next = " << next << std::endl;
             // process i-th node
             switch (node_category[v]) {
             case node_category_t::start: {
-                std::cout << "caso 1" << std::endl;
                 auto ref = sweep_line.emplace(curr, all_coords(curr, 0), all_coords(curr, 1), all_coords(next, 0), all_coords(next, 1));
                 sweep_line_it[curr] = ref.first;
                 helper[curr] = v;
                 break;
             }
             case node_category_t::end: {
-                std::cout << "caso 2" << std::endl;
                 if (node_category[helper[prev]] == node_category_t::merge) { dcel.insert_edge(v, helper[prev]); }
                 sweep_line.erase(sweep_line_it[prev]);
                 break;
             }
             case node_category_t::split: {
-                std::cout << "caso 3" << std::endl;
                 // search edge in sweep line directly left to curr
                 edge_t edge(all_coords(curr, 0), all_coords(curr, 1), all_coords(curr, 0), all_coords(curr, 1));
                 auto it = sweep_line.lower_bound(edge);
                 // insert diagonal (update v to point to the inserted diagonal)
-                std::cout << "helper it :    " << helper[it->id]->cell()->id() << std::endl;
-                std::cout << "v " << v->cell()->id() << std::endl;
                 helper[it->id] = dcel.insert_edge(v, helper[it->id], ignore_diff_cells);
-                std::cout << "SPLIT   ----------------  helper it :    " << helper[it->id]->id() << std::endl;
                 auto ref = sweep_line.emplace(curr, all_coords(curr, 0), all_coords(curr, 1), all_coords(next, 0), all_coords(next, 1));
                 sweep_line_it[curr] = ref.first;
                 helper[curr] = v;
                 break;
             }
             case node_category_t::merge: {
-                std::cout << "caso 4" << std::endl;
                 if (node_category[helper[prev]] == node_category_t::merge) { dcel.insert_edge(v, helper[prev]); }
                 sweep_line.erase(sweep_line_it[prev]);
                 // search edge in sweep line directly left to curr
@@ -282,17 +275,13 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 auto it = sweep_line.lower_bound(edge);
                 if (node_category[helper[it->id]] == node_category_t::merge) {
                     v = dcel.insert_edge(v, helper[it->id], ignore_diff_cells);   // update v to point to the inserted diagonal
-                    std::cout << "v " << v->id() << std::endl;
                 }
                 helper[it->id] = v;
                 break;
             }
             case node_category_t::regular: {
-                std::cout << "caso 5" << std::endl;
                 if (!below(all_coords.row(curr), all_coords.row(next))) {
                     // polygon interior is on the right of this halfedge
-                    std::cout << "helper prev :    " << helper[prev]->id() << std::endl;
-                    std::cout << node_category[helper[prev]] << std::endl;
                     if (node_category[helper[prev]] == node_category_t::merge) { dcel.insert_edge(v, helper[prev], ignore_diff_cells); }
                     sweep_line.erase(sweep_line_it[prev]);
                     auto ref = sweep_line.emplace(curr, all_coords(curr, 0), all_coords(curr, 1), all_coords(next, 0), all_coords(next, 1));
@@ -302,8 +291,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
                     // search edge in sweep line directly left to curr
                     edge_t edge(all_coords(curr, 0), all_coords(curr, 1), all_coords(curr, 0), all_coords(curr, 1));
                     auto it = sweep_line.lower_bound(edge);
-                    std::cout << "helper it :    " << helper[it->id]->id() << std::endl;
-                    std::cout << node_category[helper[it->id]] << std::endl;
                     if (node_category[helper[it->id]] == node_category_t::merge) {
                         v = dcel.insert_edge(v, helper[it->id], ignore_diff_cells);
                     }
@@ -411,14 +398,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
               l_chain_.begin(), l_chain_.end(), r_chain_.begin(), r_chain_.end(), node.begin(), [&](int a, int b) {
                   return nodes(a, 1) > nodes(b, 1) || (nodes(a, 1) == nodes(b, 1) && nodes(a, 0) > nodes(b, 0));
               });
-
-            /*std::vector<int> merged_chain;                                            //AGGIUNTO
-            merged_chain.insert(merged_chain.end(), l_chain_.begin(), l_chain_.end());
-            merged_chain.insert(merged_chain.end(), r_chain_.begin(), r_chain_.end());
-            std::sort(merged_chain.begin(), merged_chain.end(), [&](int a, int b) {
-                return nodes(a,1) > nodes(b,1) || (nodes(a, 1) == nodes(b, 1) && nodes(a, 0) > nodes(b, 0));
-            });
-            node=merged_chain;*/
             
             l_chain.insert(l_chain_.begin(), l_chain_.end());
             r_chain.insert(r_chain_.begin(), r_chain_.end());

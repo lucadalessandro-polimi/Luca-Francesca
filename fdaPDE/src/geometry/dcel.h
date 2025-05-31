@@ -201,7 +201,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     // constructors
     DCEL() : nodes_(), halfedges_(), n_nodes_(0), n_halfedges_(0), n_cells_(0) { }
     // constructs a closed loop structure linking nodes one after the other
-    static DCEL<local_dim, embed_dim> make_polygon(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes_entry) {
+    /*static DCEL<local_dim, embed_dim> make_polygon(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>& nodes_entry) {
         fdapde_assert(nodes_entry.cols() == embed_dim);
         Eigen::Matrix<double, Dynamic, Dynamic> nodes=nodes_entry;
         if (!internals::are_2d_counterclockwise_sorted(nodes_entry)) {
@@ -220,7 +220,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         dcel.n_cells_ = 1;
         // push nodes
         for (int i = 0; i < n_nodes; ++i) {
-            node_t* n = dcel.insert_node(node_t(i, /* boundary = */ true, nodes.row(i)));
+            node_t* n = dcel.insert_node(node_t(i, true, nodes.row(i)));
             halfedge_t* h = dcel.emplace_halfedge_(n);
             n->set_halfedge(h);
 	        h->set_cell(c);
@@ -245,7 +245,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
 	        h1->twin()->set_prev(h2->twin());
             h2->twin()->set_next(h1->twin());}
         return dcel;
-    }
+    }*/
     
 
     // overloading of make_polygon to also add holes
@@ -958,7 +958,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
             //if(cont==10) break;
             
         }
-        export_to_json("dcel_output.json");
     }
 
 private:

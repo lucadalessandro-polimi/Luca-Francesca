@@ -293,15 +293,15 @@ int main() {
 
     //------------------------------- REFINEMENT POTENZIATO ESEMPI----------------------------------------------------------------
     
-    Eigen::Matrix<double, 6, 2> triang_isoscele;
+    Eigen::Matrix<double, 5, 2> triang_isoscele;
     triang_isoscele << 
     -10, 0.0,      // B
     //-0.5, 1.,      // M_AB
     -0.7, std::sqrt(3)/2,
      0.0, 2.1,      // A
      0.5, 1.,      // M_AC
-     1.1, 0.0,      // C
-     -0.55, 0.0;
+     1.1, 0.0;      // C
+     //-0.55, 0.0;
 
     Eigen::Matrix<double, 1, 2> int_is;
     int_is << 0.0, 1.0;
@@ -373,11 +373,9 @@ int main() {
     1.5, 7.4,     // vertice superiore centrale
     1.2, 7.6,     // top sinistro
     0.9, 7.1;     // lato curvo sinistro
-
-            
     
-    Delaunay<2, 2> del(boundary_stairs, 0, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole_stairs, heart_hole});
-    //del.Ruppert_refinement(2.0);  //COSA NON VA  ?????
+    Delaunay<2, 2> del(boundary_stairs, 100000, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole_stairs, heart_hole});
+    del.Ruppert_refinement(2);  //COSA NON VA  ?????
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
