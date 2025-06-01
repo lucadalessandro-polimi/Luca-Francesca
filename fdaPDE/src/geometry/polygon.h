@@ -90,7 +90,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
         std::vector<int> cells;
         // perform monotone partitioning
         std::vector<std::vector<int>> poly_partition = monotone_partition_(nodes, holes);
-        std::cout << "poly_partition.size() = " << poly_partition.size() << std::endl;
         // triangulate each monotone polygon
         Eigen::Matrix<double, Dynamic, embed_dim> all_nodes;
         int total_rows = nodes.rows();
@@ -107,7 +106,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
             row_offset += hole.rows();
         }
         for (const std::vector<int>& poly : poly_partition) {
-            std::cout << "LOOP" << std::endl;
             std::vector<int> local_cells = triangulate_monotone_(all_nodes(poly, Eigen::placeholders::all));  //MODIFICATO
             // move local node numbering to global node numbering
             for (std::size_t i = 0; i < local_cells.size(); ++i) { local_cells[i] = poly[local_cells[i]]; }
@@ -174,7 +172,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
 
         // O(n) polygon construction as Doubly Connected Edge List
         poly_t dcel = DCEL<local_dim, embed_dim>::make_polygon(coords, coords_holes);
-        dcel.export_to_json("dcel_output.json");
         
         int n_nodes = dcel.n_nodes();
         int n_edges = dcel.n_edges();
@@ -224,7 +221,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
             all_coords.middleRows(row_offset, hole.rows()) = hole;
             row_offset += hole.rows();
         }
-        std::cout << "all_coords:\n" << all_coords << std::endl;
+        //std::cout << "all_coords:\n" << all_coords << std::endl;
         
         
         // O(nlog(n)) y-coordinate sort (break tiles using x-coordinate)
@@ -300,7 +297,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
             }
             }
         }
-        dcel.export_to_json("dcel_output.json");
         
         // recover from the DCEL structure the node numbering of each monotone polygon
         std::vector<bool> visited(dcel.n_halfedges(), false);
@@ -339,7 +335,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 monotone_partition.emplace_back(std::move(ids));
             }
         }
-        std::cout << "Stampo monotone_partition:" << std::endl;
+        /*std::cout << "Stampo monotone_partition:" << std::endl;
         std::cout << "N. di poligoni = " << monotone_partition.size() << std::endl;
         for (std::size_t i = 0; i < monotone_partition.size(); ++i) {
             std::cout << "Poligono " << i << " con " << monotone_partition[i].size() << " nodi: ";
@@ -348,7 +344,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
             }
             std::cout << std::endl;
         }
-        std::cout << "Fatto stampa monotone_partition." << std::endl;
+        std::cout << "Fatto stampa monotone_partition." << std::endl;*/
         return monotone_partition;
     }
 
@@ -358,7 +354,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
         std::vector<int> cells;
 	    int n_nodes = nodes.rows();
         cells.reserve(3 * (n_nodes - 2));
-        std::cout << "nodes.rows() = " << nodes.rows() << std::endl;
+        
         auto push_cell = [&](int i, int j, int k) {   // convinient lambda to add a triangle
             cells.push_back(i);
             cells.push_back(j);
@@ -405,7 +401,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 r_chain.insert(min);
                 l_chain.erase(min);
             }
-            for (auto l: l_chain) {
+            /*for (auto l: l_chain) {
                 std::cout << "l_chain_ " << l << std::endl;
             }
             for (auto r: r_chain) {
@@ -418,7 +414,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
             for(auto n:node)
             {
                 std::cout << "node " << n << std::endl;
-            }
+            }*/
             
             
         }
@@ -436,14 +432,9 @@ template <int LocalDim, int EmbedDim> class Polygon {
         int cont=0;
         for (std::size_t j = 2, n = node.size(); j < n; ++j) {
             cont=0;
-            std::cout <<"------------------------------------------------" << std::endl;
-            for(auto c:reflex_chain)
-            {
-                std::cout << "reflex_chain " << c << std::endl;
-            }
             node_i = *(reflex_chain.end() - 1);
             node_j = node[j];
-            std::cout << "i " << node_i << " j " << node_j << std::endl;
+            //std::cout << "i " << node_i << " j " << node_j << std::endl;
             if (are_in_opposite_chains(node_i, node_j)) {   // triangulate
                 node_i = *reflex_chain.begin();
                 on_left = !on_left;
@@ -451,18 +442,18 @@ template <int LocalDim, int EmbedDim> class Polygon {
                     reflex_chain.pop_front();
                     node_k = reflex_chain.front();
                     // add triangle
-                    std::cout << "i " << node_i << std::endl;
-                    std::cout << "k " << node_k << std::endl;
+                    //std::cout << "i " << node_i << std::endl;
+                    //std::cout << "k " << node_k << std::endl;
                     if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
 		                push_cell(node_i, node_j, node_k);
-                        std::cout << "QUI ALTRO" << std::endl;
+                        //std::cout << "QUI ALTRO" << std::endl;
                         node_i = node_k;   
                     }
                     else{
                         //reflex_chain.push_front(node_i);
                         //break;
                     }
-                    std::cout << "sono nell' IF" << std::endl;
+                    //std::cout << "sono nell' IF" << std::endl;
                 }
                 reflex_chain.push_back(node_j);
             } else {   // check if the triplet (node_i, node_j, node_k) makes a reflex turn or not
@@ -484,15 +475,15 @@ template <int LocalDim, int EmbedDim> class Polygon {
                         // add triangle
                         if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
 		                    push_cell(node_i, node_j, node_k);
-                            std::cout << "QUI" << std::endl;
+                            //std::cout << "QUI" << std::endl;
                             // triangulate until convex turn is found
                             reflex_chain.pop_back();
                         }
-                        std::cout <<"k " << node_k << std::endl;
-                        std::cout << "sono nell' ELSE" << std::endl;
+                        //std::cout <<"k " << node_k << std::endl;
+                        //std::cout << "sono nell' ELSE" << std::endl;
                         if (reflex_chain.size() > 1) {
                             node_i = *(reflex_chain.end() - 1);
-                            std::cout << "new node i: " << node_i <<std::endl;
+                            //std::cout << "new node i: " << node_i <<std::endl;
                             node_k = *(reflex_chain.end() - 2);
                             m_signed =
                               internals::signed_measure_2d_tri(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));

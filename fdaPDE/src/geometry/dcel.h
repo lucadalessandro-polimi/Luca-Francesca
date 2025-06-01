@@ -631,10 +631,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
     halfedge_t* remove_edge(halfedge_t* v1){        
         if(!v1) return nullptr;
 
-        if(!v1->cell()) // v1 external halfedge on boundary (null cell)
+        if(v1->cell()==nullptr) // v1 external halfedge on boundary (null cell)
             v1=v1->twin();
         halfedge_t* v2 = v1->twin();
-
+        //std::cout << "v1: " << v1->id() << std::endl;
+        //std::cout << "v2: " << v2->id() << std::endl;
+        //std::cout << "cell: " << v1->cell()->id() << std::endl;
         halfedge_t* end;
         halfedge_t* begin;
         cell_t* c1 = v1->cell();
@@ -901,7 +903,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
             halfedge_t* h = find_halfedge_between(p0, p1);
             bool building_dcel = true; 
-            std::cout << "Adding polygon with nodes: " << p0->id() << ", " << p1->id() << ", " << p2->id() << std::endl;
             if (h) {
                 add_polygon(h, {p2}, building_dcel);
             } else if ((h = find_halfedge_between(p1, p2))) {
