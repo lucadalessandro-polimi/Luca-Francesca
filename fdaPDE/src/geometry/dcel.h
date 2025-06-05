@@ -90,7 +90,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
          cell_t* conflict() const { return conflicting_triangle_; }
          void remove_conflict() { conflicting_triangle_ = nullptr; }
  
-        
 
     };
     struct halfedge_t {
@@ -732,10 +731,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return nullptr;
     }
 
-    halfedge_t* find_halfedge_between(node_t* from, node_t* to) {
+    halfedge_t* find_halfedge_between(coords_t from, coords_t to) {
         for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
             halfedge_t* h = &(*it);
-            if (h->node() == from && h->twin() && h->twin()->node() == to) {
+            if (h->node()->coords() == from && h->twin() && h->twin()->node()->coords() == to) {
                 return h;
             }
         }
@@ -901,13 +900,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 std::swap(p1, p2);
             }
 
-            halfedge_t* h = find_halfedge_between(p0, p1);
+            halfedge_t* h = find_halfedge_between(p0->coords(), p1->coords());
             bool building_dcel = true; 
             if (h) {
                 add_polygon(h, {p2}, building_dcel);
-            } else if ((h = find_halfedge_between(p1, p2))) {
+            } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {
                 add_polygon(h, {p0}, building_dcel);
-            } else if ((h = find_halfedge_between(p2, p0))) {
+            } else if ((h = find_halfedge_between(p2->coords(), p0->coords()))) {
                 add_polygon(h, {p1}, building_dcel);
             } else {
                 // there might be 2 or more halfedges departing from same node and belonging to same cell

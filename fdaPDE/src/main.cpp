@@ -35,9 +35,7 @@ double rho_from_min_angle(double theta_min_deg) {
 int main() {
     
     Eigen::Matrix<double, 24, 2> boundary; 
-    boundary << 0.0, 0.0,
-                5.0, 0.0,  //24
-                10.0, 0.0,
+    boundary << 
                 15.0, 0.0,
                 20.0, 0.0,
                 25.0, 0.0,
@@ -58,7 +56,10 @@ int main() {
                 0.0, 20.0,
                 0.0, 15.0,
                 0.0, 10.0,
-                0.0, 5.0;
+                0.0, 5.0,
+                0.0, 0.0,
+                5.0, 0.0,
+                10.0, 0.0;  //24;
    
 
     
@@ -89,25 +90,26 @@ int main() {
             1.6, 0.5,
             1.3, 0.5;    
     
-    Eigen::Matrix<double, 10, 2> boundary_stairs; //scala
-    boundary_stairs << 0.0, 0.0, 
-                //3.0, 0.0,  
-                //6.0, 0.0,  
-                //9.0, 0.0, 
+    Eigen::Matrix<double, 18, 2> boundary_stairs; //scala
+    boundary_stairs <<    
+                6.0, 0.0,  
+                9.0, 0.0, 
                 12.0, 0.0,
                 12.0, 2.0, 
                 9.0, 2.0,  
                 9.0, 4.0,
-                //8.0, 4.0,
-                //7.0, 4.0,
+                8.0, 4.0,
+                7.0, 4.0,
                 6.0, 4.0,  
                 6.0, 6.0,
                 3.0, 6.0,
                 3.0, 8.0,
-                0.0, 8.0;
-                //0.0, 6.0,
-                //0.0, 4.0,
-                //0.0, 3.0;
+                0.0, 8.0,
+                0.0, 6.0,
+                0.0, 4.0,
+                0.0, 3.0,
+                0.0, 0.0,
+                3.0, 0.0;
     
 
     Eigen::Matrix<double, 14, 2> internal;
@@ -375,8 +377,8 @@ int main() {
     1.2, 7.6,     // top sinistro
     0.9, 7.1;     // lato curvo sinistro
     
-    Delaunay<2, 2> del(boundary_concave, 100000, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole_concave1,hole_concave2});
-    del.Ruppert_refinement(1.5);  
+    Delaunay<2, 2> del(boundary_stairs, 0); //, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2,hole3,hole4});
+    //del.Ruppert_refinement(1.5);  // Esegui il Ruppert refinement con un raggio minimo di 1.0
 
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 

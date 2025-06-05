@@ -186,10 +186,8 @@ template <typename Derived, typename PointT>
 constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
                                        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>& holes,
                                        const PointT& p, double epsilon) {
-    // 1. Deve essere dentro il boundary principale
     if (!point_in_polygon(boundary, p)) return false;
 
-    // 2. Non deve essere dentro nessun buco
     for (const auto& hole : holes) {
         if (point_in_polygon(hole, p)){
             return false;
@@ -248,25 +246,6 @@ constexpr double radius_edge_ratio(const PointT& A, const PointT& B, const Point
 }
 
 // Compute circumcenter of triangle given its 2D coordinates
-//CAPIRE SE SI VUOLE RISOLVERE O MENO IL SISTEMA LINEARE (QUANTO COSTA IN EFFICIENZA?)
-/*template <typename PointT>
-    requires(internals::is_subscriptable<PointT, int>)
-constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C) {
-    PointT midAB = 0.5 * (A + B);
-    PointT midBC = 0.5 * (B + C);
-
-    PointT dirAB(B[1] - A[1], A[0] - B[0]);
-    PointT dirBC(C[1] - B[1], B[0] - C[0]);
-
-    Eigen::Matrix<double, 2, 2> M;
-    M << dirAB[0], -dirBC[0],
-         dirAB[1], -dirBC[1];
-
-    Eigen::Vector2d rhs = midBC - midAB;
-    Eigen::Vector2d t = M.colPivHouseholderQr().solve(rhs);
-
-    return midAB + t[0] * dirAB;
-}*/
 template <typename PointT>
 requires(internals::is_subscriptable<PointT, int>)
 constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C) {

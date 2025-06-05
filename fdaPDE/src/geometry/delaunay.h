@@ -184,8 +184,20 @@ class Delaunay {
         std::uniform_real_distribution<double> pert_x(-perturbation_scale / 2, perturbation_scale / 2);
         std::uniform_real_distribution<double> pert_y(-perturbation_scale / 2, perturbation_scale / 2);
         
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_vertices = split_boundary_points(boundary);
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes_vertices(holes.size());
+        for(int i=0; i< holes.size(); ++i){
+            holes_vertices[i] = split_boundary_points(holes[i]);
+        }
         // Initialize the triangulation with the boundary polygon
-        initialize_triangulation(boundary, holes);
+        initialize_triangulation(boundary_vertices, holes_vertices);
+        
+        // add boundary vertices to the DCEL
+        complete_boundary(boundary, boundary_vertices);
+        for(int i=0; i< holes.size(); ++i){
+            complete_boundary(holes[i], holes_vertices[i]);
+        }
+
         flip();  // Ensure boundary triangulation satisfies Delaunay property
         
         // Generate and insert interior points into the DCEL
@@ -216,17 +228,17 @@ class Delaunay {
         }
 
         // Reassign consecutive IDs to all cells and half-edges for consistency
-        /*int cont = 0;
+        int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
             it->set_id(cont++);
         dcel_.set_n_cells_(cont);
 
         cont = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
-            it->set_id(cont++);*/
+            it->set_id(cont++);
         
         // Export the resulting DCEL structure to a JSON file for visualization
-        //dcel_.export_to_json("dcel_output.json");
+        dcel_.export_to_json("dcel_output.json");
     }
     
     //overloaded one if user wants to pass manually the internal points
@@ -234,7 +246,13 @@ class Delaunay {
     void triangulate(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
         const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
         
-        initialize_triangulation(boundary, holes);
+        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_vertices = split_boundary_points(boundary);
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes_vertices(holes.size());
+        for(int i=0; i< holes.size(); ++i){
+            holes_vertices[i] = split_boundary_points(holes[i]);
+        }
+
+        initialize_triangulation(boundary_vertices, holes_vertices);
         flip();
 
         //inserting the internal points in the triangulation
@@ -273,6 +291,83 @@ class Delaunay {
         //std::cout << "Celle " << cells << std::endl;
         //we manage our input dcel to be the traslation of the trinagulation object from polygon 
         dcel_.from_triangulation(triangulation, holes);
+    }
+
+    // function to divide the boundary points into vertex points and collinear points 
+    Eigen::Matrix<double, Eigen::Dynamic, 2>  split_boundary_points(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
+        std::list<Eigen::Matrix<double, 1, 2>> vertex_points_list;
+
+        int n = boundary.rows();
+
+        // iterate through the boundary points
+        for (int i = 0; i < n; ++i) {
+            const auto& point = boundary.row(i);
+            const auto& point_prev = boundary.row((i-1+n)%n);
+            const auto& point_next = boundary.row((i+1)%n);
+            if (!fdapde::internals::collinear(point_prev, point, point_next)) 
+                vertex_points_list.push_back(point);
+        }
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> vertex_points(vertex_points_list.size(), 2);
+        int i=0;
+        for (const auto & point : vertex_points_list) {
+            vertex_points.row(i++) = point;
+        }
+        
+        return vertex_points;
+    }
+
+    void complete_boundary(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_vertices ) {
+        if(boundary.rows()==boundary_vertices.rows()) return; //if the boundary is already complete we do not need to do anything
+
+        auto row_in_matrix = [](const Eigen::Matrix<double, 1, embed_dim>& row, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& mat) -> bool {
+            for (int i = 0; i < mat.rows(); ++i) {
+                if (mat.row(i).isApprox(row))
+                    return true;
+            }
+            return false;
+        };
+        
+        int j=0;
+        int k=0;
+        for(int i=0; i < boundary.rows(); i=j){
+            if(!row_in_matrix(boundary.row(i), boundary_vertices)){
+                j=i;
+                coords_t n1= boundary_vertices.row((k-1+ boundary_vertices.rows())%boundary_vertices.rows());
+                coords_t n2= boundary_vertices.row(k%boundary_vertices.rows());
+                std::cout << n1.transpose() << " " << n2.transpose() << std::endl;
+                node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, boundary.row(j)));
+                halfedge_t* e= dcel_.find_halfedge_between(n1, n2);
+                if(!e)
+                    e= dcel_.find_halfedge_between(n1, boundary.row(0));
+                std::cout << e->id() << std::endl;
+                halfedge_t* prev = e->prev();
+                // Subdivide the triangle adjacent to edge e by inserting m
+                add_triangle(e, std::vector<node_t*> {m});
+                halfedge_t* h1 = e->next()->twin();  
+                halfedge_t* h2 = e->prev()->twin();
+                // Subdivide the opposite triangle (twin) by connecting m
+                add_triangle(prev, std::vector<node_t*> {m});
+                // Remove the encroached edge from the DCEL
+                dcel_.remove_edge(e);
+                ++j;
+                
+                while(j<boundary.rows() && !row_in_matrix(boundary.row(j), boundary_vertices)){
+                    m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, boundary.row(j)));
+                    e = h1;
+                    prev = e->prev();
+                    add_triangle(e, std::vector<node_t*> {m});
+                    h1 = e->next()->twin();  
+                    h2 = e->prev()->twin();
+                    add_triangle(prev, std::vector<node_t*> {m});
+                    dcel_.remove_edge(e);
+                    ++j;
+                }
+
+            }
+            else {++j; ++k;}
+        }
+
     }
 
 
