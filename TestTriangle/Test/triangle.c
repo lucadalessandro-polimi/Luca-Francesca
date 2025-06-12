@@ -14646,7 +14646,7 @@ void statistics(struct mesh *m, struct behavior *b)
   }
   printf("\n");
 
-  if (b->verbose) {
+  //if (b->verbose) {
     quality_statistics(m, b);
     printf("Memory allocation statistics:\n\n");
     printf("  Maximum number of vertices: %ld\n", m->vertices.maxitems);
@@ -14703,7 +14703,7 @@ void statistics(struct mesh *m, struct behavior *b)
              m->circumcentercount);
     }
     printf("\n");
-  }
+  //}
 }
 
 /*****************************************************************************/

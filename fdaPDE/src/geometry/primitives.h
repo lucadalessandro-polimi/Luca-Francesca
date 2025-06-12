@@ -184,15 +184,16 @@ constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const
 // This avoids placing points too close to the boundary.
 template <typename Derived, typename PointT>
 constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
-                                       const std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>& holes,
+                                       const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>>& holes,
                                        const PointT& p, double epsilon) {
     if (!point_in_polygon(boundary, p)) return false;
 
-    for (const auto& hole : holes) {
+    for(const auto& hole_vector: holes ){
+    for (const auto& hole : hole_vector) {
         if (point_in_polygon(hole, p)){
             return false;
         }
-    }
+    }}
 
     // 3. Deve essere lontano da tutti i bordi del boundary
     auto is_far_from_edges = [&](const Eigen::MatrixBase<Derived>& polygon) {
@@ -219,9 +220,10 @@ constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundar
     if (!is_far_from_edges(boundary)) return false;
 
     // Controlla distanza dai bordi dei buchi
-    for (const auto& hole : holes) {
+    for(const auto& hole_vector: holes) {
+    for (const auto& hole : hole_vector) {
         if (!is_far_from_edges(hole)) return false;
-    }
+    }}
 
     return true;
 }

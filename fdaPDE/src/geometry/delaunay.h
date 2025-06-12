@@ -75,13 +75,13 @@ class Delaunay {
     
     // constructors 
     // costructor with random generated points
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,  int N=100, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {}){
-        triangulate(N, boundary, holes);
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries,  int N=100, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
+        triangulate(N, boundaries, holes);
     }    
     // costructor with given internal points form the user
     // user needs to provide internal points correctly located inside the domain 
-    Delaunay(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes = {}) {
-        triangulate(internal, boundary, holes);
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}) {
+        triangulate(internal, boundaries, holes);
     }
 
     // Getter const
@@ -110,7 +110,8 @@ class Delaunay {
             halfedge_t* e = &(*it);
             //since in the previuos code we do not touch the boundary we can stop at the twin of the first boundary edge
             if(e->on_boundary() && !e->cell()) continue;  //otherwise it doesn't do the holes
-            if (e->on_boundary()){
+            //if (e->on_boundary()){
+            if(e->is_subsegment()) {
                 boundary_edges.insert(e);
                 if(check_encroachment(e)){
                     //to make sure the set saves only one copy of the edge
@@ -132,7 +133,7 @@ class Delaunay {
         while (true) {
             if (split_first_encroached_segment(boundary_edges, encroached_edges, bad_triangles, rho_bar)) {
                 cont1++;
-                //if(cont1==1000) break;
+                //if(cont1==3) break;
                 continue;
             }
             if (split_first_bad_triangle(rho_bar, boundary_edges, encroached_edges, bad_triangles)) {
@@ -159,13 +160,13 @@ class Delaunay {
     dcel_t dcel_;
 
 
-    void triangulate(int N, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes ) {
+    void triangulate(int N, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries_entry, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes_entry ) {
         
         // compute bounding box of the input polygon
-        double min_x = boundary.col(0).minCoeff();
-        double max_x = boundary.col(0).maxCoeff();
-        double min_y = boundary.col(1).minCoeff();
-        double max_y = boundary.col(1).maxCoeff();
+        double min_x = boundaries_entry[0].col(0).minCoeff();
+        double max_x = boundaries_entry[0].col(0).maxCoeff();
+        double min_y = boundaries_entry[0].col(1).minCoeff();
+        double max_y = boundaries_entry[0].col(1).maxCoeff();
         int generated_points = 0;
 
         // Estimate grid resolution based on desired number of interior points
@@ -183,23 +184,70 @@ class Delaunay {
         std::mt19937 gen(42);  // Deterministic seed for reproducibility
         std::uniform_real_distribution<double> pert_x(-perturbation_scale / 2, perturbation_scale / 2);
         std::uniform_real_distribution<double> pert_y(-perturbation_scale / 2, perturbation_scale / 2);
-        
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_vertices = split_boundary_points(boundary);
-        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes_vertices(holes.size());
-        for(int i=0; i< holes.size(); ++i){
-            holes_vertices[i] = split_boundary_points(holes[i]);
+
+        // check if boundaries are counterclockwise sorted
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> boundaries;
+        for(const auto& bd: boundaries_entry){
+            if (!internals::are_2d_counterclockwise_sorted(bd)) {
+                Eigen::Matrix<double, Eigen::Dynamic, embed_dim> reversed_bd(bd.rows(), embed_dim);
+                for (int i = 0; i < bd.rows(); ++i)
+                    reversed_bd.row(i) = bd.row(bd.rows() - 1 - i);
+                boundaries.push_back(reversed_bd);
+            }
+            else{
+                boundaries.push_back(bd);
+            }
         }
+        std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>> holes;
+        for(const auto& hole_vect : holes_entry){
+            std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> new_vector;
+            for (const auto& hole : hole_vect) {
+                if (internals::are_2d_counterclockwise_sorted(hole)) {
+                    Eigen::Matrix<double, Eigen::Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
+                    for (int i = 0; i < hole.rows(); ++i)
+                        reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
+                    new_vector.push_back(reversed_hole);
+                } else {
+                    new_vector.push_back(hole);
+                }
+            }
+            holes.push_back(new_vector);
+        }
+        
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> boundary_vertices=boundaries; 
+        for(int i=1; i< boundaries.size(); ++i){   
+            boundary_vertices[i] = split_boundary_points(boundaries[i]);
+        }
+        std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>> holes_vertices(holes.size());
+        for(int j=0; j< holes.size(); ++j){
+            std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes_vertices_i(holes[j].size());
+            for(int i=0; i< holes[j].size(); ++i){
+                holes_vertices_i[i] = split_boundary_points(holes[j][i]);
+            }
+            holes_vertices[j] = holes_vertices_i;
+        }
+        if(boundaries.size()==1)
+            boundary_vertices[0] = split_boundary_points(boundaries[0]);
+        else
+            boundary_vertices[0] = split_boundary_points_with_attachments(boundary_vertices);
+        
         // Initialize the triangulation with the boundary polygon
         initialize_triangulation(boundary_vertices, holes_vertices);
         
+        if(boundaries.size()==1) complete_boundary(boundaries[0], boundary_vertices[0]);
         // add boundary vertices to the DCEL
-        complete_boundary(boundary, boundary_vertices);
-        for(int i=0; i< holes.size(); ++i){
-            complete_boundary(holes[i], holes_vertices[i]);
+        for(int i=1; i< boundaries.size(); ++i){
+            complete_boundary(boundaries[i], boundary_vertices[i]);
         }
-
+        for(int j=1; j< holes.size(); ++j){
+            for(int i=0; i< holes[j].size(); ++i){
+                complete_boundary(holes[j][i], holes_vertices[j][i]);
+            }
+        }
+        
         flip();  // Ensure boundary triangulation satisfies Delaunay property
         
+        int n_nodes_boundaries = dcel_.n_nodes();
         // Generate and insert interior points into the DCEL
         for (int i = 1; i <= points_per_row; ++i) {
             for (int j = 1; j <= points_per_row; ++j) {
@@ -207,7 +255,7 @@ class Delaunay {
                 u << min_x + i * dx + pert_x(gen),
                     min_y + j * dy + pert_y(gen);
                 // Keep only points that lie inside the polygonal domain
-                if (!fdapde::internals::point_safely_in_polygon(boundary, holes, u, perturbation_scale/16)){
+                if (!fdapde::internals::point_safely_in_polygon(boundaries[0], holes, u, perturbation_scale/16)){
                     //std::cout<<"SCARTO PUNTO CON COORDINATE: "<<u<<std::endl;
                     continue;
                 }
@@ -217,16 +265,15 @@ class Delaunay {
                 ++generated_points;
             }
         }
-
+        
+        int cont_pt=0;
         // Insert all internal points into the triangulation using the conflict graph
-        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it, cont_pt++) {
+            if(cont_pt < n_nodes_boundaries) continue; // Skip boundary nodes
             node_t* u = &(*it);
-            if (!u->on_boundary()){
-                //std::cout<<u->coords()<<std::endl;
-                insert_vertex_at_conflict(u);
-            }
+            insert_vertex_at_conflict(u);
         }
-
+        
         // Reassign consecutive IDs to all cells and half-edges for consistency
         int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
@@ -244,36 +291,92 @@ class Delaunay {
     //overloaded one if user wants to pass manually the internal points
     //the user must know the passed internal points lie all inside the domain 
     void triangulate(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal,
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries_entry, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes_entry) {
         
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary_vertices = split_boundary_points(boundary);
-        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes_vertices(holes.size());
-        for(int i=0; i< holes.size(); ++i){
-            holes_vertices[i] = split_boundary_points(holes[i]);
+        // check if boundaries are counterclockwise sorted
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> boundaries;
+        for(const auto& bd: boundaries_entry){
+            if (!internals::are_2d_counterclockwise_sorted(bd)) {
+                Eigen::Matrix<double, Eigen::Dynamic, embed_dim> reversed_bd(bd.rows(), embed_dim);
+                for (int i = 0; i < bd.rows(); ++i)
+                    reversed_bd.row(i) = bd.row(bd.rows() - 1 - i);
+                boundaries.push_back(reversed_bd);
+            }
+            else{
+                boundaries.push_back(bd);
+            }
+        }
+        std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>> holes;
+        for(const auto& hole_vect : holes_entry){
+            std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> new_vector;
+            for (const auto& hole : hole_vect) {
+                if (internals::are_2d_counterclockwise_sorted(hole)) {
+                    Eigen::Matrix<double, Eigen::Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
+                    for (int i = 0; i < hole.rows(); ++i)
+                        reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
+                    new_vector.push_back(reversed_hole);
+                } else {
+                    new_vector.push_back(hole);
+                }
+            }
+            holes.push_back(new_vector);
         }
 
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> boundary_vertices=boundaries; 
+        for(int i=1; i< boundaries.size(); ++i){   
+            boundary_vertices[i] = split_boundary_points(boundaries[i]);
+        }
+        std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>> holes_vertices(holes.size());
+        for(int j=0; j< holes.size(); ++j){
+            std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes_vertices_i(holes[j].size());
+            for(int i=0; i< holes[j].size(); ++i){
+                holes_vertices_i[i] = split_boundary_points(holes[j][i]);
+            }
+            holes_vertices[j] = holes_vertices_i;
+        }
+        if(boundaries.size()==1)
+            boundary_vertices[0] = split_boundary_points(boundaries[0]);
+        else
+            boundary_vertices[0] = split_boundary_points_with_attachments(boundary_vertices);
+         
+        // Initialize the triangulation with the boundary polygon
         initialize_triangulation(boundary_vertices, holes_vertices);
+        
+        if(boundaries.size()==1) complete_boundary(boundaries[0], boundary_vertices[0]);
+        // add boundary vertices to the DCEL
+        for(int i=1; i< boundaries.size(); ++i){
+            complete_boundary(boundaries[i], boundary_vertices[i]);
+        }
+        for(int j=1; j< holes.size(); ++j){
+            for(int i=0; i< holes[j].size(); ++i){
+                complete_boundary(holes[j][i], holes_vertices[j][i]);
+            }
+        }
+        
         flip();
+
+        int n_nodes_boundaries = dcel_.n_nodes();
 
         //inserting the internal points in the triangulation
         for (int i = 0; i < internal.rows(); ++i) {
             node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, internal.row(i).transpose().eval()));
             detect_conflicts(n);
         }
-        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+
+        int cont_pt=0;
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it, cont_pt++) {
+            if(cont_pt < n_nodes_boundaries ) continue;
             node_t* u = &(*it);
-            if (!u->on_boundary()) 
-                insert_vertex_at_conflict(u); 
+            insert_vertex_at_conflict(u); 
         }   
+
         //reordering id of cells and halfedges to cover some jumps between ids after removing
         int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             it->set_id(cont);
             cont++;
         }
-
         dcel_.set_n_cells_(cont);
-
         int cont_h = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
             it->set_id(cont_h);
@@ -283,15 +386,192 @@ class Delaunay {
     }
 
     //function performing the first raw triangulation of the domain using the polygon.h class
-    void initialize_triangulation(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) {
-        polygon_t polygon(boundary, holes);
-        auto triangulation = polygon.triangulation();
-        const auto& nodes = triangulation.nodes();  
-        const auto& cells = triangulation.cells();
-        //std::cout << "Celle " << cells << std::endl;
-        //we manage our input dcel to be the traslation of the trinagulation object from polygon 
-        dcel_.from_triangulation(triangulation, holes);
+    void initialize_triangulation(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
+        if(holes.size()!=0)
+            dcel_= dcel_t::make_polygon(boundaries[0], holes[0]);
+        else{
+            dcel_= dcel_t::make_polygon(boundaries[0]);
+            holes.push_back({});
+        }
+       
+
+        if(boundaries.size() == 1 ){
+            polygon_t polygon(boundaries[0], holes[0]);
+            auto triangulation = polygon.triangulation();
+            const auto& nodes = triangulation.nodes(); 
+            dcel_.from_triangulation(triangulation, holes[0]);
+        }
+        else for(int i=1; i< boundaries.size(); ++i){
+            cell_t* c= &(*std::prev(dcel_.cells_end()));   //è GIUSTO ?????
+            for(int j=0; j< boundaries[i].rows(); ++j){
+                    coords_t co= boundaries[i].row(j).transpose();
+                    if(dcel_.find_node(co)) continue;
+                    node_t* n1 = dcel_.insert_node(node_t(dcel_.n_nodes(), false, co));
+                    halfedge_t* h1 = dcel_.emplace_halfedge_(n1, true);
+                    n1->set_halfedge(h1);
+                    h1->set_cell(c);
+            } 
+            cell_t* c_holes= nullptr;
+            for (int j = 0; j < boundaries[i].rows(); ++j) {
+                    coords_t co1= boundaries[i].row(j).transpose();
+                    coords_t co2= boundaries[i].row( (j+1) % boundaries[i].rows() ).transpose();
+                    node_t* n1= dcel_.find_node(co1);
+                    node_t* n2= dcel_.find_node(co2);
+                    std::cout << "n1: " << n1->id() << " n2: " << n2->id() << std::endl;
+                    if(!dcel_.find_halfedge_between(co1,co2)){
+                        /*halfedge_t* h1 = n1->halfedge();
+                        halfedge_t* h2 = n2->halfedge();
+                        halfedge_t* h_new=dcel_.insert_edge(h1, h2);
+                        h_new->set_subsegment(true);
+                        h_new->twin()->set_subsegment(true);
+                        c_holes = h_new->cell();  */
+                        insert_collinear_chain(n1, n2);
+                        //c_holes= n1->halfedge()->cell();
+                    }
+                    if(c_holes == nullptr) {
+                        c_holes = dcel_.find_halfedge_between(co1, co2)->cell();
+                    }
+            } 
+            if(holes.size() == i)
+                holes.push_back({});
+            polygon_t polygon(boundaries[i], holes[i]);
+            auto triangulation = polygon.triangulation();
+            const auto& nodes = triangulation.nodes(); 
+            // update holes[i] edges to the cell of boundary i
+            for (int j = 0; j < holes[i].size(); ++j) {
+                coords_t co = holes[i][j].row(0).transpose();
+                if (!dcel_.find_node(co)) continue;
+                node_t* n1 = dcel_.find_node(co);
+                halfedge_t* h_hole= n1->halfedge();   //make_polygon creates holes' nodes s.t. its own halfedge is defined 
+                h_hole->set_cell(c_holes);
+                halfedge_t* next= h_hole->next();
+                do{
+                    next->set_cell(c_holes);
+                    next = next->next();
+                }while(next!= h_hole);
+            }
+            dcel_.from_triangulation(triangulation, holes[i]);
+            fix_edges_over_collinear_nodes();
+        
+        }
+        // check on the DCEL to connect any nodes that might appear in only some regions and not in others (vertices in a region and collinear in another)
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            cell_t* c = &(*it);
+            halfedge_t* h = c->halfedge();
+            halfedge_t* h_nn = h->next()->next();
+            while(true){
+                if(!fdapde::internals::collinear(h->node()->coords(), h->next()->node()->coords(), h_nn->node()->coords())){
+                    dcel_.insert_edge(h, h_nn);
+                    break;
+                }
+                h=h->next();
+                h_nn= h_nn->next();
+            }
+        }
+        
     }
+
+    void fix_edges_over_collinear_nodes() {
+        std::unordered_set<halfedge_t*> edges_to_replace;
+
+        // find all edges crossing existing collinear edges
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            cell_t* c = &(*it);
+            halfedge_t* h_start = c->halfedge();
+            if (!h_start) continue;
+
+            halfedge_t* h = h_start;
+            do {
+                node_t* n1 = h->node();
+                node_t* n2 = h->twin()->node();
+
+                if (!n1 || !n2) continue;
+
+                coords_t A = n1->coords();
+                coords_t B = n2->coords();
+                coords_t AB = B - A;
+                double ab2 = AB.squaredNorm();
+                if (ab2 < 1e-12) continue;
+
+                for (auto nit = dcel_.nodes_begin(); nit != dcel_.nodes_end(); ++nit) {
+                    node_t* P = &(*nit);
+                    if (P == n1 || P == n2) continue;
+
+                    coords_t p = P->coords();
+                    if (!fdapde::internals::collinear(A, p, B)) continue;
+
+                    coords_t AP = p - A;
+                    double t = AB.dot(AP) / ab2;
+                    if (t > 1e-6 && t < 1.0 - 1e-6) {
+                        if (!edges_to_replace.count(h) && !edges_to_replace.count(h->twin())) {
+                            edges_to_replace.insert(h);
+                        }
+                        break;
+                    }
+                }
+
+                h = h->next();
+            } while (h && h != h_start);
+        }
+
+        // substitute problematic edges with collinear chains
+        for (halfedge_t* h : edges_to_replace) {
+            node_t* A = h->node();
+            node_t* B = h->twin()->node();
+            if (!A || !B) continue;
+            std::cout << "h removed: " << h->id() << std::endl;
+            dcel_.remove_edge(h);
+        }
+    }
+
+
+    void insert_collinear_chain(node_t* A, node_t* B) {
+        coords_t pA = A->coords();
+        coords_t pB = B->coords();
+        coords_t AB = pB - pA;
+        double ab_norm2 = AB.squaredNorm();
+
+        std::vector<std::pair<double, node_t*>> intermediate;
+
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            node_t* P = &(*it);
+            if (P == A || P == B) continue;
+            coords_t p = P->coords();
+            if (!fdapde::internals::collinear(pA, p, pB)) continue;
+            coords_t AP = p - pA;
+            double t = AB.dot(AP) / ab_norm2;
+            if (t > 1e-6 && t < 1.0 - 1e-6) {
+                intermediate.emplace_back(t, P);
+            }
+        }
+
+        std::sort(intermediate.begin(), intermediate.end(),
+                [](const std::pair<double, node_t*>& a, const std::pair<double, node_t*>& b) {
+                    return a.first < b.first;
+                });
+
+        // Construct chain A → P1 → ... → Pk → B
+        node_t* prev = A;
+        for (auto& [_, curr] : intermediate) {
+            halfedge_t* h1 = prev->halfedge();
+            halfedge_t* h2 = curr->halfedge();
+            if (h1 && h2) {
+                halfedge_t* h_new = dcel_.insert_edge(h1, h2);
+                h_new->set_subsegment(true);
+                h_new->twin()->set_subsegment(true);
+            }
+            prev = curr;
+        }
+        // Connect last point to B
+        halfedge_t* h1 = prev->halfedge();
+        halfedge_t* h2 = B->halfedge();
+        if (h1 && h2) {
+            halfedge_t* h_new = dcel_.insert_edge(h1, h2);
+            h_new->set_subsegment(true);
+            h_new->twin()->set_subsegment(true);
+        }
+    }
+
 
     // function to divide the boundary points into vertex points and collinear points 
     Eigen::Matrix<double, Eigen::Dynamic, 2>  split_boundary_points(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary) {
@@ -317,9 +597,49 @@ class Delaunay {
         return vertex_points;
     }
 
+    Eigen::Matrix<double, Eigen::Dynamic, 2> split_boundary_points_with_attachments(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundary_vertices) 
+    {
+        std::list<Eigen::Matrix<double, 1, 2>> vertex_points_list;
+
+        // Definizione locale del comparatore per righe
+        auto row_matrix_less = [](const Eigen::Matrix<double, 1, 2>& a,const Eigen::Matrix<double, 1, 2>& b) -> bool 
+        {
+            if (std::abs(a(0) - b(0)) > 1e-10) return a(0) < b(0);
+            return a(1) < b(1) - 1e-10;
+        };
+
+        std::set<Eigen::Matrix<double, 1, 2>, decltype(row_matrix_less)> internal_points_set(row_matrix_less);
+
+        // Costruisce il set dei punti interni
+        for (int j=1; j< boundary_vertices.size(); ++j) 
+            for (int i = 0; i < boundary_vertices[j].rows(); ++i) 
+                internal_points_set.insert(boundary_vertices[j].row(i));
+
+        int n = boundary_vertices[0].rows();
+        // Scorre i punti del bordo esterno
+        for (int i = 0; i < n; ++i) {
+            const auto& point = boundary_vertices[0].row(i);
+            const auto& point_prev = boundary_vertices[0].row((i - 1 + n) % n);
+            const auto& point_next = boundary_vertices[0].row((i + 1) % n);
+            bool is_vertex = !fdapde::internals::collinear(point_prev, point, point_next);
+            bool is_attachment = internal_points_set.find(point) != internal_points_set.end();
+            if (is_vertex || is_attachment)
+                vertex_points_list.push_back(point);
+        }
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> vertex_points(vertex_points_list.size(), 2);
+        int i = 0;
+        for (const auto& point : vertex_points_list) {
+            vertex_points.row(i++) = point;
+        }
+        return vertex_points;
+    }
+
+
     void complete_boundary(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_vertices ) {
         if(boundary.rows()==boundary_vertices.rows()) return; //if the boundary is already complete we do not need to do anything
 
+        std::cout << "in COMPLETE!!" << std::endl;
         auto row_in_matrix = [](const Eigen::Matrix<double, 1, embed_dim>& row, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& mat) -> bool {
             for (int i = 0; i < mat.rows(); ++i) {
                 if (mat.row(i).isApprox(row))
@@ -328,44 +648,189 @@ class Delaunay {
             return false;
         };
         
-        int j=0;
+        /*int j=0;
         int k=0;
         for(int i=0; i < boundary.rows(); i=j){
             if(!row_in_matrix(boundary.row(i), boundary_vertices)){
                 j=i;
                 coords_t n1= boundary_vertices.row((k-1+ boundary_vertices.rows())%boundary_vertices.rows());
                 coords_t n2= boundary_vertices.row(k%boundary_vertices.rows());
-                std::cout << n1.transpose() << " " << n2.transpose() << std::endl;
-                node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, boundary.row(j)));
+                std::cout << "in for " << boundary.row(j).transpose() << std::endl;
+                if(dcel_.find_node(boundary.row(j))){
+                    j++;
+                    k++;
+                    continue;
+                }
+
                 halfedge_t* e= dcel_.find_halfedge_between(n1, n2);
+                node_t* m;
+                std::cout << "n1: " << n1 << " n2: " << n2 << std::endl;
                 if(!e)
                     e= dcel_.find_halfedge_between(n1, boundary.row(0));
-                std::cout << e->id() << std::endl;
+                if(e->on_boundary()){
+                    m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, boundary.row(j)));
+                }
+                else
+                    m = dcel_.insert_node(node_t(dcel_.n_nodes(), false, boundary.row(j)));
                 halfedge_t* prev = e->prev();
-                // Subdivide the triangle adjacent to edge e by inserting m
-                add_triangle(e, std::vector<node_t*> {m});
-                halfedge_t* h1 = e->next()->twin();  
-                halfedge_t* h2 = e->prev()->twin();
-                // Subdivide the opposite triangle (twin) by connecting m
-                add_triangle(prev, std::vector<node_t*> {m});
+                halfedge_t* next = e->next();
+                halfedge_t* twin_prev = e->twin()->prev();
+                halfedge_t* h1 = dcel_.emplace_halfedge_(m, true);
+                h1->set_cell(next->cell());
+                dcel_.insert_edge(next, h1);
+                h1->twin()->set_subsegment(true);
+                halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);
+                h2->set_subsegment(true);
+                h2->twin()->set_subsegment(true);
+                dcel_.insert_edge(prev,h1);
                 // Remove the encroached edge from the DCEL
                 dcel_.remove_edge(e);
+                
+                if(!h1->on_boundary()) {
+                    dcel_.insert_edge(twin_prev, h2->twin());
+                }
+
                 ++j;
                 
                 while(j<boundary.rows() && !row_in_matrix(boundary.row(j), boundary_vertices)){
-                    m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, boundary.row(j)));
                     e = h1;
+                    std::cout << "in while " << boundary.row(j).transpose() << std::endl;
+                    if(dcel_.find_node(boundary.row(j))){
+                        j++;
+                        continue;
+                    }
+                    else{
+                    if(e->on_boundary())
+                        m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, boundary.row(j)));
+                    else
+                        m = dcel_.insert_node(node_t(dcel_.n_nodes(), false, boundary.row(j)));
+                    
                     prev = e->prev();
-                    add_triangle(e, std::vector<node_t*> {m});
-                    h1 = e->next()->twin();  
-                    h2 = e->prev()->twin();
-                    add_triangle(prev, std::vector<node_t*> {m});
+                    next = e->next();
+                    twin_prev = e->twin()->prev();
+                    h1 = dcel_.emplace_halfedge_(m, true);
+                    h1->set_cell(next->cell());
+                    dcel_.insert_edge(next, h1);
+                    h1->twin()->set_subsegment(true);
+                    h2 = dcel_.insert_edge(prev->next(), h1);
+                    h2->set_subsegment(true);
+                    h2->twin()->set_subsegment(true);
+                    dcel_.insert_edge(prev,h1);
                     dcel_.remove_edge(e);
+                    if(!h1->on_boundary()) {
+                        dcel_.insert_edge(twin_prev, h2->twin());
+                    }
+
                     ++j;
+                    }
                 }
 
             }
             else {++j; ++k;}
+        }*/
+        int j = 0;
+        int k = 0;
+        coords_t last_coords = boundary_vertices.row((boundary_vertices.rows() - 1)).transpose();
+
+        for (int i = 0; i < boundary.rows(); i = j) {
+            if (!row_in_matrix(boundary.row(i), boundary_vertices)) {
+                j = i;
+
+                // n1 = precedente punto del bordo completo
+                coords_t n1 = last_coords;
+
+                // n2 = punto successivo (già nel bordo)
+                coords_t n2 = boundary_vertices.row(k % boundary_vertices.rows()).transpose();
+                std::cout << "n1: " << n1.transpose() << " n2: " << n2.transpose() << std::endl;
+                // p = punto intermedio da inserire
+                coords_t p = boundary.row(j).transpose();
+                std::cout << "p: " << p.transpose() << std::endl;
+
+                if (dcel_.find_node(p)) {
+                    last_coords = p;
+                    ++j;
+                    //if(!dcel_.find_node(p)->on_boundary())
+                    //    ++k;
+                    continue;
+                }
+
+                // Trova e rimuovi l’edge che stava tra n1 e n2
+                halfedge_t* e = dcel_.find_halfedge_between(n1, n2);
+                if (!e) e = dcel_.find_halfedge_between(n1, boundary.row(0)); // fallback (anche se dovrebbe essere orientato)
+                if (!e) {
+                    std::cerr << "Errore: edge mancante tra " << n1.transpose() << " e " << n2.transpose() << std::endl;
+                    return;
+                }
+
+                node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), e->on_boundary(), p));
+
+                // Salva i puntatori
+                halfedge_t* prev = e->prev();
+                halfedge_t* next = e->next();
+                halfedge_t* twin_prev = e->twin()->prev();
+
+                // Inserisci i due nuovi lati
+                halfedge_t* h1 = dcel_.emplace_halfedge_(m, true);
+                h1->set_cell(next->cell());
+                dcel_.insert_edge(next, h1);
+                h1->twin()->set_subsegment(true);
+
+                halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);
+                h2->set_subsegment(true);
+                h2->twin()->set_subsegment(true);
+
+                dcel_.insert_edge(prev, h1);
+                dcel_.remove_edge(e);
+
+                if (!h1->on_boundary()) {
+                    dcel_.insert_edge(twin_prev, h2->twin());
+                }
+
+                last_coords = p;
+                ++j;
+
+                // gestisci altri punti consecutivi da inserire tra n1 e n2
+                while (j < boundary.rows() && !row_in_matrix(boundary.row(j), boundary_vertices)) {
+                    coords_t p = boundary.row(j).transpose();
+                    if (dcel_.find_node(p)) {
+                        last_coords = p;
+                        ++j;
+                        continue;
+                    }
+                    
+                    std::cout << "p: " << p.transpose() << std::endl;
+
+                    node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), h1->on_boundary(), p));
+
+                    e=h1;
+                    prev = e->prev();
+                    next = e->next();
+                    twin_prev = e->twin()->prev();
+
+                    h1 = dcel_.emplace_halfedge_(m, true);
+                    h1->set_cell(next->cell());
+                    dcel_.insert_edge(next, h1);
+                    h1->twin()->set_subsegment(true);
+
+                    h2 = dcel_.insert_edge(prev->next(), h1);
+                    h2->set_subsegment(true);
+                    h2->twin()->set_subsegment(true);
+                    dcel_.insert_edge(prev, h1);
+                    dcel_.remove_edge(e);
+
+                    if (!h1->on_boundary()) {
+                        dcel_.insert_edge(twin_prev, h2->twin());
+                    }
+
+                    last_coords = p;
+                    ++j;
+                }
+
+            } else {
+                last_coords = boundary.row(i).transpose();
+                ++j;
+                ++k;
+            }
         }
 
     }
@@ -527,7 +992,8 @@ class Delaunay {
     // function to mark the cavity during insertion
     void mark_cavity(node_t* u, halfedge_t* h, std::vector<halfedge_t*>& D, std::vector<halfedge_t*>& C) {
         //if we reach the boundary we automatically create the triangle
-        if(h->on_boundary()){
+        //if(h->on_boundary()){
+        if(h->is_subsegment()){
             C.push_back(h);  
             return;
         }
@@ -569,8 +1035,10 @@ class Delaunay {
         std::unordered_set<halfedge_t*> halfedges_to_check;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it,++it) {
             //we can already exclude the edges of the triangulation being automatically locally delaunay
-            if(!it->on_boundary())
+            if(!it->is_subsegment()) {
                 halfedges_to_check.insert(&(*it));
+                std::cout << "Halfedge to check: " << it->id() << std::endl;
+            }
         }
         // flip algorithm
         while (!halfedges_to_check.empty()) {
@@ -596,13 +1064,13 @@ class Delaunay {
             
                 if (new_edge) {
                     // Inserting the new halfedges created by the flip into the list to check
-                    if(!new_edge->prev()->on_boundary())
+                    if(!new_edge->prev()->is_subsegment())
                         halfedges_to_check.insert(new_edge->prev());
-                    if(!new_edge->next()->on_boundary())
+                    if(!new_edge->next()->is_subsegment())
                         halfedges_to_check.insert(new_edge->next());
-                    if(!new_edge->twin()->prev()->on_boundary())
+                    if(!new_edge->twin()->prev()->is_subsegment())
                         halfedges_to_check.insert(new_edge->twin()->prev());
-                    if(!new_edge->twin()->next()->on_boundary())
+                    if(!new_edge->twin()->next()->is_subsegment())
                         halfedges_to_check.insert(new_edge->twin()->next());
                 }
             }
@@ -638,8 +1106,8 @@ class Delaunay {
     // function that checks if edge defined by halfedge h is seditious
     // if it is, it is the triangle's shortest edge since its oppoing angle is < 60 degrees and the triangle is isosceles
     bool is_edge_seditious(halfedge_t* h) {
-        if (h->on_boundary()) return false;  // boundary edges can't be seditious
-        if (!(h->prev()->on_boundary() && h->next()->on_boundary())) return false;  
+        if (h->is_subsegment()) return false;  // boundary edges can't be seditious
+        if (!(h->prev()->is_subsegment() && h->next()->is_subsegment())) return false;  
 
         coords_t a = h->node()->coords();
         coords_t b = h->next()->node()->coords();
@@ -667,6 +1135,7 @@ class Delaunay {
         for (auto it = encroached_edges.begin(); it != encroached_edges.end(); ) {
             halfedge_t* e = *it;
             it = encroached_edges.erase(it);  // remove the edge from the set to avoid reprocessing
+            encroached_edges.erase(e->twin());  // also remove the twin edge (subsegment case)
             if (!e) continue;
             std::cout << "Checking encroached edge: " << e->id() << std::endl;
             // Proceed only if none of the adjacent edges are "seditious" (i.e., dangerous to split)
@@ -686,7 +1155,8 @@ class Delaunay {
     void split_subsegment(halfedge_t* e, std::unordered_set<halfedge_t*>& boundary_edges, std::unordered_set<halfedge_t*>& encroached_edges, 
         std::unordered_set<cell_t*>& bad_triangles, double rho_bar) {
         
-        boundary_edges.erase(e);  // Remove the edge from the boundary edges set
+        boundary_edges.erase(e);  // remove the edge from the boundary edges set
+        boundary_edges.erase(e->twin());  // also remove the twin edge (subsegment case)
 
         // Extract the two endpoints of the edge e and the third vertex forming the adjacent triangle
         node_t* a = e->node();                
@@ -695,7 +1165,7 @@ class Delaunay {
         coords_t split_pt;                    // the point where the segment will be split
 
         // Case 1: acute angle at vertex b and e->next is on boundary
-        if (e->next()->on_boundary() && fdapde::internals::is_angle_acute(a->coords(), b->coords(), c->coords())) {
+        if (e->next()->is_subsegment() && fdapde::internals::is_angle_acute(a->coords(), b->coords(), c->coords())) {
             coords_t split_pt_ref = c->coords();
             double r = (split_pt_ref - b->coords()).norm();  
             coords_t ab = a->coords() - b->coords();
@@ -711,32 +1181,62 @@ class Delaunay {
         else {
             split_pt = 0.5 * (a->coords() + b->coords());     // midpoint of segment ab
         }
-         // Insert the new node into the DCEL
-        node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, split_pt));
-        halfedge_t* prev = e->prev();
-        // Subdivide the triangle adjacent to edge e by inserting m
-        add_triangle(e, std::vector<node_t*> {m});
-        halfedge_t* h1 = e->next()->twin();  
-        halfedge_t* h2 = e->prev()->twin();
+        // Insert the new node into the DCEL
+        node_t* m;
+        if(e->on_boundary()) 
+            m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, split_pt));
+        else
+            m = dcel_.insert_node(node_t(dcel_.n_nodes(), false, split_pt));
 
+        halfedge_t* prev = e->prev();
+        halfedge_t* twin_prev = e->twin()->prev();
+        halfedge_t* next = e->next();
+        
         // Remove both affected triangles from the set of bad triangles
         bad_triangles.erase(e->cell());
         bad_triangles.erase(e->twin()->cell());
-        
-        // Subdivide the opposite triangle (twin) by connecting m
-        add_triangle(prev, std::vector<node_t*> {m});
+
+        halfedge_t* h1 = dcel_.emplace_halfedge_(m, true);
+        h1->set_cell(next->cell());
+        dcel_.insert_edge(next, h1);
+        h1->twin()->set_subsegment(true);
+        halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);
+        h2->set_subsegment(true);
+        h2->twin()->set_subsegment(true);
+        dcel_.insert_edge(prev,h1);
         // Remove the encroached edge from the DCEL
         dcel_.remove_edge(e);
+        
+        if(is_bad_triangle(h1->cell(), rho_bar)) {
+            bad_triangles.insert(h1->cell());
+        }
+        if(is_bad_triangle(h2->cell(), rho_bar)) {
+            bad_triangles.insert(h2->cell());
+        }
+        
+        if(!h1->on_boundary()) {
+            dcel_.insert_edge(twin_prev, h2->twin());
+            if(is_bad_triangle(h1->twin()->cell(), rho_bar)) {
+                bad_triangles.insert(h1->twin()->cell());
+            }
+            if(is_bad_triangle(h2->twin()->cell(), rho_bar)) {
+                bad_triangles.insert(h2->twin()->cell());
+            } 
+        }
+        
         // Perform local flips if necessary to maintain Delaunay property
         flip_Ruppert(encroached_edges, bad_triangles, rho_bar);
 
         // After inserting m, recheck the two new boundary-adjacent edges for possible encroachment
-        if (h1->on_boundary() && h1->cell())  {
-            boundary_edges.insert(h1);
+        boundary_edges.insert(h1);
+        boundary_edges.insert(h2);
+        if (!h1->on_boundary())  {
+            boundary_edges.insert(h1->twin());
         }
-        if (h2->on_boundary() && h2->cell()) {
-            boundary_edges.insert(h2);
+        if (!h2->on_boundary()) {
+            boundary_edges.insert(h2->twin());
         }
+        
         for(auto it = boundary_edges.begin(); it != boundary_edges.end(); ++it) {
             halfedge_t* e = *it;
             if (check_encroachment(e)) {
@@ -852,7 +1352,8 @@ class Delaunay {
         // Check whether the circumcenter c encroaches any boundary segment of the triangle cf
         for (halfedge_t* e : {e1, e2, e3}) {
 
-            if (e->on_boundary() && e->cell()) {
+            //if (e->on_boundary() && e->cell()) {
+            if(e->is_subsegment() && e->cell()) {
                 if (check_encroachment(e, c)) {
                     // Only split if the edge and its neighborhood is not marked as "seditious"
                     if (!is_edge_seditious(e->next()) && !is_edge_seditious(e->prev()) &&
@@ -884,7 +1385,8 @@ class Delaunay {
 
         std::unordered_set<halfedge_t*> halfedges_to_check;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it,++it) {
-            if(!it->on_boundary())
+            //if(!it->on_boundary())
+            if(!it->is_subsegment())
                 halfedges_to_check.insert(&(*it));
         }
 
@@ -915,23 +1417,27 @@ class Delaunay {
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(prev, twin_prev);
                 std::cout <<"new edge: " << new_edge->id() << std::endl;
-                std::cout << "new edge twin" << new_edge->twin()->id() << std::endl;
+                std::cout << "new edge twin: " << new_edge->twin()->id() << std::endl;
+                std::cout << "new edge cell: " << new_edge->cell()->id() << std::endl;
+                std::cout << "new edge prev: " << new_edge->prev()->id() << std::endl;
+                std::cout << "new edge prev cell: " << new_edge->prev()->cell()->id() << std::endl;
                 std::cout << "FLIP RUPPERT" << std::endl;
             
                 if (new_edge) {
-                    if(!new_edge->prev()->on_boundary()){
+                    if(!new_edge->prev()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->prev());
                         std::cout << "prev: " << new_edge->prev()->id() << std::endl;
                     }
-                    if(!new_edge->next()->on_boundary()){
+                    if(!new_edge->next()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->next());
                         std::cout << "next: " << new_edge->next()->id() << std::endl;
+                        std::cout << "next cell: " << new_edge->next()->cell()->id() << std::endl;
                     }
-                    if(!new_edge->twin()->prev()->on_boundary()){
+                    if(!new_edge->twin()->prev()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->twin()->prev());
                         std::cout << "twin_prev: " << new_edge->twin()->prev()->id() << std::endl;
                     }
-                    if(!new_edge->twin()->next()->on_boundary()){
+                    if(!new_edge->twin()->next()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->twin()->next());
                         std::cout << "twin_next: " << new_edge->twin()->next()->id() << std::endl;
                     }
@@ -940,20 +1446,20 @@ class Delaunay {
                         if (bad_triangles.count(new_edge->cell()) == 0)
                             bad_triangles.insert(new_edge->cell());
                     }
-                    if(new_edge->prev()->on_boundary() && new_edge->prev()->cell() && check_encroachment(new_edge->prev())){
+                    if(new_edge->prev()->is_subsegment() && new_edge->prev()->cell() && check_encroachment(new_edge->prev())){
                         encroached_edges.insert(new_edge->prev());
                     }
-                    if(new_edge->next()->on_boundary() && new_edge->next()->cell() && check_encroachment(new_edge->next())){
+                    if(new_edge->next()->is_subsegment() && new_edge->next()->cell() && check_encroachment(new_edge->next())){
                         encroached_edges.insert(new_edge->next());
                     }
                     if(is_bad_triangle(new_edge->twin()->cell(), rho_bar)){
                         if (bad_triangles.count(new_edge->twin()->cell()) == 0)
                             bad_triangles.insert(new_edge->twin()->cell());
                     }
-                   if(new_edge->twin()->prev()->on_boundary() && new_edge->twin()->prev()->cell() && check_encroachment(new_edge->twin()->prev())){
+                   if(new_edge->twin()->prev()->is_subsegment() && new_edge->twin()->prev()->cell() && check_encroachment(new_edge->twin()->prev())){
                         encroached_edges.insert(new_edge->twin()->prev());
                     }
-                    if(new_edge->twin()->next()->on_boundary() && new_edge->twin()->next()->cell() && check_encroachment(new_edge->twin()->next())){
+                    if(new_edge->twin()->next()->is_subsegment() && new_edge->twin()->next()->cell() && check_encroachment(new_edge->twin()->next())){
                         encroached_edges.insert(new_edge->twin()->next());
                     }
                 }
@@ -966,7 +1472,7 @@ class Delaunay {
     void dig_cavity(node_t* u, halfedge_t* vw, std::unordered_set<halfedge_t*>& encroached_edges,
         std::unordered_set<cell_t*>& bad_triangles, double rho_bar) { 
         //if we are on the boundary we add the triangle  
-        if(vw->on_boundary()){
+        if(vw->is_subsegment()){
             add_triangle(vw,std::vector<node_t*> {u});
             auto it_last = std::prev(dcel_.cells_end());  
             cell_t* t = &(*it_last);

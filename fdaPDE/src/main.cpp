@@ -34,32 +34,65 @@ double rho_from_min_angle(double theta_min_deg) {
 
 int main() {
     
-    Eigen::Matrix<double, 24, 2> boundary; 
+    Eigen::Matrix<double, 12, 2> boundary; 
     boundary << 
-                15.0, 0.0,
+                //15.0, 0.0,  
                 20.0, 0.0,
-                25.0, 0.0,
+                //25.0, 0.0,
                 30.0, 0.0,
-                35.0, 0.0,
+                //35.0, 0.0,
                 40.0, 0.0, 
-                40.0, 5.0, 
+                //40.0, 5.0, 
                 40.0, 10.0,
-                40.0, 15.0,
+                //40.0, 15.0,
                 40.0, 20.0,
-                35.0, 20.0,
+                //35.0, 20.0,
                 30.0, 20.0,
-                25.0, 20.0,
+                //25.0, 20.0,
                 20.0, 20.0,
-                15.0, 20.0,
+                //15.0, 20.0,
                 10.0, 20.0,
-                5.0, 20.0,
+                //5.0, 20.0,
                 0.0, 20.0,
-                0.0, 15.0,
+                //0.0, 15.0,
                 0.0, 10.0,
-                0.0, 5.0,
+                //0.0, 5.0,
                 0.0, 0.0,
-                5.0, 0.0,
-                10.0, 0.0;  //24;
+                //5.0, 0.0,
+                10.0, 0.0;  
+
+    Eigen::Matrix<double, 7, 2> boundary1;
+    boundary1 << 0., 10.,
+                 10., 10.,
+                 20., 10.,
+                 20., 15.,
+                 20., 20.,
+                 10., 20.,
+                 0., 20.;
+    Eigen::Matrix<double, 7, 2> boundary2;
+    boundary2 << 20., 10.,
+                 30., 10.,
+                 40., 10.,
+                 40., 20.,
+                 30., 20.,
+                 20., 20.,
+                 20, 15.;
+    Eigen::Matrix<double, 7, 2> boundary3;
+    boundary3 << 0., 0.,
+                 10., 0.,
+                 20., 0.,
+                 20., 5.,
+                 20., 10.,
+                 10., 10., 
+                 0., 10.;
+    Eigen::Matrix<double, 7,2> boundary4;
+    boundary4 << 20., 0.,
+                 30.,0.,
+                 40., 0.,
+                 40., 10.,
+                 30., 10.,
+                 20., 10.,
+                 20, 5.;
    
 
     
@@ -107,9 +140,36 @@ int main() {
                 0.0, 8.0,
                 0.0, 6.0,
                 0.0, 4.0,
-                0.0, 3.0,
+                0.0, 2.0,
                 0.0, 0.0,
                 3.0, 0.0;
+
+    Eigen::Matrix<double, 9, 2> boundary_stairs1;
+    boundary_stairs1 <<    
+                6.0, 0.0,  
+                9.0, 0.0, 
+                12.0, 0.0,
+                12.0, 2.0, 
+                9.0, 2.0,  
+                6.0, 2.0,
+                0., 2.0,
+                0., 0.0, 
+                3.0, 0.0;
+    Eigen::Matrix<double, 13, 2> boundary_stairs2;
+    boundary_stairs2 << 0., 2.,
+    6., 2.,
+    9., 2.,
+    9., 4.,
+    8.0, 4.0,
+    7.0, 4.0,
+    6.0, 4.0,  
+    6.0, 6.0,
+    3.0, 6.0,
+    3.0, 8.0,
+    0.0, 8.0,
+    0.0, 6.0,
+    0.0, 4.0;
+
     
 
     Eigen::Matrix<double, 14, 2> internal;
@@ -348,8 +408,8 @@ int main() {
     20., 5.;
     Eigen::Matrix<double, 4, 2> hole2;
     hole2 << 3.,4.,
-    3., 11.,
-    6., 11.,
+    3., 8.,
+    6., 8.,
     6., 4.;
     Eigen::Matrix<double, 5, 2> hole4;
     hole4 << 36.5, 15.,
@@ -357,9 +417,16 @@ int main() {
     36.5, 18.,
     38.5, 18.,
     38.5, 15.;
+    Eigen::Matrix<double, 5, 2> hole5;
+    hole5 << 30.5, 5.,
+    32.5, 5.,
+    38.5, 5.,
+    38.5, 8.,
+    30.5, 8.;
+    
     
     Eigen::Matrix<double, 1, 2> internal1;
-    internal1 << 18.9533, 16.7049;
+    internal1 << 35., 4.5;
     
     Eigen::Matrix<double, 6, 2> hole_stairs;
     hole_stairs << 4.0, 2.5,   
@@ -377,9 +444,22 @@ int main() {
     1.2, 7.6,     // top sinistro
     0.9, 7.1;     // lato curvo sinistro
     
-    Delaunay<2, 2> del(boundary_stairs, 0); //, std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2,hole3,hole4});
-    //del.Ruppert_refinement(1.5);  // Esegui il Ruppert refinement con un raggio minimo di 1.0
+    std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(5);
+    holes[0]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole4, hole2, hole5};
+    holes[1]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
+    holes[2]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole4};
+    holes[3]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2};
+    holes[4]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole5};
+    /*std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(3);
+    holes[0]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {heart_hole};
+    holes[1]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
+    holes[2]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {heart_hole};*/
 
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary, boundary1, boundary2, boundary3, boundary4}, internal1, holes);  //
+    del.Ruppert_refinement(1.5);  // Esegui il Ruppert refinement con un raggio minimo di 1.0
+    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs, boundary_stairs1, boundary_stairs2}, 10, holes);  //
+    //del.Ruppert_refinement(1.5);
+    
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 
 

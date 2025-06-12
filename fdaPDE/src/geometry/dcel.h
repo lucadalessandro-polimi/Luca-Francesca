@@ -99,15 +99,16 @@ template <int LocalDim, int EmbedDim> class DCEL {
         node_t* node_;
         cell_t* cell_;   // cell to which this halfedge belongs to
         std::list<halfedge_t>::iterator it_;   // iterator to the halfedge in the list
+        bool subsegment_ ;  // true if the halfedge needs to be mantained in the mesh
        public:
-        halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr) { }
-        halfedge_t(int id, halfedge_t* prev, halfedge_t* next, halfedge_t* twin, node_t* node) :
-            id_(id), prev_(prev), next_(next), twin_(twin), node_(node) { }
+        halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr), subsegment_(false) { }
+        halfedge_t(int id, halfedge_t* prev, halfedge_t* next, halfedge_t* twin, node_t* node, bool sub=false) :
+            id_(id), prev_(prev), next_(next), twin_(twin), node_(node), subsegment_(sub) { }
         // no twin constructors
-        halfedge_t(int id, halfedge_t* prev, halfedge_t* next, node_t* node) :
-            halfedge_t(id, prev, next, nullptr, node) { }
+        halfedge_t(int id, halfedge_t* prev, halfedge_t* next, node_t* node, bool sub=false) :
+            halfedge_t(id, prev, next, nullptr, node, sub) { }
         // minimal constructor
-        halfedge_t(int id, node_t* node) : halfedge_t(id, nullptr, nullptr, nullptr, node) { }
+        halfedge_t(int id, node_t* node, bool sub= false) : halfedge_t(id, nullptr, nullptr, nullptr, node, sub) { }
 
         // observers
         halfedge_t* prev() const { return prev_; }
@@ -118,6 +119,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         int id() const { return id_; }
         bool on_boundary() const { return (node_->on_boundary() && twin_->node()->on_boundary() && (cell()==nullptr || twin()->cell()==nullptr)); }
         std::list<halfedge_t>::iterator it() const { return it_; }
+        bool is_subsegment() const { return subsegment_; }
         // modifiers
         void set_prev(halfedge_t* prev) { prev_ = prev; }
         void set_next(halfedge_t* next) { next_ = next; }
@@ -126,6 +128,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         void set_cell(cell_t* cell) { cell_ = cell; }
         void set_id(int id) {id_=id;}
         void set_it(std::list<halfedge_t>::iterator it) { it_ = it; }
+        void set_subsegment(bool sub) { subsegment_ = sub; }
 
         // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
         struct circulator {
@@ -249,13 +252,14 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
     // overloading of make_polygon to also add holes
     static DCEL<local_dim, embed_dim> make_polygon(
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_entry,
-        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes_entry={}) {
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes={}) {
     
         fdapde_assert(boundary_entry.cols() == embed_dim);
         DCEL<local_dim, embed_dim> dcel;
 
-        Eigen::Matrix<double, Dynamic, Dynamic> boundary=boundary_entry;
+        // check if the boundaries are counterclockwise sorted
+        /*Eigen::Matrix<double, Eigen::Dynamic, embed_dim> boundary=boundary_entry;
         if (!internals::are_2d_counterclockwise_sorted(boundary_entry)) {
             int n_nodes = boundary_entry.rows();
             for (int i = 0; i < n_nodes; ++i)
@@ -264,14 +268,14 @@ template <int LocalDim, int EmbedDim> class DCEL {
         std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes;
         for (const auto& hole : holes_entry) {
             if (internals::are_2d_counterclockwise_sorted(hole)) {
-                Eigen::Matrix<double, Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
+                Eigen::Matrix<double, Eigen::Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
                 for (int i = 0; i < hole.rows(); ++i)
                     reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
                 holes.push_back(reversed_hole);
             } else {
                 holes.push_back(hole);
             }
-        }
+        }*/
     
         // external boundary
         int n_nodes = boundary.rows();
@@ -282,7 +286,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // nodes and halfedges for external boundary
         for (int i = 0; i < n_nodes; ++i) {
             node_t* n = dcel.insert_node(node_t(i, true, boundary.row(i)));
-            halfedge_t* h = dcel.emplace_halfedge_(n);
+            halfedge_t* h = dcel.emplace_halfedge_(n, true);
             n->set_halfedge(h);
             h->set_cell(c);
         }
@@ -292,7 +296,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             node_t* n1 = std::addressof(*it);
             node_t* n2 = std::addressof(*((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1)));
             halfedge_t* h1 = n1->halfedge();
-            halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
+            halfedge_t* h2 = dcel.emplace_halfedge_(n2, true); // Twin edge
             h2->set_cell(nullptr);
             h2->set_twin(h1);
             h1->set_twin(h2);
@@ -306,18 +310,52 @@ template <int LocalDim, int EmbedDim> class DCEL {
             h1->twin()->set_prev(h2->twin());
             h2->twin()->set_next(h1->twin());
         }
+
+        
+        /*int node_offset_bd= n_nodes;
+        auto boundaries_vector = dcel.extract_internal_paths_with_connections_(boundaries);
+        //adding internal segments (fixed regions)
+        for(auto points_matrix: boundaries_vector){
+            int n_nodes= points_matrix.rows();
+            for(auto row: points_matrix.rowwise()){
+                std::cout << "Boundary point: " << row.transpose() << std::endl;
+            }
+            for(int i=1; i< n_nodes-1; ++i){
+                coords_t co= points_matrix.row(i).transpose();
+                if(dcel.find_node(co)) continue;
+                node_t* n1 = dcel.insert_node(node_t(dcel.n_nodes(), false, points_matrix.row(i)));
+                halfedge_t* h1 = dcel.emplace_halfedge_(n1, true);
+                n1->set_halfedge(h1);
+                h1->set_cell(c);
+                std::cout << "node: " << n1->id() << " coords: " << n1->coords().transpose() << std::endl;
+            } 
+            for (int i = 0; i < n_nodes-1; ++i) {
+                coords_t co1= points_matrix.row(i).transpose();
+                coords_t co2= points_matrix.row(i+1).transpose();
+                node_t* n1= dcel.find_node(co1);
+                node_t* n2= dcel.find_node(co2);
+                std::cout << "n1: " << n1->id() << " n2: " << n2->id() << std::endl;
+                if(!dcel.find_halfedge_between(co1,co2)){
+                    halfedge_t* h1 = n1->halfedge();
+                    halfedge_t* h2 = n2->halfedge();
+                    dcel.insert_edge(h1, h2, true);
+                    std::cout << "QUI" << std::endl;
+                }
+            }
+            node_offset_bd += n_nodes -2;
+        }*/
+
     
         // adding holes
-        int node_offset = n_nodes; 
+        int node_offset = dcel.n_nodes(); 
         int hole_index = 1;
     
         for (const auto& hole : holes) {
             int hole_nodes = hole.rows();
-            
             // nodes and halfedges for the hole
             for (int i = 0; i < hole_nodes; ++i) {
                 node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
-                halfedge_t* h = dcel.emplace_halfedge_(n);
+                halfedge_t* h = dcel.emplace_halfedge_(n, true);
                 n->set_halfedge(h);
                 h->set_cell(c);
             }
@@ -327,7 +365,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 node_t* n1 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + i)));
                 node_t* n2 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)));
                 halfedge_t* h1 = n1->halfedge();
-                halfedge_t* h2 = dcel.emplace_halfedge_(n2); // Twin edge
+                halfedge_t* h2 = dcel.emplace_halfedge_(n2, true); // Twin edge
                 h2->set_twin(h1);
                 h1->set_twin(h2);
                 h2->set_cell(nullptr);
@@ -432,6 +470,58 @@ template <int LocalDim, int EmbedDim> class DCEL {
 	    n_nodes_++;
         return std::addressof(nodes_.back());
     }
+    
+    //DA RENDERE PRIVATA
+    std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> extract_internal_paths_with_connections_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries) {
+
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& outer = boundaries[0];
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> results(boundaries.size() - 1); 
+
+        for (size_t r = 1; r < boundaries.size(); ++r) {
+            const Eigen::MatrixXd& region = boundaries[r];
+            std::list<Eigen::Matrix<double, 1, embed_dim>> internal_points;
+            std::list<Eigen::Matrix<double, 1, embed_dim>> boundary_matches;
+            bool first_non_match_found = false;
+            bool post_match_after_nonmatch = false;
+            for (int i = 0; i < region.rows(); ++i) {
+                Eigen::Matrix<double, 1, embed_dim> pt = region.row(i);
+                bool found = false;
+                for (int j = 0; j < outer.rows(); ++j) {
+                    if ((pt - outer.row(j)).norm() < 1e-10) {
+                        boundary_matches.push_back(pt);
+                        found = true;
+                        break;
+                    }
+                }
+               if (!first_non_match_found) {
+                    if (found) {
+                        boundary_matches.push_back(pt);  
+                    } else {
+                        first_non_match_found = true;
+                        internal_points.push_back(boundary_matches.back());
+                        internal_points.push_back(pt);
+                    }
+                } else {
+                    if (found) {
+                        internal_points.push_back(boundary_matches.back()); 
+                        post_match_after_nonmatch = true;
+                        break;  // interrompi il ciclo
+                    } else {
+                        internal_points.push_back(pt); 
+                    }
+                }
+            }
+            Eigen::Matrix<double, Eigen::Dynamic, embed_dim> internal_matrix(internal_points.size(), embed_dim);
+            for(auto it = internal_points.begin(); it != internal_points.end(); ++it) {
+                internal_matrix.row(std::distance(internal_points.begin(), it)) = *it;
+            }
+
+            results[r-1]=internal_matrix;
+        }
+
+        return results;
+    }
+
 
 
  /*   halfedge_t* insert_edge(halfedge_t* v1, halfedge_t* v2) {
@@ -613,6 +703,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     h = emplace_halfedge_(nodes[i]);
                     h->set_cell(c);
             }
+            std::cout << h->id() << std::endl;
             halfedges_to_call[i+2] = h;
         }
         // add edges
@@ -740,6 +831,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         return nullptr;
     }
+
+    node_t* find_node(const coords_t& coords) {
+        for (auto it = nodes_begin(); it != nodes_end(); ++it) {
+            if (it->coords() == coords) {
+                return std::addressof(*it);
+            }
+        }
+        return nullptr;
+    }
     
   
 
@@ -795,8 +895,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 boundary_nodes.row(idx++) = coords.row(i);
             }
         }
-        *this = DCEL::make_polygon(boundary_nodes, holes);
-
+        if(this->nodes_.empty() && this->halfedges_.empty() && this->cells_.empty()) { 
+            *this = DCEL::make_polygon(boundary_nodes, holes);
+        }
+        else{
+            std::cout << "Warning: DCEL is not empty, cannot overwrite with triangulation data." << std::endl;
+        }
         for (int i = 0; i < coords.rows(); ++i) {
             if (markers(i, 0) == 0) {
                 insert_node(typename DCEL::node_t(n_nodes(), false, coords.row(i)));
@@ -842,7 +946,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
             auto cell = cells_list.front();
             cells_list.pop_front();
-
+            
             int id0 = cell(0, 0);
             int id1 = cell(0, 1);
             int id2 = cell(0, 2);
@@ -885,7 +989,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 is_connected[hole_to_connect] = true;
             }
 
-            auto n0 = std::find_if(nodes_.begin(), nodes_.end(),
+            /*auto n0 = std::find_if(nodes_.begin(), nodes_.end(),
                 [&](const node_t& n) { return n.id() == id0; });
             auto n1 = std::find_if(nodes_.begin(), nodes_.end(),
                 [&](const node_t& n) { return n.id() == id1; });
@@ -894,23 +998,36 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
             node_t* p0 = std::addressof(*n0);
             node_t* p1 = std::addressof(*n1);
-            node_t* p2 = std::addressof(*n2);
+            node_t* p2 = std::addressof(*n2);*/
+
+            int row0 = cell(0, 0);
+            int row1 = cell(0, 1);
+            int row2 = cell(0, 2);
+            node_t* p0 = find_node(coords.row(row0));
+            node_t* p1 = find_node(coords.row(row1));
+            node_t* p2 = find_node(coords.row(row2));
 
             if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
                 std::swap(p1, p2);
+                std::cout<< "swapping p1 and p2" << std::endl;
             }
-
+            std::cout << "p0: " << p0->id() << " p1: " << p1->id() << " p2: " << p2->id() << std::endl;
+            std::cout << " p0: " << p0->coords().transpose() << " p1: " << p1->coords().transpose() << " p2: " << p2->coords().transpose() << std::endl;
             halfedge_t* h = find_halfedge_between(p0->coords(), p1->coords());
             bool building_dcel = true; 
             if (h) {
+                std::cout << "qui 1"    << std::endl;
                 add_polygon(h, {p2}, building_dcel);
             } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {
+                std::cout << "qui 2"    << std::endl;
                 add_polygon(h, {p0}, building_dcel);
             } else if ((h = find_halfedge_between(p2->coords(), p0->coords()))) {
+                std::cout << "qui 3"    << std::endl;
                 add_polygon(h, {p1}, building_dcel);
             } else {
                 // there might be 2 or more halfedges departing from same node and belonging to same cell
                 // e.g. if edges belong to boundary, hole and another hole
+                std::cout << "qui 4"    << std::endl;
                 cells_list.push_back(cell);
                 continue;
             }
@@ -953,9 +1070,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     }
                 }
             }
-
             cont++;
-            //if(cont==10) break;
+            //if(cont==1) break;
             
         }
     }
