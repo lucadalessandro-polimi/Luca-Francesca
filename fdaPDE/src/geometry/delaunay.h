@@ -86,9 +86,9 @@ class Delaunay {
             coords_t C = t->halfedge()->next()->node()->coords();
             total_area += fdapde::internals::measure_2d_tri(A, B, C);
         }
-
-        Ruppert_refinement(30.0, 0.5);
-        check_quality(30.0, 0.5);
+        //std::cout<<"AREA RICHIESTA --------------------------------------- : "<<total_area/30<<std::endl;
+        Ruppert_refinement(25.0 , 200);
+        check_quality(25.0, 200);
     }    
     // costructor with given internal points form the user
     // user needs to provide internal points correctly located inside the domain 
@@ -139,6 +139,14 @@ class Delaunay {
             }
         }
 
+        std::cout << "Encroached subsegments:\n";
+        for (halfedge_t* e : encroached_edges) {
+            
+            std::cout << e->id()<<std::endl;
+        }
+
+
+
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             cell_t* t = &(*it);
             double priority = is_bad_triangle(t, rho_bar, max_area);
@@ -159,41 +167,39 @@ class Delaunay {
 
         //while keeps running until the two set are empty and every time a bad triangle is exiting the triangulation
         //the test of the encroached edges runs in order to keep track of the newly created triangulation
-        int cont1 = 0;
-
+        int cont = 0;
         while (true) {
-            if (split_first_encroached_segment(boundary_edges, encroached_edges, bad_triangles, rho_bar, max_area)) {
-                continue;  
-            }
+            if (split_first_encroached_segment(boundary_edges, encroached_edges, bad_triangles, rho_bar, max_area))
+                continue;
 
-            bool did_split_triangle = split_first_bad_triangle(rho_bar, max_area, boundary_edges, encroached_edges, bad_triangles);
-
-            if (did_split_triangle) {
-
-                
-                if (split_first_encroached_segment(boundary_edges, encroached_edges, bad_triangles, rho_bar, max_area)) {
-                    cont1++;
-                    std::cout<<cont1<<std::endl;
-                    continue;  
+            if (split_first_bad_triangle(rho_bar, max_area, boundary_edges, encroached_edges, bad_triangles)) {
+                cont++;
+                std::cout << "Encroached subsegments:\n";
+                for (halfedge_t* e : encroached_edges) {
+                    
+                    std::cout << e->id()<<std::endl;
                 }
+                std::cout << "Bad triangles (priority ≥ 0):\n";
+
+                for (const auto& [priority, t] : bad_triangles) {
+                    std::cout << "  Triangle (priority = " << priority << "): "<<t->id()<<std::endl;
+                }
+                //if(cont == 6) break;
                 continue;
             }
             break;
         }
 
         // final reorder to cut no longer existing id of cells and edges
-        int cont = 0;
+        /*int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
             it->set_id(cont++);
         dcel_.set_n_cells_(cont);
     
         cont = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
-            it->set_id(cont++);
+            it->set_id(cont++);*/
         
-        for (const auto& [priority, t] : bad_triangles) 
-            std::cout<<t->id()<<std::endl;
-
         //json needed for debug
         dcel_.export_to_json("dcel_output.json");
     }
@@ -237,29 +243,30 @@ class Delaunay {
             coords_t B = t->halfedge()->node()->coords();
             coords_t C = t->halfedge()->next()->node()->coords();
 
-            // === Area
+            // === Area (determinante)
             double area = 0.5 * std::abs((B - A).x() * (C - A).y() - (B - A).y() * (C - A).x());
             min_area = std::min(min_area, area);
             max_area = std::max(max_area, area);
 
-            // === Edge lengths
-            double ab = (B - A).norm();
-            double bc = (C - B).norm();
-            double ca = (A - C).norm();
+            // === Squared edge lengths
+            double ab2 = (B - A).squaredNorm();
+            double bc2 = (C - B).squaredNorm();
+            double ca2 = (A - C).squaredNorm();
 
-            min_edge = std::min({min_edge, ab, bc, ca});
-            max_edge = std::max({max_edge, ab, bc, ca});
+            double longest2 = std::max({ab2, bc2, ca2});
+            double longest = std::sqrt(longest2);
 
-            // === Altitudes
-            double ha = 2 * area / bc;
-            double hb = 2 * area / ca;
-            double hc = 2 * area / ab;
-            double min_h = std::min({ha, hb, hc});
-            min_altitude = std::min(min_altitude, min_h);
+            min_edge = std::min(min_edge, std::sqrt(std::min({ab2, bc2, ca2})));
+            max_edge = std::max(max_edge, longest);
 
-            // === Aspect ratio
-            double longest = std::max({ab, bc, ca});
-            double aspect = longest / min_h;
+            // === Altitude relative to longest side only (Triangle-style)
+            double triminaltitude2 = (2 * area) * (2 * area) / longest2;
+            double altitude = std::sqrt(triminaltitude2);
+            min_altitude = std::min(min_altitude, altitude);
+
+            // === Aspect ratio (Triangle-style)
+            double aspect2 = longest2 / triminaltitude2;
+            double aspect = std::sqrt(aspect2);
             max_aspect_ratio = std::max(max_aspect_ratio, aspect);
 
             // === Angles
@@ -318,8 +325,7 @@ class Delaunay {
             std::cout << "  " << std::setw(17) << std::left << range << ":  " << std::setw(8) << count;
             if (++aspect_i % 2 == 0) std::cout << "\n";
             else std::cout << "  |  ";
-        } 
-
+        }
 
         // === Angles
         std::cout << "\n\n  Smallest angle:   " << min_angle << "   |  Largest angle:        " << max_angle << "\n";
@@ -334,6 +340,7 @@ class Delaunay {
 
         std::cout << std::endl;
     }
+
 
 
 
@@ -1271,9 +1278,10 @@ class Delaunay {
     // function that checks if edge defined by halfedge h is seditious
     // if it is, it is the triangle's shortest edge since its oppoing angle is < 60 degrees and the triangle is isosceles
     bool is_edge_seditious(halfedge_t* h) {
+        std::cout<<"SARA SEDICIUSO?: "<<h->id()<<std::endl;
         if (h->is_subsegment()) return false;  // boundary edges can't be seditious
+        
         if (!(h->prev()->is_subsegment() && h->next()->is_subsegment())) return false;  
-
         coords_t a = h->node()->coords();
         coords_t b = h->next()->node()->coords();
         coords_t c = h->prev()->node()->coords();
@@ -1281,12 +1289,18 @@ class Delaunay {
         if (fdapde::internals::angle_between(b,c,a) >= 60) return false; // angle is not too small
         
         // 2 edges of h's cell need to have same length and to be midpoints of another segment 
-        if (fdapde::internals::segment_length(c,a) != fdapde::internals::segment_length(c,b) )  return false;
+        double tol = 1e-6;
+        if (std::abs(fdapde::internals::segment_length(c, a) - fdapde::internals::segment_length(c, b)) > tol)   return false;
+        std::cout<<"SOLO UNO SOPRAVVIVE : "<<h->id()<<std::endl;
         coords_t d = h->prev()->twin()->prev()->node()->coords();  
         coords_t e = h->next()->twin()->next()->next()->node()->coords();
+
         if ( !( fdapde::internals::collinear(c, a, d) && 
-                fdapde::internals::collinear(c, b, e) ) )
-                return false;
+                fdapde::internals::collinear(c, b, e) &&
+                std::abs(fdapde::internals::segment_length(c,a) - fdapde::internals::segment_length(d,a)) < tol &&
+                std::abs(fdapde::internals::segment_length(c,b) - fdapde::internals::segment_length(b,e)) < tol ) )
+            return false;
+
         
         std::cout << "SEDITIOUS EDGE: " << h->id() << std::endl;
         return true;
@@ -1303,9 +1317,9 @@ class Delaunay {
             it = encroached_edges.erase(it);  // remove the edge from the set to avoid reprocessing
             encroached_edges.erase(e->twin());
             if (!e) continue;
-
-            if (!is_edge_seditious(e->next()) && !is_edge_seditious(e->prev()) &&
-                !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
+            std::cout<<"STO LAVORANDO CON : "<<e->id()<<std::endl;
+            if (!is_edge_seditious(e->next()) && !is_edge_seditious(e->prev())) {
+               //&& !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
 
                 split_subsegment(e, boundary_edges, encroached_edges, bad_triangles, rho_bar, max_area);
                 return true;
@@ -1339,9 +1353,10 @@ class Delaunay {
         node_t* b = e->twin()->node();      
         node_t* c = e->prev()->node();      
         coords_t split_pt;                    // the point where the segment will be split
-
+        std::cout << "ab: " << fdapde::internals::segment_length(a->coords(),b->coords()) << std::endl;
+        std::cout << "bc: " << fdapde::internals::segment_length(b->coords(),c->coords()) << std::endl;
         // Case 1: acute angle at vertex b and e->next is on boundary
-        if (e->next()->is_subsegment() && fdapde::internals::is_angle_acute(a->coords(), b->coords(), c->coords())) {
+        if (e->next()->is_subsegment() &&   std::abs(fdapde::internals::segment_length(a->coords(),b->coords())-fdapde::internals::segment_length(b->coords(),c->coords()))/fdapde::internals::segment_length(a->coords(),b->coords()) > 0.1   && fdapde::internals::is_angle_acute(a->coords(), b->coords(), c->coords())) {
             coords_t split_pt_ref = c->coords();
             double r = (split_pt_ref - b->coords()).norm();  
             coords_t ab = a->coords() - b->coords();
@@ -1358,11 +1373,9 @@ class Delaunay {
             split_pt = 0.5 * (a->coords() + b->coords());     // midpoint of segment ab
         }
         // Insert the new node into the DCEL
-        node_t* m;
-        if(e->on_boundary()) 
-            m = dcel_.insert_node(node_t(dcel_.n_nodes(), true, split_pt));
-        else
-            m = dcel_.insert_node(node_t(dcel_.n_nodes(), false, split_pt));
+        node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), e->on_boundary(), split_pt));
+        std::cout << "m: " << m->id() << std::endl;
+        std::cout << "e: " << e->id() << std::endl;
 
         halfedge_t* prev = e->prev();
         halfedge_t* twin_prev = e->twin()->prev();
@@ -1642,7 +1655,6 @@ class Delaunay {
         // Iterate in reverse (lowest priority → highest key value)
         for (auto it = bad_triangles.rbegin(); it != bad_triangles.rend(); ) {
             cell_t* t = it->second;
-
             // Convert reverse_iterator to base iterator (which points to the element AFTER the one we want to erase)
             auto erase_it = std::prev(it.base());
             ++it;  // advance the reverse iterator BEFORE erasing
@@ -1671,50 +1683,50 @@ class Delaunay {
     // Returns true if a refinement was performed.
     bool split_triangle(cell_t* t, std::unordered_set<halfedge_t*>& boundary_edges, std::unordered_set<halfedge_t*>& encroached_edges,
         std::multimap<double, cell_t*>& bad_triangles, double rho_bar, double max_area) {
-        // Get triangle vertices A, B, C
+        
+        halfedge_t* h1 = t->halfedge()->prev();
+        halfedge_t* h2 = t->halfedge();
+        halfedge_t* h3 = t->halfedge()->next();
+
         coords_t A = t->halfedge()->prev()->node()->coords();
         coords_t B = t->halfedge()->node()->coords();
         coords_t C = t->halfedge()->next()->node()->coords();
+
+        double area = fdapde::internals::measure_2d_tri(A, B, C);
+        std::cout<<"STO SPLITTANDO TRIANGOLO CON ID: "<<t->id()<<std::endl;
+        if(area <= max_area){
+            std::cout<<"SONO SULLA PUNTA CON :"<<t->id()<<"CON HALFEDGE PER CAPIRE ------: "<<t->halfedge()->id()<<std::endl;
+            std::cout<<A<<"  "<<B<<" "<<C<<std::endl;
+            for (halfedge_t* h : {h1, h2, h3}) {
+                if(is_edge_seditious(h) || is_edge_seditious(h->twin()))  return true;
+            }
+        }
 
         // Compute the circumcenter of triangle ABC
         coords_t c = fdapde::internals::circumcenter(A, B, C); 
         
         // Understanding where the circumcenter is actually falling 
-        std::cout << "Circumcenter: " << c.transpose() << std::endl;
-        std::cout << "Triangle edges: " << t->halfedge()->id() << " " << t->halfedge()->next()->id() << " " << t->halfedge()->prev()->id() << std::endl;
         cell_t* cf = find_triangle_local(c, t); 
         halfedge_t* e1 = cf->halfedge()->prev();
         halfedge_t* e2 = cf->halfedge();
         halfedge_t* e3 = cf->halfedge()->next();
-        
+        std::cout<<"ANALIZZZANDO IL TRINAGOLO ID : "<<t->id()<<" MENTRE IL CIRC STA IN : "<<cf->id()<<std::endl;
         // Check whether the circumcenter c encroaches any boundary segment of the triangle cf
+        bool flag = false;
         for (halfedge_t* e : {e1, e2, e3}) {
-
-            //if (e->on_boundary() && e->cell()) {
-            if(e->is_subsegment() && e->cell()) {
-                if (check_encroachment(e, c)) {
-                    // Only split if the edge and its neighborhood is not marked as "seditious"
-                    if (!is_edge_seditious(e->next()) && !is_edge_seditious(e->prev()) &&
-                        !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
-                        
-                        // Split the encroached subsegment instead of inserting the circumcenter
-                        //split_subsegment(e, boundary_edges, encroached_edges, bad_triangles, rho_bar, max_area);
-                        if (encroached_edges.count(e) == 0)
-                        encroached_edges.insert(e);
-                        return false;
-                    }
-
-                    // If the segment is seditious, do nothing now (will be retried later)
-                    return false;
-                }
+            if(e->is_subsegment() && e->cell() && check_encroachment(e, c)) {
+                    if (encroached_edges.count(e) == 0)
+                        encroached_edges.insert(e);     
+                    flag = true;  
             }
         }
+        if (flag) return false;
 
         // If no encroachment is detected, insert the circumcenter into the mesh
         node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
         // Insert the new node into the triangulation (splitting the containing triangle)
         insert_vertex(circ, cf, encroached_edges, bad_triangles, rho_bar, max_area);
-
+        std::cout<<"HO INSERITO CON SUCCESSO: "<<circ->id()<<std::endl;
         return true;
     }
 
