@@ -413,6 +413,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
    
     // to be removed, to export DCEL to file json
+    // to be removed, to export DCEL to file json
     void export_to_json(const std::string& filename) {
         json j;  
         j["nodes"] = json::array();
@@ -430,6 +431,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             edge["from"] = it->node()->id();
             edge["to"] = it->next()->node()->id();
             edge["twin"] = it->twin() ? it->twin()->id() : -1; 
+            edge["subsegment"] = it->is_subsegment();
             j["edges"].push_back(edge);
         }
         j["cells"] = json::array();
@@ -703,7 +705,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
                     h = emplace_halfedge_(nodes[i]);
                     h->set_cell(c);
             }
-            std::cout << h->id() << std::endl;
             halfedges_to_call[i+2] = h;
         }
         // add edges
@@ -1034,44 +1035,37 @@ template <int LocalDim, int EmbedDim> class DCEL {
               
             if(!all_connected){
                 // find the cell that connects all the halfedges that don't belong to triangles yet 
-                for(auto it = cells_begin(); it!= cells_end(); ++it){
-                    int cont=0;
-                    halfedge_t* h= it->halfedge();
-                    do{
-                        cont++;
-                        h=h->next();
-                    }while(h!=it->halfedge());
-                    if(cont>3){  // cell is not a triangle
-                        longest_cell= &(*it);
-                        break;
-                    }
-
+                halfedge_t* h_last= &(*std::prev(halfedges_end()));  
+                int cont=1;
+                halfedge_t* h= h_last->next();
+                do{
+                    cont++;
+                    h=h->next();
+                }while(h!=h_last);
+                if(cont>3){  // cell is not a triangle
+                    longest_cell= h_last->cell();
                 }
+                else if(cont==3)
+                    longest_cell= h_last->twin()->cell();
 
-                auto it = halfedges_.begin();
-                // go to the first half-edge of the internal boundary (hole)
-                for (int i = 0; i < n_boundary_external*2; ++i)
-                    ++it;
-                for (int k = 0; k < holes.size(); ++k) {
-                    // if the hole is not connected yet, change the cell of the halfedges to longest_cell
-                    if (!is_connected[k]) { 
-                        for (int h = 0; h < holes[k].rows(); ++h) {
-                            it->set_cell(longest_cell);  
-                            ++it;
-                        }
-                        // disregard the twins since they must have null cell
-                        for (int h = 0; h < holes[k].rows(); ++h) {
-                            it++;
-                        }
-                    } else {
-                        // skip halfedges of the hole
-                        for (int h = 0; h < holes[k].rows()*2; ++h)
-                            ++it;
+
+                for(int k = 0; k < holes.size(); ++k) {
+                    if(!is_connected[k]){  
+                        coords_t co1= holes[k].row(0);
+                        coords_t co2= holes[k].row(1);
+                        halfedge_t* h_hole = find_halfedge_between(co1, co2);  //holes[k] is clockwise sorted
+                        h_hole->set_cell(longest_cell);  // set the cell of the halfedge to the longest cell
+                        halfedge_t* h_next = h_hole->next();
+                        do{
+                            h_next->set_cell(longest_cell);  
+                            std::cout << " setting cell of halfedge " << h_next->id() << " to " << longest_cell->id() << std::endl;
+                            h_next = h_next->next();
+                        }while(h_next != h_hole);
                     }
                 }
             }
             cont++;
-            //if(cont==1) break;
+            //if(cont==2) break;
             
         }
     }

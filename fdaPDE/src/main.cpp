@@ -123,26 +123,18 @@ int main() {
             1.6, 0.5,
             1.3, 0.5;    
     
-    Eigen::Matrix<double, 18, 2> boundary_stairs; //scala
+    Eigen::Matrix<double, 10, 2> boundary_stairs; //scala
     boundary_stairs <<    
-                6.0, 0.0,  
-                9.0, 0.0, 
+                0.0, 0.0,  
                 12.0, 0.0,
                 12.0, 2.0, 
                 9.0, 2.0,  
                 9.0, 4.0,
-                8.0, 4.0,
-                7.0, 4.0,
                 6.0, 4.0,  
                 6.0, 6.0,
                 3.0, 6.0,
                 3.0, 8.0,
-                0.0, 8.0,
-                0.0, 6.0,
-                0.0, 4.0,
-                0.0, 2.0,
-                0.0, 0.0,
-                3.0, 0.0;
+                0.0, 8.0;
 
     Eigen::Matrix<double, 9, 2> boundary_stairs1;
     boundary_stairs1 <<    
@@ -358,18 +350,89 @@ int main() {
     -0.910947171536292,0.160624564341911,
     -0.925,1.1327608772857e-16;
 
-    Eigen::Matrix<double, 10, 2> grattacielo;
-    grattacielo <<
-        0., 0.,
-        5.0, 0.,
-        5.0, 28.,
-        3., 30.,
-        3., 35.,
-        2.9, 35.,
-        2.9, 33.,
-        2.7,33.,
-        2.7,30,
-        0., 25.;
+Eigen::Matrix<double, 24, 2> skyline;
+skyline <<  0.0, 0.0,      // Punto iniziale in basso a sinistra
+            0.0, 15.0,     // Edificio 1 sinistro
+            5.0, 15.0,
+            5.0, 10.0,     // Discesa
+            10.0, 10.0,
+            10.0, 13.0,    // Edificio più basso
+            15.0, 13.0,
+            15.0, 18.0,    // Edificio medio
+            25.0, 18.0,
+            25.0, 20.0,    // Edificio più alto
+            26.5, 22.0,
+            27.0, 25.0,
+            27.4, 30.0,
+            27.50, 30.,
+            28.0, 25.0,
+            28.5, 22.0,
+            30.0, 20.0,
+            30.0, 17.0,    // Scala discendente
+            35.0, 17.0,
+            35.0, 12.0,
+            40.0, 12.0,
+            40.0, 0.0,
+            30.0, 0.0,     
+            25.0,0.0;    // Chiusura a destra     
+
+Eigen::Matrix<double, 10, 2> building1;
+building1 <<  0.0, 0.0,      // Punto iniziale in basso a sinistra
+            0.0, 15.0,     // Edificio 1 sinistro
+            5.0, 15.0,
+            5.0, 10.0,     // Discesa
+            10.0, 10.0,
+            10.0, 13.0,    // Edificio più basso
+            15.0, 13.0,
+            15.0, 18.0,    // Edificio medio
+            25.0, 18.0,
+            25.0,0.0;
+
+
+Eigen::Matrix<double, 12, 2> building2;
+building2 <<  25.0, 0.0,
+            25.0, 18.0,
+            25.0, 20.0,    // Edificio più alto
+            26.5, 22.0,
+            27.0, 25.0,
+            27.4, 30.0,
+            27.5, 30.,
+            28.0, 25.0,
+            28.5, 22.0,
+            30.0, 20.0,
+            30.0, 17.0,    // Scala discendente
+            30.0, 0.0;
+
+            //35.0, 17.0,
+            //35.0, 12.0,
+            //40.0, 12.0,
+            //40.0, 0.0;  // Chiusura a destra
+
+Eigen::Matrix<double, 6, 2> building3;
+building3 <<  30.0, 0.0,
+            30.0, 17.0,    // Scala discendente
+            35.0, 17.0,
+            35.0, 12.0,
+            40.0, 12.0,
+            40.0, 0.0;    // Chiusura a destra 
+
+Eigen::Matrix<double, 4, 2> hole_building1;
+hole_building1 << 20., 10.,
+        22., 10.,
+        22., 12.,
+        20., 12.;     
+
+Eigen::Matrix<double, 4, 2> hole_building2;
+hole_building2 << 20., 5.,
+        22., 5.,
+        22., 7.,
+        20., 7.;  
+
+std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes_b(4);
+holes_b[0]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole_building1, hole_building2};
+holes_b[1]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole_building1, hole_building2};
+holes_b[2]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
+holes_b[3]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
 
 
     //------------------------------- REFINEMENT POTENZIATO ESEMPI----------------------------------------------------------------
@@ -444,21 +507,28 @@ int main() {
     1.2, 7.6,     // top sinistro
     0.9, 7.1;     // lato curvo sinistro
     
-    std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(5);
+    /*std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(5);
     holes[0]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole4, hole2, hole5};
     holes[1]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
     holes[2]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole4};
     holes[3]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole2};
-    holes[4]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole5};
-    /*std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(3);
+    holes[4]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {hole5};*/
+    std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(3);
     holes[0]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {heart_hole};
     holes[1]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
-    holes[2]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {heart_hole};*/
+    holes[2]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {heart_hole};
 
-    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary, boundary1, boundary2, boundary3, boundary4}, internal1, holes);  //
-    del.Ruppert_refinement(1.5);  // Esegui il Ruppert refinement con un raggio minimo di 1.0
-    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs, boundary_stairs1, boundary_stairs2}, 10, holes);  //
+    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary, boundary1, boundary2, boundary3, boundary4}, internal1, holes);  //
+    //del.Ruppert_refinement(1.5);  // Esegui il Ruppert refinement con un raggio minimo di 1.0
+    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs, boundary_stairs1, boundary_stairs2}, 0, holes);  //
+    
+
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {star_points_ref}, 0);
     //del.Ruppert_refinement(1.5);
+    
+    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs}, 0);
+    //del.Ruppert_refinement(20.0, 1.0); 
+    //del.print_statistics();
     
 ///////////TEST OF COMPUTATIONAL EFFICIENCY////////////////
 

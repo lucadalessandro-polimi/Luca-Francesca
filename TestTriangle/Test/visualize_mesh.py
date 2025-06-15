@@ -45,8 +45,8 @@ def plot_mesh(points, triangles):
     print("Mesh salvata come triangle_mesh.png")
 
 # === MAIN ===
-node_file = "example.1.node"
-ele_file = "example.1.ele"
+node_file = "regioni.1.node"
+ele_file = "regioni.1.ele"
 
 points = read_node_file(node_file)
 triangles = read_ele_file(ele_file)
