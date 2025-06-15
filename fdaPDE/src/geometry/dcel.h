@@ -394,7 +394,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return coords;
     }
     int n_nodes() const { return n_nodes_; }
-    int n_halfedges() const { return n_halfedges_; }   //USE size() ?? since we are not changing them
+    int n_halfedges() const { return halfedges_.size(); }   //USE size() ?? since we are not changing them
     int n_cells() const { return n_cells_; }
     int n_edges() const { return n_halfedges_ / 2; }
 

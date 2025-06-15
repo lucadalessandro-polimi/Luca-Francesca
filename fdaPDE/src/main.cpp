@@ -350,7 +350,7 @@ int main() {
     -0.910947171536292,0.160624564341911,
     -0.925,1.1327608772857e-16;
 
-Eigen::Matrix<double, 24, 2> skyline;
+Eigen::Matrix<double, 22, 2> skyline;
 skyline <<  0.0, 0.0,      // Punto iniziale in basso a sinistra
             0.0, 15.0,     // Edificio 1 sinistro
             5.0, 15.0,
@@ -363,8 +363,7 @@ skyline <<  0.0, 0.0,      // Punto iniziale in basso a sinistra
             25.0, 20.0,    // Edificio più alto
             26.5, 22.0,
             27.0, 25.0,
-            27.4, 30.0,
-            27.50, 30.,
+            27.45, 30.0,
             28.0, 25.0,
             28.5, 22.0,
             30.0, 20.0,
@@ -373,7 +372,6 @@ skyline <<  0.0, 0.0,      // Punto iniziale in basso a sinistra
             35.0, 12.0,
             40.0, 12.0,
             40.0, 0.0,
-            30.0, 0.0,     
             25.0,0.0;    // Chiusura a destra     
 
 Eigen::Matrix<double, 10, 2> building1;
@@ -389,32 +387,30 @@ building1 <<  0.0, 0.0,      // Punto iniziale in basso a sinistra
             25.0,0.0;
 
 
-Eigen::Matrix<double, 12, 2> building2;
+Eigen::Matrix<double, 15, 2> building2;
 building2 <<  25.0, 0.0,
             25.0, 18.0,
             25.0, 20.0,    // Edificio più alto
             26.5, 22.0,
             27.0, 25.0,
             27.4, 30.0,
-            27.5, 30.,
+            27.5, 30.0,
             28.0, 25.0,
             28.5, 22.0,
             30.0, 20.0,
             30.0, 17.0,    // Scala discendente
-            30.0, 0.0;
+            35.0, 17.0,
+            35.0, 12.0,
+            40.0, 12.0,
+            40.0, 0.0;  // Chiusura a destra
 
-            //35.0, 17.0,
-            //35.0, 12.0,
-            //40.0, 12.0,
-            //40.0, 0.0;  // Chiusura a destra
-
-Eigen::Matrix<double, 6, 2> building3;
+/*Eigen::Matrix<double, 6, 2> building3;
 building3 <<  30.0, 0.0,
             30.0, 17.0,    // Scala discendente
             35.0, 17.0,
             35.0, 12.0,
             40.0, 12.0,
-            40.0, 0.0;    // Chiusura a destra 
+            40.0, 0.0;    // Chiusura a destra */
 
 Eigen::Matrix<double, 4, 2> hole_building1;
 hole_building1 << 20., 10.,
@@ -521,10 +517,12 @@ holes_b[3]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
     //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary, boundary1, boundary2, boundary3, boundary4}, internal1, holes);  //
     //del.Ruppert_refinement(1.5);  // Esegui il Ruppert refinement con un raggio minimo di 1.0
     //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs, boundary_stairs1, boundary_stairs2}, 0, holes);  //
-    
-
-    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {star_points_ref}, 0);
     //del.Ruppert_refinement(1.5);
+
+    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {skyline, building1, building2}, 0, holes_b);
+
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs}, 0);
+    del.print_statistics();
     
     //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs}, 0);
     //del.Ruppert_refinement(20.0, 1.0); 
