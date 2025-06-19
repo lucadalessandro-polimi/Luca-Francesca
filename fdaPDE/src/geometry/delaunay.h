@@ -21,77 +21,25 @@ class Delaunay {
     using dcel_t = DCEL<local_dim, embed_dim>;
     using polygon_t = Polygon<local_dim, embed_dim>;
 
-    
-    /*  DECORATOR
-    struct node_t_;
-    struct cell_t_;
 
-    struct node_t_ : public DCEL<local_dim, embed_dim>::node_t {
-
-        using Base = typename DCEL<local_dim, embed_dim>::node_t;
-
-        node_t_() noexcept = default;
-        template <typename CoordsType>
-             requires(internals::is_eigen_dense_xpr_v<CoordsType>)
-        node_t_(int id, halfedge_t* halfedge, bool boundary, const CoordsType& coords) : Base(id, halfedge, boundary, coords), conflicting_triangle_(nullptr) {}
-        template <typename CoordsType>
-             requires(internals::is_eigen_dense_xpr_v<CoordsType>)
-        node_t_(int id, bool boundary, const CoordsType& coords) : Base(id, boundary, coords), conflicting_triangle_(nullptr) {}
-        template <typename... CoordsType>
-            requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
-        node_t_(int id, halfedge_t* halfedge, bool boundary, CoordsType&&... coords) : Base(id, halfedge, boundary, coords...), conflicting_triangle_(nullptr) {}
-        template <typename... CoordsType>
-            requires(std::is_floating_point_v<CoordsType> && ...) && (sizeof...(CoordsType) == embed_dim)
-        node_t_(int id, bool boundary, CoordsType&&... coords) :  Base(id, nullptr, boundary, coords...), conflicting_triangle_(nullptr) { }
-
-        void set_conflict(cell_t_* triangle) { conflicting_triangle_ = triangle; }
-        cell_t_* conflict() const { return conflicting_triangle_; }
-        void remove_conflict() { conflicting_triangle_ = nullptr; }
-
-       private:
-        cell_t_* conflicting_triangle_; 
-    };
-
-    struct cell_t_ : public DCEL<local_dim, embed_dim>::cell_t {
-
-        using Base = typename DCEL<local_dim, embed_dim>::cell_t;
-        
-        cell_t_() : Base() { }
-        cell_t_(int id) : Base(id) { }
-        cell_t_(int id, halfedge_t* h) : Base(id, h) { }
-        cell_t_(const cell_t& base) : Base(base.id(), base.halfedge()) { }
-        
-        void add_conflict(node_t_* point) { conflicting_points_.push_back(point); }
-        const std::vector<node_t_*>& conflicting_points() const{ return conflicting_points_; }
-        std::vector<node_t_*>& conflicting_points() { return conflicting_points_; }
-        void clear_conflicts() { conflicting_points_.clear(); }
-
-       private:
-        std::vector<node_t_*> conflicting_points_;
-    };
-    */
-
-    
-    
-    // constructors 
-    // costructor with random generated points
-    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries,  int N=100, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
+    // costructor with random generated points and refinement
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, double min_angle, double max_area, int N=0, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
         triangulate(N, boundaries, holes);
-        
-        double total_area = 0.0;
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* t = &(*it);
-            coords_t A = t->halfedge()->prev()->node()->coords();
-            coords_t B = t->halfedge()->node()->coords();
-            coords_t C = t->halfedge()->next()->node()->coords();
-            total_area += fdapde::internals::measure_2d_tri(A, B, C);
-        }
-        //std::cout<<"AREA RICHIESTA --------------------------------------- : "<<total_area/30<<std::endl;
-        Ruppert_refinement(25.0 , 200);
-        check_quality(25.0, 200);
-    }    
-    // costructor with given internal points form the user
+        Ruppert_refinement(min_angle, max_area);
+        check_quality(min_angle, max_area);
+    }  
+    // costructor with random generated points, no refinement
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, int N=0, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
+        triangulate(N, boundaries, holes);
+    }   
+    // costructor with given internal points from the user, and refinement
     // user needs to provide internal points correctly located inside the domain 
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal, double min_angle, double max_area, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}) {
+        triangulate(internal, boundaries, holes);
+        Ruppert_refinement(min_angle, max_area);
+        check_quality(min_angle, max_area);
+    }
+    // costructor with given internal points from the user, no refinement
     Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& internal, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}) {
         triangulate(internal, boundaries, holes);
     }
@@ -107,6 +55,18 @@ class Delaunay {
 
     triangulation_t triangulation() {
         return dcel_.template to_triangulation<triangulation_t>();
+    }
+
+    double domain_area() const{
+        double total_area = 0.0;
+        for (const auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+            cell_t* t = &(*it);
+            coords_t A = t->halfedge()->prev()->node()->coords();
+            coords_t B = t->halfedge()->node()->coords();
+            coords_t C = t->halfedge()->next()->node()->coords();
+            total_area += fdapde::internals::measure_2d_tri(A, B, C);
+        }
+        return total_area;
     }
 
     //function running the refinment with Ruppert algorithm 
@@ -605,7 +565,6 @@ class Delaunay {
                     coords_t co2= boundaries[i].row( (j+1) % boundaries[i].rows() ).transpose();
                     node_t* n1= dcel_.find_node(co1);
                     node_t* n2= dcel_.find_node(co2);
-                    std::cout << "n1: " << n1->id() << " n2: " << n2->id() << std::endl;
                     if(!dcel_.find_halfedge_between(co1,co2)){
                         /*halfedge_t* h1 = n1->halfedge();
                         halfedge_t* h2 = n2->halfedge();

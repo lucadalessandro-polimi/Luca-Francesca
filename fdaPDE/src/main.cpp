@@ -521,8 +521,8 @@ holes_b[3]= std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {};
 
     //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {skyline, building1, building2}, 0, holes_b);
 
-    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs}, 0);
-    del.print_statistics();
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs}, 20,2);
+    //del.print_statistics();
     
     //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {boundary_stairs}, 0);
     //del.Ruppert_refinement(20.0, 1.0); 
