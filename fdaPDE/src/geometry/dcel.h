@@ -899,9 +899,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         if(this->nodes_.empty() && this->halfedges_.empty() && this->cells_.empty()) { 
             *this = DCEL::make_polygon(boundary_nodes, holes);
         }
-        else{
-            std::cout << "Warning: DCEL is not empty, cannot overwrite with triangulation data." << std::endl;
-        }
+
         for (int i = 0; i < coords.rows(); ++i) {
             if (markers(i, 0) == 0) {
                 insert_node(typename DCEL::node_t(n_nodes(), false, coords.row(i)));
@@ -1010,14 +1008,14 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
             if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
                 std::swap(p1, p2);
-                std::cout<< "swapping p1 and p2" << std::endl;
+               // std::cout<< "swapping p1 and p2" << std::endl;
             }
-            std::cout << "p0: " << p0->id() << " p1: " << p1->id() << " p2: " << p2->id() << std::endl;
-            std::cout << " p0: " << p0->coords().transpose() << " p1: " << p1->coords().transpose() << " p2: " << p2->coords().transpose() << std::endl;
+           // std::cout << "p0: " << p0->id() << " p1: " << p1->id() << " p2: " << p2->id() << std::endl;
+           // std::cout << " p0: " << p0->coords().transpose() << " p1: " << p1->coords().transpose() << " p2: " << p2->coords().transpose() << std::endl;
             halfedge_t* h = find_halfedge_between(p0->coords(), p1->coords());
             bool building_dcel = true; 
             if (h) {
-                std::cout << "qui 1"    << std::endl;
+               // std::cout << "qui 1"    << std::endl;
                 add_polygon(h, {p2}, building_dcel);
             } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {
                 std::cout << "qui 2"    << std::endl;

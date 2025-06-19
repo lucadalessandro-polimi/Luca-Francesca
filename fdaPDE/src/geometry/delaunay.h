@@ -57,9 +57,9 @@ class Delaunay {
         return dcel_.template to_triangulation<triangulation_t>();
     }
 
-    double domain_area() const{
+    double domain_area() {
         double total_area = 0.0;
-        for (const auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
+        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             cell_t* t = &(*it);
             coords_t A = t->halfedge()->prev()->node()->coords();
             coords_t B = t->halfedge()->node()->coords();
@@ -99,11 +99,6 @@ class Delaunay {
             }
         }
 
-        std::cout << "Encroached subsegments:\n";
-        for (halfedge_t* e : encroached_edges) {
-            
-            std::cout << e->id()<<std::endl;
-        }
 
 
 
@@ -133,18 +128,6 @@ class Delaunay {
                 continue;
 
             if (split_first_bad_triangle(rho_bar, max_area, boundary_edges, encroached_edges, bad_triangles)) {
-                cont++;
-                std::cout << "Encroached subsegments:\n";
-                for (halfedge_t* e : encroached_edges) {
-                    
-                    std::cout << e->id()<<std::endl;
-                }
-                std::cout << "Bad triangles (priority ≥ 0):\n";
-
-                for (const auto& [priority, t] : bad_triangles) {
-                    std::cout << "  Triangle (priority = " << priority << "): "<<t->id()<<std::endl;
-                }
-                //if(cont == 6) break;
                 continue;
             }
             break;
@@ -161,7 +144,7 @@ class Delaunay {
             it->set_id(cont++);*/
         
         //json needed for debug
-        dcel_.export_to_json("dcel_output.json");
+        //dcel_.export_to_json("dcel_output.json");
     }
 
     void print_statistics() {
@@ -309,29 +292,18 @@ class Delaunay {
 
 
     void triangulate(int N, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries_entry, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes_entry ) {
-        
-        // compute bounding box of the input polygon
+
+        // Computing the bounding box
         double min_x = boundaries_entry[0].col(0).minCoeff();
         double max_x = boundaries_entry[0].col(0).maxCoeff();
         double min_y = boundaries_entry[0].col(1).minCoeff();
         double max_y = boundaries_entry[0].col(1).maxCoeff();
-        int generated_points = 0;
-
-        // Estimate grid resolution based on desired number of interior points
-        int points_per_row = static_cast<int>(std::ceil(std::sqrt(N)));
-        double dx = (max_x - min_x) / (points_per_row + 1);
-        double dy = (max_y - min_y) / (points_per_row + 1);
-
-        // Use average dimension to scale the perturbation uniformly in all directions
-        double width = max_x - min_x;
-        double height = max_y - min_y;
-        double avg_dim = (width + height) / 2.0;
-
-        // Random perturbation to avoid aligned grid artifacts
-        double perturbation_scale = avg_dim / (points_per_row + 1);
-        std::mt19937 gen(42);  // Deterministic seed for reproducibility
-        std::uniform_real_distribution<double> pert_x(-perturbation_scale / 2, perturbation_scale / 2);
-        std::uniform_real_distribution<double> pert_y(-perturbation_scale / 2, perturbation_scale / 2);
+    
+        // Creating the generator of causal numbers
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<double> dist_x(min_x, max_x);
+        std::uniform_real_distribution<double> dist_y(min_y, max_y);
 
         // check if boundaries are counterclockwise sorted
         std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> boundaries;
@@ -394,24 +366,21 @@ class Delaunay {
         }
         
         flip();  // Ensure boundary triangulation satisfies Delaunay property
-        
+
         int n_nodes_boundaries = dcel_.n_nodes();
-        // Generate and insert interior points into the DCEL
-        for (int i = 1; i <= points_per_row; ++i) {
-            for (int j = 1; j <= points_per_row; ++j) {
-                coords_t u;
-                u << min_x + i * dx + pert_x(gen),
-                    min_y + j * dy + pert_y(gen);
-                // Keep only points that lie inside the polygonal domain
-                if (!fdapde::internals::point_safely_in_polygon(boundaries[0], holes, u, perturbation_scale/16)){
-                    //std::cout<<"SCARTO PUNTO CON COORDINATE: "<<u<<std::endl;
+        int generated_points = 0;
+
+        while (generated_points < N) {
+            coords_t u;
+            u << dist_x(gen), dist_y(gen);
+
+                if (!fdapde::internals::is_point_in_polygon(boundaries[0], holes, u)){
                     continue;
                 }
 
                 node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, u));
                 detect_conflicts(n);
                 ++generated_points;
-            }
         }
         
         int cont_pt=0;
@@ -423,17 +392,17 @@ class Delaunay {
         }
         
         // Reassign consecutive IDs to all cells and half-edges for consistency
-        int cont = 0;
+        /*int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
             it->set_id(cont++);
         dcel_.set_n_cells_(cont);
 
         cont = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
-            it->set_id(cont++);
+            it->set_id(cont++);*/
         
         // Export the resulting DCEL structure to a JSON file for visualization
-        dcel_.export_to_json("dcel_output.json");
+        //dcel_.export_to_json("dcel_output.json");
     }
     
     //overloaded one if user wants to pass manually the internal points
@@ -530,7 +499,7 @@ class Delaunay {
             it->set_id(cont_h);
             cont_h++;
         }
-        dcel_.export_to_json("dcel_output.json");
+        //dcel_.export_to_json("dcel_output.json");
     }
 
     //function performing the first raw triangulation of the domain using the polygon.h class
@@ -573,7 +542,6 @@ class Delaunay {
                         h_new->twin()->set_subsegment(true);
                         c_holes = h_new->cell();  */
                         insert_collinear_chain(n1, n2);
-                        std::cout << co1 << co2 << std::endl;
                         //c_holes= n1->halfedge()->cell();
                     }
                     if(c_holes == nullptr && dcel_.find_halfedge_between(co1, co2)) {
@@ -667,7 +635,6 @@ class Delaunay {
             node_t* A = h->node();
             node_t* B = h->twin()->node();
             if (!A || !B) continue;
-            std::cout << "h removed: " << h->id() << std::endl;
             dcel_.remove_edge(h);
         }
     }
@@ -787,7 +754,6 @@ class Delaunay {
     void complete_boundary(const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_vertices ) {
         if(boundary.rows()==boundary_vertices.rows()) return; //if the boundary is already complete we do not need to do anything
 
-        std::cout << "in COMPLETE!!" << std::endl;
         auto row_in_matrix = [](const Eigen::Matrix<double, 1, embed_dim>& row, const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& mat) -> bool {
             for (int i = 0; i < mat.rows(); ++i) {
                 if (mat.row(i).isApprox(row))
@@ -809,10 +775,8 @@ class Delaunay {
 
                 // n2 = punto successivo (già nel bordo)
                 coords_t n2 = boundary_vertices.row(k % boundary_vertices.rows()).transpose();
-                std::cout << "n1: " << n1.transpose() << " n2: " << n2.transpose() << std::endl;
                 // p = punto intermedio da inserire
                 coords_t p = boundary.row(j).transpose();
-                std::cout << "p: " << p.transpose() << std::endl;
 
                 if (dcel_.find_node(p)) {
                     last_coords = p;
@@ -865,8 +829,6 @@ class Delaunay {
                         ++j;
                         continue;
                     }
-                    
-                    std::cout << "p: " << p.transpose() << std::endl;
 
                     node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), h1->on_boundary(), p));
 
@@ -1105,7 +1067,6 @@ class Delaunay {
             //we can already exclude the edges of the triangulation being automatically locally delaunay
             if(!it->is_subsegment()) {
                 halfedges_to_check.insert(&(*it));
-                std::cout << "Halfedge to check: " << it->id() << std::endl;
             }
         }
         // flip algorithm
@@ -1128,7 +1089,6 @@ class Delaunay {
                 halfedge_t* e = edge;
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(e->prev(), e->twin()->prev());
-                //std::cout << "FLIP" << std::endl;
             
                 if (new_edge) {
                     // Inserting the new halfedges created by the flip into the list to check
@@ -1237,7 +1197,6 @@ class Delaunay {
     // function that checks if edge defined by halfedge h is seditious
     // if it is, it is the triangle's shortest edge since its oppoing angle is < 60 degrees and the triangle is isosceles
     bool is_edge_seditious(halfedge_t* h) {
-        std::cout<<"SARA SEDICIUSO?: "<<h->id()<<std::endl;
         if (h->is_subsegment()) return false;  // boundary edges can't be seditious
         
         if (!(h->prev()->is_subsegment() && h->next()->is_subsegment())) return false;  
@@ -1250,7 +1209,6 @@ class Delaunay {
         // 2 edges of h's cell need to have same length and to be midpoints of another segment 
         double tol = 1e-6;
         if (std::abs(fdapde::internals::segment_length(c, a) - fdapde::internals::segment_length(c, b)) > tol)   return false;
-        std::cout<<"SOLO UNO SOPRAVVIVE : "<<h->id()<<std::endl;
         coords_t d = h->prev()->twin()->prev()->node()->coords();  
         coords_t e = h->next()->twin()->next()->next()->node()->coords();
 
@@ -1260,8 +1218,6 @@ class Delaunay {
                 std::abs(fdapde::internals::segment_length(c,b) - fdapde::internals::segment_length(b,e)) < tol ) )
             return false;
 
-        
-        std::cout << "SEDITIOUS EDGE: " << h->id() << std::endl;
         return true;
     }   
 
@@ -1276,7 +1232,6 @@ class Delaunay {
             it = encroached_edges.erase(it);  // remove the edge from the set to avoid reprocessing
             encroached_edges.erase(e->twin());
             if (!e) continue;
-            std::cout<<"STO LAVORANDO CON : "<<e->id()<<std::endl;
             if (!is_edge_seditious(e->next()) && !is_edge_seditious(e->prev())) {
                //&& !is_edge_seditious(e->next()->twin()) && !is_edge_seditious(e->prev()->twin())) {
 
@@ -1312,8 +1267,6 @@ class Delaunay {
         node_t* b = e->twin()->node();      
         node_t* c = e->prev()->node();      
         coords_t split_pt;                    // the point where the segment will be split
-        std::cout << "ab: " << fdapde::internals::segment_length(a->coords(),b->coords()) << std::endl;
-        std::cout << "bc: " << fdapde::internals::segment_length(b->coords(),c->coords()) << std::endl;
         // Case 1: acute angle at vertex b and e->next is on boundary
         if (e->next()->is_subsegment() &&   std::abs(fdapde::internals::segment_length(a->coords(),b->coords())-fdapde::internals::segment_length(b->coords(),c->coords()))/fdapde::internals::segment_length(a->coords(),b->coords()) > 0.1   && fdapde::internals::is_angle_acute(a->coords(), b->coords(), c->coords())) {
             coords_t split_pt_ref = c->coords();
@@ -1325,7 +1278,6 @@ class Delaunay {
             double t = r / L;
             // compute split point at distance r from b on segment ab
             split_pt = b->coords() + t * ab;
-            std::cout << " Splitting segment at acute angle: " << split_pt.transpose() << std::endl;
         } 
         // Case 2: regular midpoint split
         else {
@@ -1333,8 +1285,6 @@ class Delaunay {
         }
         // Insert the new node into the DCEL
         node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), e->on_boundary(), split_pt));
-        std::cout << "m: " << m->id() << std::endl;
-        std::cout << "e: " << e->id() << std::endl;
 
         halfedge_t* prev = e->prev();
         halfedge_t* twin_prev = e->twin()->prev();
@@ -1625,7 +1575,6 @@ class Delaunay {
 
             bool split = split_triangle(t, boundary_edges, encroached_edges, bad_triangles, rho_bar, max_area);
             if (split){
-                std::cout<<"STO PER RITORNARE TRUE"<<std::endl;
                 return true;}
             else{
                 double p1 = is_bad_triangle(t, rho_bar, max_area);
@@ -1652,10 +1601,7 @@ class Delaunay {
         coords_t C = t->halfedge()->next()->node()->coords();
 
         double area = fdapde::internals::measure_2d_tri(A, B, C);
-        std::cout<<"STO SPLITTANDO TRIANGOLO CON ID: "<<t->id()<<std::endl;
         if(area <= max_area){
-            std::cout<<"SONO SULLA PUNTA CON :"<<t->id()<<"CON HALFEDGE PER CAPIRE ------: "<<t->halfedge()->id()<<std::endl;
-            std::cout<<A<<"  "<<B<<" "<<C<<std::endl;
             for (halfedge_t* h : {h1, h2, h3}) {
                 if(is_edge_seditious(h) || is_edge_seditious(h->twin()))  return true;
             }
@@ -1669,7 +1615,6 @@ class Delaunay {
         halfedge_t* e1 = cf->halfedge()->prev();
         halfedge_t* e2 = cf->halfedge();
         halfedge_t* e3 = cf->halfedge()->next();
-        std::cout<<"ANALIZZZANDO IL TRINAGOLO ID : "<<t->id()<<" MENTRE IL CIRC STA IN : "<<cf->id()<<std::endl;
         // Check whether the circumcenter c encroaches any boundary segment of the triangle cf
         bool flag = false;
         for (halfedge_t* e : {e1, e2, e3}) {
@@ -1685,7 +1630,6 @@ class Delaunay {
         node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
         // Insert the new node into the triangulation (splitting the containing triangle)
         insert_vertex(circ, cf, encroached_edges, bad_triangles, rho_bar, max_area);
-        std::cout<<"HO INSERITO CON SUCCESSO: "<<circ->id()<<std::endl;
         return true;
     }
 
@@ -1717,8 +1661,6 @@ class Delaunay {
             if (fdapde::internals::in_circle(A, B, C, D) || fdapde::internals::in_circle(A, D, B, C)) {
                 
                 halfedge_t* e = edge;
-                std::cout << "edge: " << edge->id() << std::endl;
-                std::cout << "twin: " << edge->twin()->id() << std::endl;
                 
                 remove_from_multimap(bad_triangles, edge->cell());
                 remove_from_multimap(bad_triangles, edge->twin()->cell());
@@ -1727,25 +1669,23 @@ class Delaunay {
                 
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(prev, twin_prev);
-                std::cout << "FLIP RUPPERT" << std::endl;
             
                 if (new_edge) {
                     if(!new_edge->prev()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->prev());
-                        std::cout << "prev: " << new_edge->prev()->id() << std::endl;
+    
                     }
                     if(!new_edge->next()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->next());
-                        std::cout << "next: " << new_edge->next()->id() << std::endl;
-                        std::cout << "next cell: " << new_edge->next()->cell()->id() << std::endl;
+      
                     }
                     if(!new_edge->twin()->prev()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->twin()->prev());
-                        std::cout << "twin_prev: " << new_edge->twin()->prev()->id() << std::endl;
+                   
                     }
                     if(!new_edge->twin()->next()->is_subsegment()){
                         halfedges_to_check.insert(new_edge->twin()->next());
-                        std::cout << "twin_next: " << new_edge->twin()->next()->id() << std::endl;
+            
                     }
 
                     /*if(is_bad_triangle(new_edge->cell(), rho_bar)){
@@ -1972,18 +1912,12 @@ class Delaunay {
 
             // --- Check conditions ---
             if (min_angle < rho_bar || area > max_area) {
-                std::cout << "❌ Triangle " << t->id()
-                        << " violates quality: min_angle = " << min_angle
-                        << ", area = " << area << std::endl;
-                        std::cout<<"ANGOLO DEL CHECK: "<<angleA<<std::endl;
+
                 all_ok = false;
                 bad_count++;
                 coords_t A = t->halfedge()->prev()->node()->coords();
                 coords_t B = t->halfedge()->node()->coords();
                 coords_t C = t->halfedge()->next()->node()->coords();
-                std::cout<<"A: "<<A<<std::endl;
-                std::cout<<"B: "<<B<<std::endl;
-                std::cout<<"C: "<<C<<std::endl;
 
             }
         }

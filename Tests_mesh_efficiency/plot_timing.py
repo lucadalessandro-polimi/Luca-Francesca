@@ -5,7 +5,7 @@ import os
 
 def plot_timing_data():
   
-    file_path = os.path.join(os.path.dirname(__file__), 'timing_results.csv')
+    file_path = os.path.join(os.path.dirname(__file__), 'timing.csv')
 
     df = pd.read_csv(file_path)
     
@@ -38,7 +38,7 @@ def plot_timing_data():
     plt.ylabel('Time (ms)')
     plt.legend()
     plt.grid(True)
-    plt.savefig("timing_plot.png", dpi=300)
+    plt.savefig("Tests_mesh_efficiency/timing_plot.png", dpi=300)
 
 
 if __name__ == "__main__":

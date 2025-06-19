@@ -183,9 +183,9 @@ constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const
 // and also at least `epsilon` distance away from any edge of the polygon.
 // This avoids placing points too close to the boundary.
 template <typename Derived, typename PointT>
-constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
+constexpr bool is_point_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
                                        const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>>& holes,
-                                       const PointT& p, double epsilon) {
+                                       const PointT& p) {
     if (!point_in_polygon(boundary, p)) return false;
 
     for(const auto& hole_vector: holes ){
@@ -194,37 +194,6 @@ constexpr bool point_safely_in_polygon(const Eigen::MatrixBase<Derived>& boundar
             return false;
         }
     }}
-
-    // 3. Deve essere lontano da tutti i bordi del boundary
-    auto is_far_from_edges = [&](const Eigen::MatrixBase<Derived>& polygon) {
-        const int n = polygon.rows();
-        for (int i = 0; i < n; ++i) {
-            Eigen::Vector2d a = polygon.row(i);
-            Eigen::Vector2d b = polygon.row((i + 1) % n);
-
-            Eigen::Vector2d ab = b - a;
-            Eigen::Vector2d ap = p - a;
-
-            double ab_len_sq = ab.dot(ab);
-            double t = std::max(0.0, std::min(1.0, ab.dot(ap) / ab_len_sq));
-            Eigen::Vector2d proj = a + t * ab;
-
-            double dist = (p - proj).norm();
-            if (dist < epsilon)
-                return false;
-        }
-        return true;
-    };
-
-    // Controlla distanza dai bordi del boundary
-    if (!is_far_from_edges(boundary)) return false;
-
-    // Controlla distanza dai bordi dei buchi
-    for(const auto& hole_vector: holes) {
-    for (const auto& hole : hole_vector) {
-        if (!is_far_from_edges(hole)) return false;
-    }}
-
     return true;
 }
 

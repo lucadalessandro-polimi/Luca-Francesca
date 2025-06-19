@@ -8,6 +8,7 @@ def plot_dcel(filename):
         data = json.load(file)
 
     # Estrai i nodi
+
     nodes = {node["id"]: np.array(node["coords"]) for node in data["nodes"]}
 
     # Disegna ogni arco con colore diverso se è un subsegment
@@ -40,9 +41,9 @@ def plot_dcel(filename):
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid(True)
-    plt.savefig("dcel_plot.png", dpi=300)
+    plt.savefig("Tests_mesh_efficiency/dcel_plot.png", dpi=300)
     print("Plot salvato come 'dcel_plot.png'")
 
 if __name__ == "__main__":
-    plot_dcel("dcel_output.json")
+    plot_dcel("Tests_mesh_efficiency/dcel_output.json")
 
