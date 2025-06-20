@@ -10,9 +10,9 @@ using namespace fdapde;
 int main() {
 
 //-----------------------CALL TO BUILD THE MESH AND PRINT ITS QUALITY MEASURES-------------------------------------
-Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle}, 20, 2.0);
-del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
-del.print_statistics();
+//Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle}, 20, 2.0);
+//del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
+//del.print_statistics();
 
     
 //-----------------------TEST OF COMPUTATIONAL EFFICIENCY OF CONFLICT GRAPH ALGORITHM------------------------------
@@ -45,7 +45,7 @@ del.print_statistics();
     std::cout << "elapsed time for 1000000 internal points: " << duration << " ms" << std::endl;
     outfile << 1000000 << "," << duration << "\n"; 
     
-    outfile.close();*/
+    outfile.close(); */
 
 //-----------------------END TEST OF COMPUTATIONAL EFFICIENCY OF CONFLICT GRAPH ALGORITHM------------------------------
 
@@ -53,7 +53,7 @@ del.print_statistics();
 //-----------------------TEST OF COMPUTATIONAL EFFICIENCY OF REFINEMENT ALGORITHM------------------------------
 
 
-/*    std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
+    std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
     Delaunay<2, 2> del1(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle});
@@ -93,7 +93,7 @@ del.print_statistics();
     outfile << del4.dcel().n_nodes() << "," << duration << "\n"; 
 
     outfile.close();
-*/
+
     //-----------------------END TEST OF COMPUTATIONAL EFFICIENCY OF REFINEMENT ALGORITHM------------------------------
     
     return 0;

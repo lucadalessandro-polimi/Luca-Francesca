@@ -213,15 +213,12 @@ template <int LocalDim, int EmbedDim> class Polygon {
             total_rows += hole.rows();
         }
         all_coords.resize(total_rows, embed_dim);
-        // Copia del bordo esterno
         all_coords.topRows(coords.rows()) = coords;
-        // Copia dei buchi
         int row_offset = coords.rows();
         for (const auto& hole : coords_holes) {
             all_coords.middleRows(row_offset, hole.rows()) = hole;
             row_offset += hole.rows();
         }
-        //std::cout << "all_coords:\n" << all_coords << std::endl;
         
         
         // O(nlog(n)) y-coordinate sort (break tiles using x-coordinate)
