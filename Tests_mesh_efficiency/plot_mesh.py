@@ -36,11 +36,11 @@ def plot_dcel(filename):
             y_values = [pt[1] for pt in cell_nodes] + [cell_nodes[0][1]]
             ax.plot(x_values, y_values, 'g-', linewidth=0.5)
         except KeyError:
-            print(f"Errore nel disegnare la cella con edges {cell['edges']}")
+            print(f"Error in drawing cell with edges {cell['edges']}")
 
     # Salvataggio immagine pulita
     plt.savefig("Tests_mesh_efficiency/dcel_plot.png", dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
-    print("Plot salvato come 'dcel_plot.png'")
+    print("Plot saved as 'Tests_mesh_efficiency/dcel_plot.png'")
 
 if __name__ == "__main__":
     plot_dcel("Tests_mesh_efficiency/dcel_output.json")

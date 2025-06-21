@@ -10,15 +10,15 @@ using namespace fdapde;
 int main() {
 
 //-----------------------CALL TO BUILD THE MESH AND PRINT ITS QUALITY MEASURES-------------------------------------
-Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {skyline},20,1.0,0, holes_skyline);
+Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {star},25,200,0);
 del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
-//del.print_statistics();
+del.print_statistics();
 
     
 //-----------------------TEST OF COMPUTATIONAL EFFICIENCY OF CONFLICT GRAPH ALGORITHM------------------------------
 
 
-/*    std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
+    std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
 
     auto start = high_resolution_clock::now(); 
@@ -45,7 +45,7 @@ del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
     std::cout << "elapsed time for 1000000 internal points: " << duration << " ms" << std::endl;
     outfile << 1000000 << "," << duration << "\n"; 
     
-    outfile.close(); */
+    outfile.close(); 
 
 //-----------------------END TEST OF COMPUTATIONAL EFFICIENCY OF CONFLICT GRAPH ALGORITHM------------------------------
 
@@ -53,7 +53,7 @@ del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
 //-----------------------TEST OF COMPUTATIONAL EFFICIENCY OF REFINEMENT ALGORITHM------------------------------
 
 
-    std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
+    /*std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
     
     Delaunay<2, 2> del1(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle});
@@ -93,7 +93,7 @@ del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
     outfile << del4.dcel().n_nodes() << "," << duration << "\n"; 
 
     outfile.close();
-
+    */
     //-----------------------END TEST OF COMPUTATIONAL EFFICIENCY OF REFINEMENT ALGORITHM------------------------------
     
     return 0;

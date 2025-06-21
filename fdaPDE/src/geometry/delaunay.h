@@ -13,7 +13,7 @@ class Delaunay {
     static constexpr int embed_dim = EmbedDim;
     static constexpr int n_nodes_cell = 3;
 
-    using coords_t = Eigen::Matrix<double, embed_dim, 1>;
+    using coords_t = Eigen::Matrix<double, 1, embed_dim>;
     using node_t = typename DCEL<local_dim, embed_dim>::node_t;
     using halfedge_t = typename DCEL<local_dim, embed_dim>::halfedge_t;
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
@@ -53,14 +53,14 @@ class Delaunay {
         return dcel_;
     }
 
-    triangulation_t triangulation() {
+    triangulation_t triangulation() const{
         return dcel_.template to_triangulation<triangulation_t>();
     }
 
-    double domain_area() {
+    double domain_area() const{
         double total_area = 0.0;
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* t = &(*it);
+        for (auto it = dcel_.cells_cbegin(); it != dcel_.cells_cend(); ++it) {
+            const cell_t* t = &(*it);
             coords_t A = t->halfedge()->prev()->node()->coords();
             coords_t B = t->halfedge()->node()->coords();
             coords_t C = t->halfedge()->next()->node()->coords();
@@ -99,9 +99,6 @@ class Delaunay {
             }
         }
 
-
-
-
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             cell_t* t = &(*it);
             double priority = is_bad_triangle(t, rho_bar, max_area);
@@ -134,20 +131,16 @@ class Delaunay {
         }
 
         // final reorder to cut no longer existing id of cells and edges
-        /*int cont = 0;
+        /*cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
             it->set_id(cont++);
-        dcel_.set_n_cells_(cont);
-    
         cont = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
             it->set_id(cont++);*/
-        
-        //json needed for debug
-        //dcel_.export_to_json("dcel_output.json");
+
     }
 
-    void print_statistics() {
+    void print_statistics() const{
         std::cout << "\nStatistics:\n\n";
 
         std::cout << "\n  Mesh vertices: " << dcel_.n_nodes() << "\n";
@@ -156,13 +149,10 @@ class Delaunay {
 
         double min_area = std::numeric_limits<double>::max();
         double max_area = 0.0;
-
         double min_edge = std::numeric_limits<double>::max();
         double max_edge = 0.0;
-
         double min_altitude = std::numeric_limits<double>::max();
         double max_aspect_ratio = 0.0;
-
         double min_angle = std::numeric_limits<double>::max();
         double max_angle = 0.0;
 
@@ -180,8 +170,8 @@ class Delaunay {
             {"130 - 140", 0}, {"140 - 150", 0}, {"150 - 160", 0}, {"160 - 170", 0}, {"170 - 180", 0}
         };
 
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* t = &(*it);
+        for (auto it = dcel_.cells_cbegin(); it != dcel_.cells_cend(); ++it) {
+            const cell_t* t = &(*it);
             coords_t A = t->halfedge()->prev()->node()->coords();
             coords_t B = t->halfedge()->node()->coords();
             coords_t C = t->halfedge()->next()->node()->coords();
@@ -279,6 +269,34 @@ class Delaunay {
             std::cout << "  " << std::setw(17) << std::left << range + " degrees:" << std::setw(8) << count;
             if (++i % 2 == 0) std::cout << "\n";
             else std::cout << "  |  ";
+        }
+
+        std::ofstream fout("Comparisons/Statistics/delaunay.csv");
+        if (fout) {
+            fout << "Metric,Value\n";
+            fout << "Vertices," << dcel_.n_nodes() << "\n";
+            fout << "Triangles," << dcel_.n_cells() << "\n";
+            fout << "Edges," << dcel_.n_halfedges() / 2 << "\n";
+            fout << "MinArea," << min_area << "\n";
+            fout << "MaxArea," << max_area << "\n";
+            fout << "MinEdge," << min_edge << "\n";
+            fout << "MaxEdge," << max_edge << "\n";
+            fout << "MinAltitude," << min_altitude << "\n";
+            fout << "MaxAspectRatio," << max_aspect_ratio << "\n";
+            fout << "MinAngle," << min_angle << "\n";
+            fout << "MaxAngle," << max_angle << "\n\n";
+            fout << "AspectRatioRange,Count\n";
+            for (const auto& [range, count] : aspect_bins) {
+                fout << "\"" << range << "\"," << count << "\n";
+            }
+            fout << "\nAngleRange,Count\n";
+            for (const auto& [range, count] : angle_bins) {
+                fout << "\"" << range << " degrees\"," << count << "\n";
+            }
+            fout.close();
+            std::cout << "\nMesh statistics saved to mesh_stats.csv\n";
+        } else {
+            std::cerr << "\nError: unable to write mesh_stats.csv\n";
         }
 
         std::cout << std::endl;
@@ -392,17 +410,13 @@ class Delaunay {
         }
         
         // Reassign consecutive IDs to all cells and half-edges for consistency
-        /*int cont = 0;
+        int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
             it->set_id(cont++);
-        dcel_.set_n_cells_(cont);
-
         cont = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it)
-            it->set_id(cont++);*/
+            it->set_id(cont++);
         
-        // Export the resulting DCEL structure to a JSON file for visualization
-        //dcel_.export_to_json("dcel_output.json");
     }
     
     //overloaded one if user wants to pass manually the internal points
@@ -476,7 +490,7 @@ class Delaunay {
 
         //inserting the internal points in the triangulation
         for (int i = 0; i < internal.rows(); ++i) {
-            node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, internal.row(i).transpose().eval()));
+            node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, internal.row(i).eval()));  //.transpose()
             detect_conflicts(n);
         }
 
@@ -493,13 +507,11 @@ class Delaunay {
             it->set_id(cont);
             cont++;
         }
-        dcel_.set_n_cells_(cont);
         int cont_h = 0;
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it) {
             it->set_id(cont_h);
             cont_h++;
         }
-        //dcel_.export_to_json("dcel_output.json");
     }
 
     //function performing the first raw triangulation of the domain using the polygon.h class
@@ -511,7 +523,6 @@ class Delaunay {
             holes.push_back({});
         }
        
-
         if(boundaries.size() == 1 ){
             polygon_t polygon(boundaries[0], holes[0]);
             auto triangulation = polygon.triangulation();
@@ -521,17 +532,17 @@ class Delaunay {
         else for(int i=1; i< boundaries.size(); ++i){
             cell_t* c= &(*std::prev(dcel_.cells_end()));   //è GIUSTO ?????
             for(int j=0; j< boundaries[i].rows(); ++j){
-                    coords_t co= boundaries[i].row(j).transpose();
+                    coords_t co= boundaries[i].row(j);  //.transpose()
                     if(dcel_.find_node(co)) continue;
                     node_t* n1 = dcel_.insert_node(node_t(dcel_.n_nodes(), false, co));
-                    halfedge_t* h1 = dcel_.emplace_halfedge_(n1, true);
+                    halfedge_t* h1 = dcel_.emplace_halfedge(n1, true);
                     n1->set_halfedge(h1);
                     h1->set_cell(c);
             } 
             cell_t* c_holes= nullptr;
             for (int j = 0; j < boundaries[i].rows(); ++j) {
-                    coords_t co1= boundaries[i].row(j).transpose();
-                    coords_t co2= boundaries[i].row( (j+1) % boundaries[i].rows() ).transpose();
+                    coords_t co1= boundaries[i].row(j);  //.transpose()
+                    coords_t co2= boundaries[i].row( (j+1) % boundaries[i].rows() ); //.transpose()
                     node_t* n1= dcel_.find_node(co1);
                     node_t* n2= dcel_.find_node(co2);
                     if(!dcel_.find_halfedge_between(co1,co2)){
@@ -555,7 +566,7 @@ class Delaunay {
             const auto& nodes = triangulation.nodes(); 
             // update holes[i] edges to the cell of boundary i
             for (int j = 0; j < holes[i].size(); ++j) {
-                coords_t co = holes[i][j].row(0).transpose();
+                coords_t co = holes[i][j].row(0);  //.transpose()
                 if (!dcel_.find_node(co)) continue;
                 node_t* n1 = dcel_.find_node(co);
                 halfedge_t* h_hole= n1->halfedge();   //make_polygon creates holes' nodes s.t. its own halfedge is defined 
@@ -584,7 +595,6 @@ class Delaunay {
                 h_nn= h_nn->next();
             }
         }
-        
     }
 
     void fix_edges_over_collinear_nodes() {
@@ -764,7 +774,7 @@ class Delaunay {
         
         int j = 0;
         int k = 0;
-        coords_t last_coords = boundary_vertices.row((boundary_vertices.rows() - 1)).transpose();
+        coords_t last_coords = boundary_vertices.row((boundary_vertices.rows() - 1));  //.transpose()
 
         for (int i = 0; i < boundary.rows(); i = j) {
             if (!row_in_matrix(boundary.row(i), boundary_vertices)) {
@@ -774,9 +784,9 @@ class Delaunay {
                 coords_t n1 = last_coords;
 
                 // n2 = punto successivo (già nel bordo)
-                coords_t n2 = boundary_vertices.row(k % boundary_vertices.rows()).transpose();
+                coords_t n2 = boundary_vertices.row(k % boundary_vertices.rows());  //.transpose()
                 // p = punto intermedio da inserire
-                coords_t p = boundary.row(j).transpose();
+                coords_t p = boundary.row(j);  //.transpose()
 
                 if (dcel_.find_node(p)) {
                     last_coords = p;
@@ -790,7 +800,6 @@ class Delaunay {
                 halfedge_t* e = dcel_.find_halfedge_between(n1, n2);
                 if (!e) e = dcel_.find_halfedge_between(n1, boundary.row(0)); // fallback (anche se dovrebbe essere orientato)
                 if (!e) {
-                    std::cerr << "Errore: edge mancante tra " << n1.transpose() << " e " << n2.transpose() << std::endl;
                     return;
                 }
 
@@ -802,7 +811,7 @@ class Delaunay {
                 halfedge_t* twin_prev = e->twin()->prev();
 
                 // Inserisci i due nuovi lati
-                halfedge_t* h1 = dcel_.emplace_halfedge_(m, true);
+                halfedge_t* h1 = dcel_.emplace_halfedge(m, true);
                 h1->set_cell(next->cell());
                 dcel_.insert_edge(next, h1);
                 h1->twin()->set_subsegment(true);
@@ -823,7 +832,7 @@ class Delaunay {
 
                 // gestisci altri punti consecutivi da inserire tra n1 e n2
                 while (j < boundary.rows() && !row_in_matrix(boundary.row(j), boundary_vertices)) {
-                    coords_t p = boundary.row(j).transpose();
+                    coords_t p = boundary.row(j);  //.transpose()
                     if (dcel_.find_node(p)) {
                         last_coords = p;
                         ++j;
@@ -837,7 +846,7 @@ class Delaunay {
                     next = e->next();
                     twin_prev = e->twin()->prev();
 
-                    h1 = dcel_.emplace_halfedge_(m, true);
+                    h1 = dcel_.emplace_halfedge(m, true);
                     h1->set_cell(next->cell());
                     dcel_.insert_edge(next, h1);
                     h1->twin()->set_subsegment(true);
@@ -857,12 +866,11 @@ class Delaunay {
                 }
 
             } else {
-                last_coords = boundary.row(i).transpose();
+                last_coords = boundary.row(i);  //.transpose()
                 ++j;
                 ++k;
             }
         }
-
     }
 
 
@@ -1293,7 +1301,7 @@ class Delaunay {
         remove_from_multimap(bad_triangles, e->cell());
         remove_from_multimap(bad_triangles, e->twin()->cell());
 
-        halfedge_t* h1 = dcel_.emplace_halfedge_(m, true);
+        halfedge_t* h1 = dcel_.emplace_halfedge(m, true);
         h1->set_cell(next->cell());
         dcel_.insert_edge(next, h1);
         h1->twin()->set_subsegment(true);
@@ -1468,7 +1476,7 @@ class Delaunay {
         //return ratio > rho_bar || area > max_area;
     }*/
 
-    int triangle_priority(double min_edge2) {
+    int triangle_priority(double min_edge2) const{
         const double SQR2 = std::sqrt(2.0);
         double length = 0.0;
         int exponent = 0;
@@ -1531,7 +1539,6 @@ class Delaunay {
         } else {
             min_angle_deg = fdapde::internals::angle_between(B, C, A); // ∠BCA
         }
-
 
         // Confronto con soglia angolare passata (rho_bar) usando cos^2
         double min_angle_cos2 = std::pow(std::cos(min_angle_deg * M_PI / 180.0), 2.0);
@@ -1889,12 +1896,12 @@ class Delaunay {
     }
 
 
-    bool check_quality(double rho_bar, double max_area) {
+    bool check_quality(double rho_bar, double max_area) const {
         bool all_ok = true;
         int bad_count = 0;
 
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* t = &(*it);
+        for (auto it = dcel_.cells_cbegin(); it != dcel_.cells_cend(); ++it) {
+            const cell_t* t = &(*it);
 
             coords_t A = t->halfedge()->prev()->node()->coords();
             coords_t B = t->halfedge()->node()->coords();
@@ -1906,26 +1913,23 @@ class Delaunay {
             double min_angle = std::min({angleA, angleB, angleC});
             double angle = fdapde::internals::angle_between(B, C, A);
             
-
             // --- Compute area ---
             double area = fdapde::internals::measure_2d_tri(A,B,C);
 
             // --- Check conditions ---
             if (min_angle < rho_bar || area > max_area) {
-
                 all_ok = false;
                 bad_count++;
                 coords_t A = t->halfedge()->prev()->node()->coords();
                 coords_t B = t->halfedge()->node()->coords();
                 coords_t C = t->halfedge()->next()->node()->coords();
-
             }
         }
 
         if (all_ok) {
-            std::cout << "✅ All triangles satisfy the quality constraints." << std::endl;
+            std::cout << "All triangles satisfy the quality constraints." << std::endl;
         } else {
-            std::cout << "⚠️ Found " << bad_count << " triangles violating quality constraints." << std::endl;
+            std::cout << "Found " << bad_count << " triangles violating quality constraints." << std::endl;
         }
 
         return all_ok;

@@ -112,23 +112,19 @@ inline std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes_
     {}
 };
 
-// === Contorno esterno: lettera A stilizzata (trapezio simmetrico con base e vertice) ===
-// 10 punti: due gambe laterali, una base orizzontale, un ponte centrale
+
 inline Eigen::Matrix<double, 8, 2> letter_A =
     (Eigen::Matrix<double, 8, 2>() <<
-        0.0, 0.0,     // base sinistra
+        0.0, 0.0,     
         7.5, 0.0,
-        10.0, 10.0,   // primo punto diagonale
-        //15.0, 20.0,   // vertice alto
+        10.0, 10.0,  
         20.0, 10.0,
         22.5, 0.0,
-        30.0, 0.0,    // base destra
-        22.5, 30.0,   // punta destra sopra (chiusura superiore)
-        //15.0, 35.0,   // vertice assoluto
-        7.5, 30.0     // punta sinistra sopra
+        30.0, 0.0,    
+        22.5, 30.0,   
+        7.5, 30.0   
     ).finished();
 
-// === Buco centrale (trapezio invertito o triangolo centrale) ===
 inline Eigen::Matrix<double, 4, 2> hole_A =
     (Eigen::Matrix<double, 4, 2>() <<
         11.5, 16.0,
@@ -137,7 +133,6 @@ inline Eigen::Matrix<double, 4, 2> hole_A =
         13, 24.0
     ).finished();
 
-// === Buchi nella geometria A ===
 inline std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes_A = {
     {hole_A}
 };

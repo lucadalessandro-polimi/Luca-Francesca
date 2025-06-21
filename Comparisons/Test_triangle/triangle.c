@@ -14611,6 +14611,52 @@ void quality_statistics(struct mesh *m, struct behavior *b)
            i * 10 + 90, i * 10 + 100, angletable[i + 9]);
   }
   printf("\n");
+
+  FILE *f = fopen("Comparisons/Statistics/triangle.csv", "w");
+  if (f) {
+    // Header 
+    fprintf(f, "Metric,Value\n");
+    fprintf(f, "Vertices,%d\n", m->vertices.maxitems);
+    fprintf(f, "Triangles,%d\n", m->triangles.maxitems);
+    fprintf(f, "Edges,%d\n", m->edges);
+    fprintf(f, "MinArea,%.6f\n", smallestarea);
+    fprintf(f, "MaxArea,%.6f\n", biggestarea);
+    fprintf(f, "MinEdge,%.5f\n", shortest);
+    fprintf(f, "MaxEdge,%.5f\n", longest);
+    fprintf(f, "MinAltitude,%.5f\n", minaltitude);
+    fprintf(f, "MaxAspectRatio,%.5f\n", worstaspect);
+    fprintf(f, "MinAngle,%.4f\n", smallestangle);
+    fprintf(f, "MaxAngle,%.4f\n\n", biggestangle);
+    // Istogramma Aspect Ratio
+    fprintf(f, "AspectRatioRange,Count\n");
+    fprintf(f, "\"1.1547 - 1.5\",%d\n", aspecttable[0]);
+    fprintf(f, "\"1.5 - 2\",%d\n", aspecttable[1]);
+    fprintf(f, "\"2 - 2.5\",%d\n", aspecttable[2]);
+    fprintf(f, "\"2.5 - 3\",%d\n", aspecttable[3]);
+    fprintf(f, "\"3 - 4\",%d\n", aspecttable[4]);
+    fprintf(f, "\"4 - 6\",%d\n", aspecttable[5]);
+    fprintf(f, "\"6 - 10\",%d\n", aspecttable[6]);
+    fprintf(f, "\"10 - 15\",%d\n", aspecttable[7]);
+    fprintf(f, "\"15 - 25\",%d\n", aspecttable[8]);
+    fprintf(f, "\"25 - 50\",%d\n", aspecttable[9]);
+    fprintf(f, "\"50 - 100\",%d\n", aspecttable[10]);
+    fprintf(f, "\"100 - 300\",%d\n", aspecttable[11]);
+    fprintf(f, "\"300 - 1000\",%d\n", aspecttable[12]);
+    fprintf(f, "\"1000 - 10000\",%d\n", aspecttable[13]);
+    fprintf(f, "\"10000 - 100000\",%d\n", aspecttable[14]);
+    fprintf(f, "\"100000 -\",%d\n\n", aspecttable[15]);
+    // Angles
+    fprintf(f, "AngleRange,Count\n");
+    for (i = 0; i < 9; i++) {
+      fprintf(f, "\"%d - %d degrees\",%d\n", i * 10, (i + 1) * 10, angletable[i]);
+    }
+    for (i = 9; i < 18; i++) {
+      fprintf(f, "\"%d - %d degrees\",%d\n", (i - 9 + 9) * 10, (i - 9 + 10) * 10, angletable[i]);
+    }
+    fclose(f);
+    printf("Statistics written to Comparisons/Statistics/triangle.csv\n");
+  }
+
 }
 
 /*****************************************************************************/
