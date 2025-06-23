@@ -159,7 +159,7 @@ constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, cons
     return det > 0;  // D is inside the circumcircle if determinant is positive
 }
 
-//new function to detect if a point is inside the polygon or not (used for the insertion of points in concave domains)
+// checks if a point is inside a polygon or not 
 //algorithm of Ray-Casting 
 template <typename Derived, typename PointT>
 constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p) {
@@ -177,11 +177,7 @@ constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const
     return inside;
 }
 
-// Check if a point is safely inside a polygon, i.e., farther than `epsilon` from any polygon edge.
-// This is useful to prevent sampling too close to boundaries.
-// Checks whether a point `p` is inside a polygon `polygon`
-// and also at least `epsilon` distance away from any edge of the polygon.
-// This avoids placing points too close to the boundary.
+// checks whether a point `p` is inside a polygon `polygon`, also accounting for internal holes
 template <typename Derived, typename PointT>
 constexpr bool is_point_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
                                        const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>>& holes,
@@ -199,7 +195,9 @@ constexpr bool is_point_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
 
 
 
-// Compute radius-edge ratio of triangle given its 2D coordinates
+// computes radius-edge ratio of triangle given its 2D coordinates
+// calculated as the ratio of circumradius to the shortest edge length
+// used for Ruppert refinement algorithm ("Delaunay mesh generation", Cheng, Siu-Wing and Dey, Tamal Krishna and Shewchuk, Jonathan and Sahni, Sartaj)
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr double radius_edge_ratio(const PointT& A, const PointT& B, const PointT& C) {
@@ -216,7 +214,7 @@ constexpr double radius_edge_ratio(const PointT& A, const PointT& B, const Point
     return circum_radius / shortest_edge;
 }
 
-// Compute circumcenter of triangle given its 2D coordinates
+// computes circumcenter of triangle given its 2D coordinates
 template <typename PointT>
 requires(internals::is_subscriptable<PointT, int>)
 constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C) {
@@ -235,7 +233,8 @@ constexpr PointT circumcenter(const PointT& A, const PointT& B, const PointT& C)
 
     return PointT(Ux, Uy);
 }
-//function detecting if p is the circle of diameter ab
+
+// detects if p is inside circle of diameter ab
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool is_encroached(const PointT& p, const PointT& a, const PointT& b) {
@@ -245,7 +244,7 @@ constexpr bool is_encroached(const PointT& p, const PointT& a, const PointT& b) 
     return dist_sq < radius_sq - machine_epsilon; 
 }
 
-// function to compute the angle between two segments that share vertex p in 2D (counterclockwise)
+// computes the angle between two segments that share vertex p in 2D (counterclockwise)
 // the angle is in degrees
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
@@ -262,21 +261,21 @@ constexpr double angle_between(const PointT& a, const PointT& p, const PointT& b
     double angle_rad = std::acos(cos_theta);
     // 2D vector product to dtermine orientation
     double cross = v1[0] * v2[1] - v1[1] * v2[0];
-    // if cross > 0: angle is clockwise, so we need to subtract from 2 * pi
-    // since boundary is counterclockwise oriented
+    // if cross > 0: angle is clockwise, so we need to subtract from 2 * pi since boundary is counterclockwise oriented
     if (cross > 0)
         angle_rad = 2 * M_PI - angle_rad;
 
     return angle_rad * 180.0 / M_PI;
 }
-// function to check if the angle between two segments that share vertex p in 2D is acute
+
+// checks if the angle between two segments that share vertex p in 2D is acute
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool is_angle_acute(const PointT& a, const PointT& p, const PointT& b, double threshold_deg = 90.0) {
     return angle_between(a, p, b) < threshold_deg - machine_epsilon;
 }
 
-// function to calculate the length of a segment in 2D
+// claculates segment ab's length (2D)
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr double segment_length(const PointT& a, const PointT& b) {
