@@ -31,20 +31,15 @@ template <int LocalDim, int EmbedDim> class Polygon {
     Polygon() noexcept = default;
     Polygon(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes) noexcept : triangulation_() {
         fdapde_assert(nodes.rows() > 0 && nodes.cols() == embed_dim);
-        /*if (internals::are_2d_counterclockwise_sorted(nodes) ) {
-            triangulate_(nodes, holes);
-        } else {   // nodes are in clocwise order, reverse node ordering
-            int n_nodes = nodes.rows();
-            Eigen::Matrix<double, Dynamic, Dynamic> reversed_nodes(n_nodes, embed_dim);
-            for (int i = 0; i < n_nodes; ++i) { reversed_nodes.row(i) = nodes.row(n_nodes - 1 - i); }
-            triangulate_(reversed_nodes, holes);
-        }*/
+        
+        // check if nodes are given in counterclockwise order
         Eigen::Matrix<double, Dynamic, Dynamic> corrected_nodes=nodes;
         if (!internals::are_2d_counterclockwise_sorted(nodes)) {
             int n_nodes = nodes.rows();
             for (int i = 0; i < n_nodes; ++i)
                 corrected_nodes.row(i) = nodes.row(n_nodes - 1 - i);
         }
+        // check if holes' points are given in clockwise order
         std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> corrected_holes;
         for (const auto& hole : holes) {
             if (internals::are_2d_counterclockwise_sorted(hole)) {
@@ -92,21 +87,20 @@ template <int LocalDim, int EmbedDim> class Polygon {
         std::vector<std::vector<int>> poly_partition = monotone_partition_(nodes, holes);
         // triangulate each monotone polygon
         Eigen::Matrix<double, Dynamic, embed_dim> all_nodes;
-        int total_rows = nodes.rows();
+        int total_rows = nodes.rows();  // total number of points in the triangulation
         for (const auto& hole : holes) {
             total_rows += hole.rows();
         }
+        // insert all points in all_nodes
         all_nodes.resize(total_rows, embed_dim);
-        // Copia del bordo esterno
         all_nodes.topRows(nodes.rows()) = nodes;
-        // Copia dei buchi
         int row_offset = nodes.rows();
         for (const auto& hole : holes) {
             all_nodes.middleRows(row_offset, hole.rows()) = hole;
             row_offset += hole.rows();
         }
         for (const std::vector<int>& poly : poly_partition) {
-            std::vector<int> local_cells = triangulate_monotone_(all_nodes(poly, Eigen::placeholders::all));  //MODIFICATO
+            std::vector<int> local_cells = triangulate_monotone_(all_nodes(poly, Eigen::placeholders::all));  
             // move local node numbering to global node numbering
             for (std::size_t i = 0; i < local_cells.size(); ++i) { local_cells[i] = poly[local_cells[i]]; }
             cells.insert(cells.end(), local_cells.begin(), local_cells.end());
@@ -208,10 +202,12 @@ template <int LocalDim, int EmbedDim> class Polygon {
         }
         
         Eigen::Matrix<double, Dynamic, embed_dim> all_coords;
+        // total_rows = total number of points in the triangulation
         int total_rows = coords.rows();
         for (const auto& hole : coords_holes) {
             total_rows += hole.rows();
         }
+        // insert all points in all_coords
         all_coords.resize(total_rows, embed_dim);
         all_coords.topRows(coords.rows()) = coords;
         int row_offset = coords.rows();
@@ -236,7 +232,6 @@ template <int LocalDim, int EmbedDim> class Polygon {
             int prev = v->node()->prev()->id();
             int curr = v->node()->id();
 	        int next = v->node()->next()->id();
-            //std::cout << "curr = " << curr << ", prev = " << prev << ", next = " << next << std::endl;
             // process i-th node
             switch (node_category[v]) {
             case node_category_t::start: {
@@ -332,16 +327,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 monotone_partition.emplace_back(std::move(ids));
             }
         }
-        /*std::cout << "Stampo monotone_partition:" << std::endl;
-        std::cout << "N. di poligoni = " << monotone_partition.size() << std::endl;
-        for (std::size_t i = 0; i < monotone_partition.size(); ++i) {
-            std::cout << "Poligono " << i << " con " << monotone_partition[i].size() << " nodi: ";
-            for (int idx : monotone_partition[i]) {
-                std::cout << idx << " ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << "Fatto stampa monotone_partition." << std::endl;*/
+        
         return monotone_partition;
     }
 
@@ -398,22 +384,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 r_chain.insert(min);
                 l_chain.erase(min);
             }
-            /*for (auto l: l_chain) {
-                std::cout << "l_chain_ " << l << std::endl;
-            }
-            for (auto r: r_chain) {
-                std::cout << "r_chain_ " << r << std::endl;
-            }
-            for (int i = 0; i < nodes.rows(); ++i) {
-                auto n = nodes.row(i);  
-                std::cout << "nodes " << i << ": " << n(0) << ", " << n(1) << std::endl;
-            }
-            for(auto n:node)
-            {
-                std::cout << "node " << n << std::endl;
-            }*/
-            
-            
+           
         }
         auto is_l_chain = [&](int i) { return l_chain.contains(i); };
         auto is_r_chain = [&](int i) { return r_chain.contains(i); };
@@ -431,26 +402,19 @@ template <int LocalDim, int EmbedDim> class Polygon {
             cont=0;
             node_i = *(reflex_chain.end() - 1);
             node_j = node[j];
-            //std::cout << "i " << node_i << " j " << node_j << std::endl;
+
             if (are_in_opposite_chains(node_i, node_j)) {   // triangulate
                 node_i = *reflex_chain.begin();
                 on_left = !on_left;
                 while (reflex_chain.size() > 1) {
                     reflex_chain.pop_front();
                     node_k = reflex_chain.front();
-                    // add triangle
-                    //std::cout << "i " << node_i << std::endl;
-                    //std::cout << "k " << node_k << std::endl;
+                    // check if the triplet (node_i, node_j, node_k) is not collinear
                     if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
+                        // add triangle
 		                push_cell(node_i, node_j, node_k);
-                        //std::cout << "QUI ALTRO" << std::endl;
                         node_i = node_k;   
                     }
-                    else{
-                        //reflex_chain.push_front(node_i);
-                        //break;
-                    }
-                    //std::cout << "sono nell' IF" << std::endl;
                 }
                 reflex_chain.push_back(node_j);
             } else {   // check if the triplet (node_i, node_j, node_k) makes a reflex turn or not
@@ -469,18 +433,15 @@ template <int LocalDim, int EmbedDim> class Polygon {
                     reflex_chain.push_back(node_j);
                 } else {
                     do {
-                        // add triangle
+                        // check if the triplet (node_i, node_j, node_k) is not collinear
                         if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
+                            // add triangle
 		                    push_cell(node_i, node_j, node_k);
-                            //std::cout << "QUI" << std::endl;
                             // triangulate until convex turn is found
                             reflex_chain.pop_back();
                         }
-                        //std::cout <<"k " << node_k << std::endl;
-                        //std::cout << "sono nell' ELSE" << std::endl;
                         if (reflex_chain.size() > 1) {
                             node_i = *(reflex_chain.end() - 1);
-                            //std::cout << "new node i: " << node_i <<std::endl;
                             node_k = *(reflex_chain.end() - 2);
                             m_signed =
                               internals::signed_measure_2d_tri(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));
