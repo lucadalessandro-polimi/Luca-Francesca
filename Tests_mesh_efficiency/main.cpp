@@ -10,7 +10,88 @@ using namespace fdapde;
 int main() {
 
 //-----------------------CALL TO BUILD THE MESH AND PRINT ITS QUALITY MEASURES-------------------------------------
-Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {star},25,200,0);
+Eigen::Matrix<double, 2, 2> internal;
+internal << 30.5,0.5,
+            24.5,0.5;
+Eigen::Matrix<double, 4, 2> region1;
+region1 << 
+    0.0, 0.0,
+    2000.0, 0.0,
+    2000.0, 1000.0,
+    0.0, 1000.0;
+Eigen::Matrix<double, 4, 2> region2;
+region2 << 
+    2000.0, 0.0,
+    4000.0, 0.0,
+    4000.0, 1000.0,
+    2000.0, 1000.0;
+Eigen::Matrix<double, 4, 2> region3;
+region3 << 
+    2000.0, 1000.0,
+    4000.0, 1000.0,
+    4000.0, 2000.0,
+    2000.0, 2000.0;
+Eigen::Matrix<double, 4, 2> region4;
+region4 << 
+    0.0, 1000.0,
+    2000.0, 1000.0,
+    2000.0, 2000.0,
+    0.0, 2000.0;
+
+std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>> holes(5); 
+
+// === Regione 1 ===
+Eigen::Matrix<double, 4, 2> hole1_r1;
+hole1_r1 << 300.0, 200.0,  500.0, 200.0,  500.0, 400.0,  300.0, 400.0;
+
+Eigen::Matrix<double, 4, 2> hole2_r1;
+hole2_r1 << 1500.0, 600.0,  1700.0, 600.0,  1700.0, 800.0,  1500.0, 800.0;
+
+holes[0].push_back(hole1_r1);
+holes[0].push_back(hole2_r1);
+holes[1].push_back(hole1_r1);
+holes[1].push_back(hole2_r1);
+
+// === Regione 2 ===
+Eigen::Matrix<double, 4, 2> hole1_r2;
+hole1_r2 << 2300.0, 300.0,  2500.0, 300.0,  2500.0, 500.0,  2300.0, 500.0;
+
+Eigen::Matrix<double, 4, 2> hole2_r2;
+hole2_r2 << 3500.0, 100.0,  3700.0, 100.0,  3700.0, 300.0,  3500.0, 300.0;
+
+holes[0].push_back(hole1_r2);
+holes[0].push_back(hole2_r2);
+holes[3].push_back(hole1_r2);
+holes[3].push_back(hole2_r2);
+
+// === Regione 3 ===
+Eigen::Matrix<double, 4, 2> hole1_r3;
+hole1_r3 << 2200.0, 1200.0,  2400.0, 1200.0,  2400.0, 1400.0,  2200.0, 1400.0;
+
+Eigen::Matrix<double, 4, 2> hole2_r3;
+hole2_r3 << 3200.0, 1700.0,  3400.0, 1700.0,  3400.0, 1900.0,  3200.0, 1900.0;
+
+holes[0].push_back(hole1_r3);
+holes[0].push_back(hole2_r3);
+holes[2].push_back(hole1_r3);
+holes[2].push_back(hole2_r3);
+
+// === Regione 4 ===
+Eigen::Matrix<double, 4, 2> hole1_r4;
+hole1_r4 << 200.0, 1400.0,  400.0, 1400.0,  400.0, 1600.0,  200.0, 1600.0;
+
+Eigen::Matrix<double, 4, 2> hole2_r4;
+hole2_r4 << 1400.0, 1100.0,  1600.0, 1100.0,  1600.0, 1300.0,  1400.0, 1300.0;
+
+holes[0].push_back(hole1_r4);
+holes[0].push_back(hole2_r4);
+holes[4].push_back(hole1_r4);
+holes[4].push_back(hole2_r4);
+
+
+
+Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle, region1, region3, region4, region2},0);
+std::cout << typeid(del).name() << std::endl;
 del.dcel().export_to_json("Tests_mesh_efficiency/dcel_output.json");
 del.print_statistics();
 
@@ -18,7 +99,7 @@ del.print_statistics();
 //-----------------------TEST OF COMPUTATIONAL EFFICIENCY OF CONFLICT GRAPH ALGORITHM------------------------------
 
 
-    std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
+    /*std::ofstream outfile("Tests_mesh_efficiency/timing.csv");
     outfile << "NumPoints,TimeElapsed(ms)\n";
 
     auto start = high_resolution_clock::now(); 
@@ -45,7 +126,7 @@ del.print_statistics();
     std::cout << "elapsed time for 1000000 internal points: " << duration << " ms" << std::endl;
     outfile << 1000000 << "," << duration << "\n"; 
     
-    outfile.close(); 
+    outfile.close(); */
 
 //-----------------------END TEST OF COMPUTATIONAL EFFICIENCY OF CONFLICT GRAPH ALGORITHM------------------------------
 
