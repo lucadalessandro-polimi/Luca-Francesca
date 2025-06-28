@@ -325,10 +325,10 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
    
     // to export DCEL to JSON format for visualization purposes (using python script)
-    void export_to_json(const std::string& filename) {
+    void export_to_json(const std::string& filename) const{
         json j;  
         j["nodes"] = json::array();
-        for (auto it = nodes_begin(); it != nodes_end(); ++it) {
+        for (auto it = nodes_cbegin(); it != nodes_cend(); ++it) {
             json node;
             node["id"] = it->id();
             node["coords"] = {it->coords()(0), it->coords()(1)};
@@ -336,7 +336,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             j["nodes"].push_back(node);
         }  
         j["edges"] = json::array();
-        for (auto it = halfedges_begin(); it != halfedges_end(); ++it) {
+        for (auto it = halfedges_cbegin(); it != halfedges_cend(); ++it) {
             json edge;
             edge["id"] = it->id();
             edge["from"] = it->node()->id();
@@ -346,7 +346,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             j["edges"].push_back(edge);
         }
         j["cells"] = json::array();
-        for (auto it = cells_begin(); it != cells_end(); ++it) {
+        for (auto it = cells_cbegin(); it != cells_cend(); ++it) {
             json cell;
             cell["id"] = it->id();
             cell["edges"] = json::array();
@@ -634,13 +634,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
         Eigen::Matrix<int, Eigen::Dynamic, 1> boundary_markers(n_nodes());
 
         int idx = 0;
-        for (auto it = nodes_.begin(); it != nodes_.end(); ++it, ++idx) {
+        for (auto it = nodes_cbegin(); it != nodes_cend(); ++it, ++idx) {
             nodes_mat.row(it->id()) = it->coords().transpose();
             boundary_markers(it->id()) = it->on_boundary() ? 1 : 0;
         }
 
         idx = 0;
-        for (auto it = cells_.begin(); it != cells_.end(); ++it, ++idx) {
+        for (auto it = cells_cbegin(); it != cells_cend(); ++it, ++idx) {
             halfedge_t* h = it->halfedge();
             cells_mat(idx, 0) = h->node()->id();
             cells_mat(idx, 1) = h->next()->node()->id();

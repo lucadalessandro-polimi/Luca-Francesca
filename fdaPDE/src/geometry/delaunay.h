@@ -17,7 +17,7 @@ class Delaunay {
     using node_t = typename DCEL<local_dim, embed_dim>::node_t;
     using halfedge_t = typename DCEL<local_dim, embed_dim>::halfedge_t;
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
-    using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<2,2>>;
+    using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<local_dim,embed_dim>>;
     using dcel_t = DCEL<local_dim, embed_dim>;
     using polygon_t = Polygon<local_dim, embed_dim>;
 
@@ -44,12 +44,8 @@ class Delaunay {
         triangulate(internal, boundaries, holes);
     }
 
-    // Getter const
+    // Getter const, to guarantee that delaunay triangulation is preserved
     const dcel_t& dcel() const {
-        return dcel_;
-    }
-    // Getter non-const
-    dcel_t& dcel() {
         return dcel_;
     }
 
