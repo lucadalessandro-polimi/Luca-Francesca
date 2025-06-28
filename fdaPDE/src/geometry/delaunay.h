@@ -23,13 +23,13 @@ class Delaunay {
 
 
     // costructor with random generated points and refinement
-    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, double min_angle, double max_area, int N=0, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, double min_angle, double max_area, int N, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
         triangulate(N, boundaries, holes);
         Ruppert_refinement(min_angle, max_area);
         check_quality(min_angle, max_area);
     }  
     // costructor with random generated points, no refinement
-    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, int N=0, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
+    Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, int N, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
         triangulate(N, boundaries, holes);
     }   
     // costructor with given internal points from the user, and refinement
@@ -271,7 +271,7 @@ class Delaunay {
             else std::cout << "  |  ";
         }
 
-        std::ofstream fout("Comparisons/Statistics/delaunay.csv");
+        std::ofstream fout("Meshes/Comparisons/delaunay.csv");
         if (fout) {
             fout << "Metric,Value\n";
             fout << "Vertices," << dcel_.n_nodes() << "\n";
@@ -294,9 +294,9 @@ class Delaunay {
                 fout << "\"" << range << " degrees\"," << count << "\n";
             }
             fout.close();
-            std::cout << "\nMesh statistics saved to mesh_stats.csv\n";
+            std::cout << "\nMesh statistics saved to Meshes/Comparisons/delaunay.csv\n";
         } else {
-            std::cerr << "\nError: unable to write mesh_stats.csv\n";
+            std::cerr << "\nError: unable to write Meshes/Comparisons/delaunay.csv\n";
         }
 
         std::cout << std::endl;
@@ -501,7 +501,7 @@ class Delaunay {
 
         //inserting the internal points in the triangulation
         for (int i = 0; i < internal.rows(); ++i) {
-            node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, internal.row(i).eval()));  //.transpose()
+            node_t* n = dcel_.insert_node(node_t(dcel_.n_nodes(), false, internal.row(i).eval())); 
             detect_conflicts(n);
         }
 
@@ -538,7 +538,7 @@ class Delaunay {
             for(int i=1; i< boundaries.size(); ++i){
                 // creation of connection for internal regions
                 for(int j=0; j< boundaries[i].rows(); ++j){
-                        coords_t co= boundaries[i].row(j);  //.transpose()
+                        coords_t co= boundaries[i].row(j);  
                         if(dcel_.find_node(co)) continue; // node already added in dcel_
                         // create a new node and halfedge for the subsegment point (it's not on the boundary)
                         node_t* n1 = dcel_.insert_node(node_t(dcel_.n_nodes(), false, co)); 
@@ -548,8 +548,8 @@ class Delaunay {
                 } 
                 cell_t* c_holes= nullptr;
                 for (int j = 0; j < boundaries[i].rows(); ++j) {
-                        coords_t co1= boundaries[i].row(j);  //.transpose()
-                        coords_t co2= boundaries[i].row( (j+1) % boundaries[i].rows() ); //.transpose()
+                        coords_t co1= boundaries[i].row(j);  
+                        coords_t co2= boundaries[i].row( (j+1) % boundaries[i].rows() ); 
                         node_t* n1= dcel_.find_node(co1);
                         node_t* n2= dcel_.find_node(co2);
                         halfedge_t* h_between = dcel_.find_halfedge_between(co1, co2);
@@ -570,7 +570,7 @@ class Delaunay {
                 auto triangulation = polygon.triangulation();
                 // update holes[i] edges to the cell of boundary i 
                 for (int j = 0; j < holes[i].size(); ++j) {
-                    coords_t co = holes[i][j].row(0);  //.transpose()
+                    coords_t co = holes[i][j].row(0);  
                     if (!dcel_.find_node(co)) continue;
                     node_t* n1 = dcel_.find_node(co);
                     halfedge_t* h_hole= n1->halfedge();   // make_polygon creates holes' nodes s.t. its own halfedge is defined 
@@ -788,14 +788,14 @@ class Delaunay {
         int j = 0;
         int k = 0;
         halfedge_t* e = nullptr; // edge to find between two existing boundary points
-        coords_t last_coords = boundary_vertices.row((boundary_vertices.rows() - 1));  //.transpose()
+        coords_t last_coords = boundary_vertices.row((boundary_vertices.rows() - 1)); 
 
         for (int i = 0; i < boundary.rows(); i = j) {
             if (vertices_set.find(boundary.row(i)) == vertices_set.end()) {
                 j = i;
 
                 // p = point to insert
-                coords_t p = boundary.row(j);  //.transpose()
+                coords_t p = boundary.row(j); 
                 // if p is already in dcel_, move to the next point
                 if (dcel_.find_node(p)) {
                     last_coords = p;
@@ -805,7 +805,7 @@ class Delaunay {
 
                 // determine the two adjacent boundary points surrounding p 
                 coords_t n1 = last_coords;
-                coords_t n2 = boundary_vertices.row(k % boundary_vertices.rows());  //.transpose()
+                coords_t n2 = boundary_vertices.row(k % boundary_vertices.rows());  
 
                 // find and remove edge between n1 and n2, to add p
                 if (!e) e = dcel_.find_halfedge_between(n1, n2);
@@ -840,7 +840,7 @@ class Delaunay {
 
             } else { // move to the next boundary points to insert
                 // update last_coords (new n1)
-                last_coords = boundary.row(i);  //.transpose()
+                last_coords = boundary.row(i);  
                 ++j;
                 ++k;
                 e = nullptr;  // reset edge to find next time

@@ -141,10 +141,8 @@ constexpr bool point_in_2d_tri(const PointT& a, const PointT& t1, const PointT& 
            (t2[0] - a[0]) * (t3[1] - a[1]) >= (t3[0] - a[0]) * (t2[1] - a[1]);
 }
 
-//new function in_circle used for the delaunay trinagulation implementation 
-// 2D point-in-circle test (Delaunay criterion)
 
-// Checks if point D is inside the circumcircle of the triangle (A, B, C)
+// checks if point D is inside the circumcircle of the triangle (A, B, C) (Delaunay criterion)
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
@@ -160,7 +158,7 @@ constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, cons
 }
 
 // checks if a point is inside a polygon or not 
-//algorithm of Ray-Casting 
+// algorithm of Ray-Casting 
 template <typename Derived, typename PointT>
 constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p) {
 
@@ -192,7 +190,6 @@ constexpr bool is_point_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
     }}
     return true;
 }
-
 
 
 // computes radius-edge ratio of triangle given its 2D coordinates
@@ -271,11 +268,11 @@ constexpr double angle_between(const PointT& a, const PointT& p, const PointT& b
 // checks if the angle between two segments that share vertex p in 2D is acute
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
-constexpr bool is_angle_acute(const PointT& a, const PointT& p, const PointT& b, double threshold_deg = 90.0) {
-    return angle_between(a, p, b) < threshold_deg - machine_epsilon;
+constexpr bool is_angle_acute(const PointT& a, const PointT& p, const PointT& b) {
+    return angle_between(a, p, b) < 90.0 - machine_epsilon;
 }
 
-// claculates segment ab's length (2D)
+// calculates segment ab's length (2D)
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr double segment_length(const PointT& a, const PointT& b) {

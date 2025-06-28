@@ -4,16 +4,13 @@
 #include <Eigen/Dense>
 #include <vector>
 
-inline Eigen::Matrix<double, 8, 2> rectangle =
-    (Eigen::Matrix<double, 8, 2>() <<
+inline Eigen::Matrix<double, 4, 2> rectangle =
+    (Eigen::Matrix<double, 4, 2>() <<
         0.0, 0.0,
-        2000, 0,
         4000.0, 0.0,
-        4000, 1000,
         4000.0, 2000.0,
-        2000, 2000,
-        0.0, 2000.0, 
-    0, 1000).finished();
+        0.0, 2000.0
+    ).finished();
 
 
 inline Eigen::Matrix<double, 10, 2> star =

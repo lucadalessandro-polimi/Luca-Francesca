@@ -5,7 +5,7 @@ import os
 
 def plot_timing_data():
   
-    file_path = os.path.join(os.path.dirname(__file__), 'timing.csv')
+    file_path = os.path.join(os.path.dirname(__file__), 'timing_triangle.csv')
 
     df = pd.read_csv(file_path)
     
@@ -38,7 +38,9 @@ def plot_timing_data():
     plt.ylabel('Time (ms)')
     plt.legend()
     plt.grid(True)
-    plt.savefig("Tests_mesh_efficiency/timing_plot.png", dpi=300)
+    plt.savefig("Meshes/Test_triangle/timing_triangle.png", dpi=300)
+
+    print("Plot saved as Meshes/Test_triangle/timing_triangle.png")
 
 
 if __name__ == "__main__":

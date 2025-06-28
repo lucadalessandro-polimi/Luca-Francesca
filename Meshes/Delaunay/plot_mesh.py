@@ -39,10 +39,10 @@ def plot_dcel(filename):
             print(f"Error in drawing cell with edges {cell['edges']}")
 
     # Salvataggio immagine pulita
-    plt.savefig("Tests_mesh_efficiency/dcel_plot.png", dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
-    print("Plot saved as 'Tests_mesh_efficiency/dcel_plot.png'")
+    plt.savefig("Meshes/Delaunay/delaunay_plot.png", dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
+    print("Plot saved as 'Meshes/Delaunay/delaunay_plot.png'")
 
 if __name__ == "__main__":
-    plot_dcel("Tests_mesh_efficiency/dcel_output.json")
+    plot_dcel("Meshes/Delaunay/delaunay_output.json")
 
 

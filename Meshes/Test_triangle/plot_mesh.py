@@ -32,13 +32,13 @@ def plot_mesh(points, triangles, basename):
     for tri in triangles:
         x = [points[i][0] for i in tri] + [points[tri[0]][0]]
         y = [points[i][1] for i in tri] + [points[tri[0]][1]]
-        ax.plot(x, y, 'k-')
+        color = "black"
+        ax.plot(x, y, color=color, linewidth=1.5)
     ax.set_aspect('equal')
-    ax.set_title("Triangle mesh")
-    plt.grid(True)
-    out_path = f"Comparisons/Test_triangle/{basename}_mesh.png"
+    ax.axis('off')
+    out_path = f"Meshes/Test_triangle/{basename}_mesh.png"
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    plt.savefig(out_path, dpi=300)
+    plt.savefig(out_path, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
     print(f"Mesh saved as {out_path}")
 
 # === MAIN ===
@@ -48,8 +48,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     basename = sys.argv[1]  # es: "star"
-    node_file = f"Comparisons/Test_triangle/{basename}.1.node"
-    ele_file = f"Comparisons/Test_triangle/{basename}.1.ele"
+    node_file = f"Meshes/Test_triangle/{basename}.1.node"
+    ele_file = f"Meshes/Test_triangle/{basename}.1.ele"
 
     points = read_node_file(node_file)
     triangles = read_ele_file(ele_file)
