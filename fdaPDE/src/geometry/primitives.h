@@ -191,26 +191,6 @@ constexpr bool is_point_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
     return true;
 }
 
-
-// computes radius-edge ratio of triangle given its 2D coordinates
-// calculated as the ratio of circumradius to the shortest edge length
-// used for Ruppert refinement algorithm ("Delaunay mesh generation", Cheng, Siu-Wing and Dey, Tamal Krishna and Shewchuk, Jonathan and Sahni, Sartaj)
-template <typename PointT>
-    requires(internals::is_subscriptable<PointT, int>)
-constexpr double radius_edge_ratio(const PointT& A, const PointT& B, const PointT& C) {
-    double a = (B - C).norm();
-    double b = (A - C).norm();
-    double c = (A - B).norm();
-
-    double s = 0.5 * (a + b + c);  //semi-perimeter
-    double area = std::sqrt(s * (s - a) * (s - b) * (s - c)); //Heron's formula 
-    if (area <= 0.0) return std::numeric_limits<double>::infinity(); //for degenerate case 
-
-    double circum_radius = (a * b * c) / (4.0 * area);
-    double shortest_edge = std::min({a, b, c});
-    return circum_radius / shortest_edge;
-}
-
 // computes circumcenter of triangle given its 2D coordinates
 template <typename PointT>
 requires(internals::is_subscriptable<PointT, int>)
