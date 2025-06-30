@@ -95,8 +95,7 @@ class Delaunay {
 
                 // if the edge is encroached, add it to the set
                 if (check_encroachment_(e)) {
-                    if (encroached_segments.count(e) == 0)
-                        encroached_segments.insert(e);
+                    encroached_segments.insert(e);
                 }
             }
         }
@@ -163,8 +162,7 @@ class Delaunay {
         while (!halfedges_to_check.empty()) {
             halfedge_t* edge = *halfedges_to_check.begin();
             halfedges_to_check.erase(edge);
-            if(halfedges_to_check.count(edge->twin()) > 0) 
-                halfedges_to_check.erase(edge->twin()); 
+            halfedges_to_check.erase(edge->twin()); 
             cell_t* neighbor = edge->twin()->cell();
 
             // obtaine the 4 vertices of the quadrilateral formed by the two adjoining triangles 
@@ -180,7 +178,6 @@ class Delaunay {
                 halfedge_t* twin_prev = edge->twin()->prev();
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(prev, twin_prev);
-            
                 if (new_edge) {
                     // insert the new halfedges created by the flip into the list to check
                     if(!new_edge->prev()->is_segment())
@@ -1174,10 +1171,10 @@ class Delaunay {
         // coordinates of the point to insert to split e
         coords_t split_pt; 
 
-        // if ab^c is acute and ab is not too close in length to bc, create a circular crown to ensure at next sweep e is not encroached anymore
+        // if ab^c is <= 45° and ab is not too close in length to bc, create a circular crown to ensure at next sweep e is not encroached anymore
         if (e->next()->is_segment() &&
             (fdapde::internals::segment_length(a->coords(), b->coords()) - fdapde::internals::segment_length(b->coords(), c->coords()) ) / fdapde::internals::segment_length(a->coords(), b->coords()) > 0.1 &&
-            fdapde::internals::is_angle_acute(a->coords(), b->coords(), c->coords())) {
+            fdapde::internals::angle_between(a->coords(), b->coords(), c->coords()) <=45) {
             // project c onto the line ab s.t. b_split = bc
             coords_t split_pt_ref = c->coords();
             double r = (split_pt_ref - b->coords()).norm();
@@ -1199,12 +1196,12 @@ class Delaunay {
         // create new connections between am, mb, bc before removing e
         halfedge_t* h1 = dcel_.emplace_halfedge(m, true);
         h1->set_cell(next->cell());
-        dcel_.insert_edge(next, h1); 
+        dcel_.insert_edge(next, h1); //mb
         h1->twin()->set_segment(true);
-        halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);
+        halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);  //am
         h2->set_segment(true);
         h2->twin()->set_segment(true);
-        dcel_.insert_edge(prev, h1);
+        dcel_.insert_edge(prev, h1);  //mc
         dcel_.remove_edge(e);
 
         // check whether the 2 new triangles are badly-shaped
@@ -1267,9 +1264,26 @@ class Delaunay {
                 }
             }
         }
-        
+
+        if (fdapde::internals::in_circle(h1->node()->coords(), next->node()->coords(), prev->node()->coords(), next->twin()->prev()->node()->coords()) || 
+            fdapde::internals::in_circle(next->twin()->prev()->node()->coords(), h1->prev()->node()->coords(), next->node()->coords(), h1->node()->coords()) || 
+            fdapde::internals::in_circle(h1->node()->coords(), prev->node()->coords(), h2->node()->coords(), prev->twin()->prev()->node()->coords()) || 
+            fdapde::internals::in_circle(prev->twin()->prev()->node()->coords(), h2->node()->coords(), prev->node()->coords(), h1->node()->coords()) ) {
+            // perform local flips if necessary to maintain Delaunay property
+            flip_refinement_(encroached_segments, bad_triangles, min_angle, max_area);
+        }
+        else if(!h1->on_boundary()){
+            halfedge_t* h3= h1->twin();
+            halfedge_t* h4= h2->twin();
+            if (fdapde::internals::in_circle(h4->node()->coords(), h3->prev()->node()->coords(), h3->node()->coords(), h3->prev()->twin()->prev()->node()->coords()) ||
+                fdapde::internals::in_circle(h3->prev()->twin()->prev()->node()->coords(), h3->node()->coords(), h3->prev()->node()->coords(), h4->node()->coords()) ||
+                fdapde::internals::in_circle(h4->node()->coords(), h2->node()->coords(), h4->prev()->node()->coords(), h4->next()->twin()->prev()->node()->coords()) ||
+                fdapde::internals::in_circle(h4->next()->twin()->prev()->node()->coords(), h4->prev()->node()->coords(), h2->node()->coords(), h4->node()->coords())){
+                    flip_refinement_(encroached_segments, bad_triangles, min_angle, max_area);
+                }
+        }
         // perform local flips if necessary to maintain Delaunay property
-        flip_refinement_(encroached_segments, bad_triangles, min_angle, max_area);
+        //flip_refinement_(encroached_segments, bad_triangles, min_angle, max_area);
 
         // recheck the two new segments for possible encroachment
         segments.insert(h1);
@@ -1286,8 +1300,7 @@ class Delaunay {
         for(auto it = segments.begin(); it != segments.end(); ++it) {
             halfedge_t* h = *it;
             if (check_encroachment_(h)) {
-                if(encroached_segments.count(h) == 0)
-                    encroached_segments.insert(h);
+                encroached_segments.insert(h);
             }
         }
     }
@@ -1492,8 +1505,7 @@ class Delaunay {
         bool flag = false;
         for (halfedge_t* e : {e1, e2, e3}) {
             if(e->is_segment() && e->cell() && check_encroachment_(e, c)) {
-                    if (encroached_segments.count(e) == 0)
-                        encroached_segments.insert(e);     
+                    encroached_segments.insert(e);     
                     flag = true;  
             }
         }
@@ -1519,8 +1531,7 @@ class Delaunay {
         while (!halfedges_to_check.empty()) {
             halfedge_t* edge = *(halfedges_to_check.begin());
             halfedges_to_check.erase(edge);
-            if(halfedges_to_check.count(edge->twin()) > 0)
-                halfedges_to_check.erase(edge->twin());
+            halfedges_to_check.erase(edge->twin());
 
             cell_t* neighbor = edge->twin()->cell();
 
@@ -1574,11 +1585,9 @@ class Delaunay {
                         }
                     }
                     if(new_edge->prev()->is_segment() && new_edge->prev()->cell() && check_encroachment_(new_edge->prev())){
-                        if (encroached_segments.count(new_edge->prev()) == 0)
                         encroached_segments.insert(new_edge->prev());
                     }
                     if(new_edge->next()->is_segment() && new_edge->next()->cell() && check_encroachment_(new_edge->next())){
-                        if (encroached_segments.count(new_edge->next()) == 0)
                         encroached_segments.insert(new_edge->next());
                     }
                     double p2 = is_bad_triangle_(new_edge->twin()->cell(), min_angle, max_area);
@@ -1597,11 +1606,9 @@ class Delaunay {
                     }
                     
                    if(new_edge->twin()->prev()->is_segment() && new_edge->twin()->prev()->cell() && check_encroachment_(new_edge->twin()->prev())){
-                        if (encroached_segments.count(new_edge->twin()->prev()) == 0)
                         encroached_segments.insert(new_edge->twin()->prev());
                     }
                     if(new_edge->twin()->next()->is_segment() && new_edge->twin()->next()->cell() && check_encroachment_(new_edge->twin()->next())){
-                        if (encroached_segments.count(new_edge->twin()->next()) == 0)
                         encroached_segments.insert(new_edge->twin()->next());
                     }
                 }
@@ -1634,8 +1641,7 @@ class Delaunay {
                 }
             }
             if (check_encroachment_(vw)) {
-                if (encroached_segments.count(vw) == 0)
-                    encroached_segments.insert(vw);
+                encroached_segments.insert(vw);
             }
             return;
         }
