@@ -19,7 +19,7 @@ def plot_dcel(filename):
     for edge in data["edges"]:
         from_id = edge["from"]
         to_id = edge["to"]
-        is_sub = edge.get("subsegment", False)
+        is_sub = edge.get("segment", False)
 
         p1 = nodes[from_id]
         p2 = nodes[to_id]

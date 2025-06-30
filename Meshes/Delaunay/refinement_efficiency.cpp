@@ -14,7 +14,7 @@ int main() {
     
     Delaunay<2, 2> del1(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle},0);
     auto start = high_resolution_clock::now();    
-    del1.Ruppert_refinement(20, del1.domain_area()/1000.0);
+    del1.refinement(20, del1.domain_area()/1000.0);
     auto end = high_resolution_clock::now();  
     del1.print_statistics();
 
@@ -24,7 +24,7 @@ int main() {
 
     Delaunay<2, 2> del2(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle},0);
     start = high_resolution_clock::now();    
-    del2.Ruppert_refinement(20, del2.domain_area()/10000.0);
+    del2.refinement(20, del2.domain_area()/10000.0);
     end = high_resolution_clock::now(); 
     del2.print_statistics(); 
 
@@ -34,7 +34,7 @@ int main() {
 
     Delaunay<2, 2> del3(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle},0);
     start = high_resolution_clock::now();    
-    del3.Ruppert_refinement(20, del3.domain_area()/50000.0);
+    del3.refinement(20, del3.domain_area()/50000.0);
     end = high_resolution_clock::now(); 
     del3.print_statistics(); 
 
@@ -44,7 +44,7 @@ int main() {
 
     Delaunay<2, 2> del4(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> {rectangle},0);
     start = high_resolution_clock::now();    
-    del4.Ruppert_refinement(20, del4.domain_area()/100000.0);
+    del4.refinement(20, del4.domain_area()/100000.0);
     end = high_resolution_clock::now();  
     del4.print_statistics();
 

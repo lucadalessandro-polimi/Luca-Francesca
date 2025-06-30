@@ -99,11 +99,11 @@ template <int LocalDim, int EmbedDim> class DCEL {
         node_t* node_;
         cell_t* cell_;   // cell to which this halfedge belongs to
         std::list<halfedge_t>::iterator it_;   // iterator to the halfedge in the list
-        bool subsegment_ ;  // true if the halfedge needs to be mantained in the mesh
+        bool segment_ ;  // true if the halfedge needs to be mantained in the mesh
        public:
-        halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr), subsegment_(false) { }
+        halfedge_t() : node_(nullptr), prev_(nullptr), next_(nullptr), twin_(nullptr), segment_(false) { }
         halfedge_t(int id, halfedge_t* prev, halfedge_t* next, halfedge_t* twin, node_t* node, bool sub=false) :
-            id_(id), prev_(prev), next_(next), twin_(twin), node_(node), subsegment_(sub) { }
+            id_(id), prev_(prev), next_(next), twin_(twin), node_(node), segment_(sub) { }
         // no twin constructors
         halfedge_t(int id, halfedge_t* prev, halfedge_t* next, node_t* node, bool sub=false) :
             halfedge_t(id, prev, next, nullptr, node, sub) { }
@@ -119,7 +119,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         int id() const { return id_; }
         bool on_boundary() const { return (node_->on_boundary() && twin_->node()->on_boundary() && (cell()==nullptr || twin()->cell()==nullptr)); }
         std::list<halfedge_t>::iterator it() const { return it_; }
-        bool is_subsegment() const { return subsegment_; }
+        bool is_segment() const { return segment_; }
         // modifiers
         void set_prev(halfedge_t* prev) { prev_ = prev; }
         void set_next(halfedge_t* next) { next_ = next; }
@@ -128,7 +128,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         void set_cell(cell_t* cell) { cell_ = cell; }
         void set_id(int id) {id_=id;}
         void set_it(std::list<halfedge_t>::iterator it) { it_ = it; }
-        void set_subsegment(bool sub) { subsegment_ = sub; }
+        void set_segment(bool sub) { segment_ = sub; }
 
         // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
         struct circulator {
@@ -184,8 +184,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
  
          // code for conflict graph algorithm in delaunay.h
          void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
-         std::vector<node_t*>& conflicting_points() const{ return conflicting_points_; }
-         std::vector<node_t*>& conflicting_points() { return conflicting_points_; }
+         std::list<node_t*>& conflicting_points() const{ return conflicting_points_; }
+         std::list<node_t*>& conflicting_points() { return conflicting_points_; }
          void clear_conflicts() { conflicting_points_.clear(); }
       
  
@@ -193,7 +193,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
          int id_;
          halfedge_t* h_;
          // code needed for conflict graph algorithm in delaunay.h
-         std::vector<node_t*> conflicting_points_;  
+         std::list<node_t*> conflicting_points_;  
      };
 
 
@@ -226,7 +226,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         // nodes and halfedges for external boundary
         for (int i = 0; i < n_nodes; ++i) {
             node_t* n = dcel.insert_node(node_t(i, true, boundary.row(i)));
-            halfedge_t* h = dcel.emplace_halfedge(n, true);  //is_subsegment=true
+            halfedge_t* h = dcel.emplace_halfedge(n, true);  //is_segment=true
             n->set_halfedge(h);
             h->set_cell(c);
         }
@@ -236,7 +236,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             node_t* n1 = std::addressof(*it);
             node_t* n2 = std::addressof(*((it->id() == n_nodes - 1) ? dcel.nodes_begin() : std::next(it, 1)));
             halfedge_t* h1 = n1->halfedge();
-            halfedge_t* h2 = dcel.emplace_halfedge(n2, true); // twin edge, is_subsegment=true
+            halfedge_t* h2 = dcel.emplace_halfedge(n2, true); // twin edge, is_segment=true
             h2->set_cell(nullptr);
             h2->set_twin(h1);
             h1->set_twin(h2);
@@ -260,7 +260,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             // nodes and halfedges for the hole
             for (int i = 0; i < hole_nodes; ++i) {
                 node_t* n = dcel.insert_node(node_t(node_offset + i,  true, hole.row(i)));
-                halfedge_t* h = dcel.emplace_halfedge(n, true); //is_subsegment= true
+                halfedge_t* h = dcel.emplace_halfedge(n, true); //is_segment= true
                 n->set_halfedge(h);
                 h->set_cell(c);
             }
@@ -270,7 +270,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 node_t* n1 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + i)));
                 node_t* n2 = std::addressof(*(std::next(dcel.nodes_begin(), node_offset + (i + 1) % hole_nodes)));
                 halfedge_t* h1 = n1->halfedge();
-                halfedge_t* h2 = dcel.emplace_halfedge(n2, true); // twin edge, is_subsegment=true
+                halfedge_t* h2 = dcel.emplace_halfedge(n2, true); // twin edge, is_segment=true
                 h2->set_twin(h1);
                 h1->set_twin(h2);
                 h2->set_cell(nullptr);
@@ -342,7 +342,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             edge["from"] = it->node()->id();
             edge["to"] = it->next()->node()->id();
             edge["twin"] = it->twin() ? it->twin()->id() : -1; 
-            edge["subsegment"] = it->is_subsegment();
+            edge["segment"] = it->is_segment();
             j["edges"].push_back(edge);
         }
         j["cells"] = json::array();
@@ -543,16 +543,9 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return next; 
     }
 
-    // remove polygon inside dcel by calling its id 
-    void remove_polygon(int cell_id) {
-
-        auto it = cells_.begin();
-        for (; it != cells_.end(); ++it) 
-            if (it->id() == cell_id) 
-                break;
-        cell_t* cell= &(*it);
-        if (!cell) return;
-    
+    // remove polygon inside dcel by calling its cell's pointer
+    void remove_polygon(cell_t* cell) {
+        if(!cell) return; // nothing to remove
         // removing cell's halfedges
         halfedge_t* h1 = cell->halfedge();
         halfedge_t* ending = h1->twin() ? h1->twin()->next() : nullptr; 
@@ -560,9 +553,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
             halfedge_t* next = remove_edge(h1->twin());
             h1 = next; 
         } while (h1 && h1 != ending);
-    
-    }
-        
+    }   
 
     // return the node of the halfedge previous to h 
     node_t* adjacent(halfedge_t* h) const {return (h->twin()) ? h->twin()->prev()->node() : nullptr;  }
