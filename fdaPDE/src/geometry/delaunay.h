@@ -104,18 +104,10 @@ class Delaunay {
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             cell_t* t = &(*it);
             double priority = is_bad_triangle_(t, min_angle, max_area);
-
-            if (priority >= 0.0) {
-                bool already_present = false;
-                for (const auto& [prio, existing_cell] : bad_triangles) {
-                    if (existing_cell == t) {
-                        already_present = true;
-                        break;
-                    }
-                }
-                if (!already_present) {
-                    bad_triangles.insert({priority, t});
-                }
+            if (priority >= 0.0 &&
+                std::find_if(bad_triangles.begin(), bad_triangles.end(),
+                            [t](const auto& entry) { return entry.second == t; }) == bad_triangles.end()) {
+                bad_triangles.insert({priority, t});
             }
         }
 
@@ -178,6 +170,7 @@ class Delaunay {
                 halfedge_t* twin_prev = edge->twin()->prev();
                 dcel_.remove_edge(edge);
                 halfedge_t* new_edge = dcel_.insert_edge(prev, twin_prev);
+                
                 if (new_edge) {
                     // insert the new halfedges created by the flip into the list to check
                     if(!new_edge->prev()->is_segment())
@@ -1205,64 +1198,25 @@ class Delaunay {
         dcel_.remove_edge(e);
 
         // check whether the 2 new triangles are badly-shaped
+        auto already_present = [&](cell_t* c) {return std::find_if(bad_triangles.begin(), bad_triangles.end(),[c](const auto& entry) { return entry.second == c; }) != bad_triangles.end();};
+        // check whether the 2 new triangles are badly-shaped
         double p1 = is_bad_triangle_(h1->cell(), min_angle, max_area);
-        if (p1 >= 0.0) {
-            bool already_present = false;
-            for (const auto& [prio, existing_cell] : bad_triangles) {
-                if (existing_cell == h1->cell()) {
-                    already_present = true;
-                    break;
-                }
-            }
-            if (!already_present) {
-                bad_triangles.insert({p1, h1->cell()});
-            }
-        }
+        if (p1 >= 0.0 && !already_present(h1->cell()) ) 
+            bad_triangles.insert({p1,h1->cell()});
         double p2 = is_bad_triangle_(h2->cell(), min_angle, max_area);
-        if (p2 >= 0.0) {
-            bool already_present = false;
-            for (const auto& [prio, existing_cell] : bad_triangles) {
-                if (existing_cell == h2->cell()) {
-                    already_present = true;
-                    break;
-                }
-            }
-            if (!already_present) {
-                bad_triangles.insert({p2, h2->cell()});
-            }
-        }
+        if (p2 >= 0.0 && !already_present(h2->cell()) ) 
+            bad_triangles.insert({p2,h2->cell()});
         
         // if h1 is not a boundary edge, insert an edge that connects m with the opposite node, in order to ensure the mesh is conforming
         if(!h1->on_boundary()) {
             dcel_.insert_edge(twin_prev, h2->twin());
-            
             // check whether the two new triangles are badly-shaped
             double p3 = is_bad_triangle_(h1->twin()->cell(), min_angle, max_area);
-            if (p3 >= 0.0) {
-                bool already_present = false;
-                for (const auto& [prio, existing_cell] : bad_triangles) {
-                    if (existing_cell == h1->twin()->cell()) {
-                        already_present = true;
-                        break;
-                    }
-                }
-                if (!already_present) {
-                    bad_triangles.insert({p3, h1->twin()->cell()});
-                }
-            }
+            if (p3 >= 0.0 && !already_present(h1->twin()->cell()) ) 
+                bad_triangles.insert({p3, h1->twin()->cell()});
             double p4 = is_bad_triangle_(h2->twin()->cell(), min_angle, max_area);
-            if (p4 >= 0.0) {
-                bool already_present = false;
-                for (const auto& [prio, existing_cell] : bad_triangles) {
-                    if (existing_cell == h2->twin()->cell()) {
-                        already_present = true;
-                        break;
-                    }
-                }
-                if (!already_present) {
-                    bad_triangles.insert({p4, h2->twin()->cell()});
-                }
-            }
+            if (p4 >= 0.0 && !already_present(h2->twin()->cell()) ) 
+                bad_triangles.insert({p4, h2->twin()->cell()});
         }
 
         if (fdapde::internals::in_circle(h1->node()->coords(), next->node()->coords(), prev->node()->coords(), next->twin()->prev()->node()->coords()) || 
@@ -1570,20 +1524,12 @@ class Delaunay {
             
                     }
 
+                    auto already_present = [&](cell_t* c) {return std::find_if(bad_triangles.begin(), bad_triangles.end(),[c](const auto& entry) { return entry.second == c; }) != bad_triangles.end();
+};
                     double p1 = is_bad_triangle_(new_edge->cell(), min_angle, max_area);
-                    if (p1 >= 0.0) {
-                        bool already_present = false;
-                        for (const auto& [prio, existing_cell] : bad_triangles) {
-                            if (existing_cell == new_edge->cell()) {
-                                already_present = true;
-                                break;
-                            }
-                        }
-
-                        if (!already_present) {
-                            bad_triangles.insert({p1, new_edge->cell()});
-                        }
-                    }
+                    if (p1 >= 0.0 && !already_present(new_edge->cell())) 
+                        bad_triangles.insert({p1, new_edge->cell()});
+                    
                     if(new_edge->prev()->is_segment() && new_edge->prev()->cell() && check_encroachment_(new_edge->prev())){
                         encroached_segments.insert(new_edge->prev());
                     }
@@ -1591,19 +1537,8 @@ class Delaunay {
                         encroached_segments.insert(new_edge->next());
                     }
                     double p2 = is_bad_triangle_(new_edge->twin()->cell(), min_angle, max_area);
-                    if (p2 >= 0.0) {
-                        bool already_present = false;
-                        for (const auto& [prio, existing_cell] : bad_triangles) {
-                            if (existing_cell == new_edge->twin()->cell()) {
-                                already_present = true;
-                                break;
-                            }
-                        }
-
-                        if (!already_present) {
-                            bad_triangles.insert({p2, new_edge->twin()->cell()});
-                        }
-                    }
+                    if (p2 >= 0.0 && !already_present(new_edge->twin()->cell())) 
+                        bad_triangles.insert({p2, new_edge->twin()->cell()});
                     
                    if(new_edge->twin()->prev()->is_segment() && new_edge->twin()->prev()->cell() && check_encroachment_(new_edge->twin()->prev())){
                         encroached_segments.insert(new_edge->twin()->prev());
@@ -1624,22 +1559,14 @@ class Delaunay {
     void dig_cavity_(node_t* u, halfedge_t* vw, std::unordered_set<halfedge_t*>& encroached_segments,
         std::multimap<double, cell_t*>& bad_triangles, double min_angle, double max_area) { 
 
+        auto already_present = [&](cell_t* c) {return std::find_if(bad_triangles.begin(), bad_triangles.end(),[c](const auto& entry) { return entry.second == c; }) != bad_triangles.end();};
+
         if(vw->is_segment()){ // vw cannot be removed, so directly create a new triangle from vw and u
             add_triangle_(vw,std::vector<node_t*> {u});
             cell_t* t = vw->cell();
             double p1 = is_bad_triangle_(t, min_angle, max_area);
-            if (p1 >= 0.0) {
-                bool already_present = false;
-                for (const auto& [prio, existing_cell] : bad_triangles) {
-                    if (existing_cell == t) {
-                        already_present = true;
-                        break;
-                    }
-                }
-                if (!already_present) {
+            if (p1 >= 0.0 && !already_present(t)) 
                     bad_triangles.insert({p1, t});
-                }
-            }
             if (check_encroachment_(vw)) {
                 encroached_segments.insert(vw);
             }
@@ -1672,18 +1599,9 @@ class Delaunay {
             add_triangle_(vw,std::vector<node_t*> {u});
             cell_t* t = vw->cell();
             double p2 = is_bad_triangle_(t, min_angle, max_area);
-            if (p2 >= 0.0) {
-                bool already_present = false;
-                for (const auto& [prio, existing_cell] : bad_triangles) {
-                    if (existing_cell == t) {
-                        already_present = true;
-                        break;
-                    }
-                }
-                if (!already_present) {
-                    bad_triangles.insert({p2, t});
-                }
-            }
+            if (p2 >= 0.0 && !already_present(t)) 
+                bad_triangles.insert({p2, t});
+                
             return;
         } 
     }

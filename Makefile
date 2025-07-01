@@ -15,7 +15,8 @@ TRIANGLE_POLY := Meshes/Test_triangle/$(TRIANGLE_NAME).poly
 FMESHER_SCRIPT := Meshes/Test_fmesher/star.r
 
 # FLAGS                  
-CXXFLAGS := -std=c++20 -g -march=native -O2 -DFDAPDE_NO_DEBUG
+CXXFLAGS := -std=c++20 -g -march=native -O2 -DFDAPDE_NO_DEBUG 
+#CXXFLAGS := g++ -fsanitize=address -g -O1
 INCLUDES := -I$(EIGEN_DIR) -I$(FDAPDE_DIR) -I$(SYS_INCLUDE_DIR) -I$(ARCH_INCLUDE_DIR) -I$(NLOHMANN_DIR)
 
 # Run all targets
