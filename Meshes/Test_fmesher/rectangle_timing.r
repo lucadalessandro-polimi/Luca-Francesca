@@ -12,7 +12,7 @@ segments <- cbind(1:nrow(loc), c(2:nrow(loc), 1))
 segm_obj <- fm_segm(loc = loc, idx = segments, closed = TRUE)
 boundary <- fm_as_segm(segm_obj)
 
-edge_values <- c(176, 61, 22.5, 18)
+edge_values <- c(176, 61, 18)
 
 # Initialize a data frame to store results
 results <- data.frame(
@@ -42,6 +42,13 @@ n <- results$NumPoints
 t <- results$TimeElapsed_ms
 n_min <- n[1]
 t_min <- t[1]
+
+df <- data.frame(
+  NumPoints = n,
+  TimeElapsed(ms) = t
+)
+
+write.csv(df, "mnt/Meshes/Test_fmesher/timing_fmesher.csv", row.names = FALSE, quote = FALSE)
 
 curve_nlogn   <- t_min / (n_min * log(n_min)) * n * log(n)
 curve_n       <- t_min / n_min * n

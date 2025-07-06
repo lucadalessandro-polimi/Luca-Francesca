@@ -1,7 +1,6 @@
 *.txt
 *.json
 *.cmake
-*Makefile
 *.Rhistory
 *.tar.gz
 *.RData
@@ -24,6 +23,9 @@ experiments/test_RSVD/performances.csv
 #plots
 *.pdf
 *.png
+*.1.node
+*.1.ele
+*.1.poly
 
 #help files
 *.csv

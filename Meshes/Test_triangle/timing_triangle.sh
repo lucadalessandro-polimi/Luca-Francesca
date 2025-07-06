@@ -14,7 +14,7 @@ echo "NumPoints,TimeElapsed(ms)" > "$OUTCSV"
 
 # Array di valori di max_area da testare
 domain_area=$((4000 * 2000))
-divisors=(1000 10000 50000 100000)
+divisors=(1000 10000 100000)
 
 AREAS=()
 for d in "${divisors[@]}"; do

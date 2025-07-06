@@ -1,7 +1,6 @@
 library(fmesher)
 
-
-analyze_mesh_quality <- function(mesh, output_csv = "/mnt/Meshes/Comparisons/fmesher.csv") {
+analyze_mesh_quality <- function(mesh) {
   triangles <- mesh$graph$tv
   coords <- mesh$loc
 
@@ -37,7 +36,6 @@ analyze_mesh_quality <- function(mesh, output_csv = "/mnt/Meshes/Comparisons/fme
     angles_deg[i, ] <- c(angleA, angleB, angleC)
   }
 
-  # Mesh counts 
   n_vertices <- nrow(coords)
   n_triangles <- nrow(triangles)
 
@@ -55,7 +53,6 @@ analyze_mesh_quality <- function(mesh, output_csv = "/mnt/Meshes/Comparisons/fme
   n_edges <- nrow(unique_edges)
   n_hull_edges <- sum(edge_counts == 1)
 
-  # Summary metrics
   summary_metrics <- data.frame(
     Metric = c("Vertices", "Triangles", "Edges", "MinArea", "MaxArea", 
                "MinEdge", "MaxEdge", "MinAltitude", "MaxAspectRatio", 
@@ -78,7 +75,6 @@ analyze_mesh_quality <- function(mesh, output_csv = "/mnt/Meshes/Comparisons/fme
   cat("\nMesh structural info:\n\n")
   print(summary_metrics)
 
-  # Aspect ratio histogram
   ar_bins <- c(1.1547, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0, 10.0, 15.0, 25.0,
                50.0, 100.0, 300.0, 1000.0, 10000.0, 100000.0, Inf)
   ar_labels <- paste0("\"", format(ar_bins[-length(ar_bins)]), " - ", format(ar_bins[-1]), "\"")
@@ -88,7 +84,6 @@ analyze_mesh_quality <- function(mesh, output_csv = "/mnt/Meshes/Comparisons/fme
   cat("\nAspect Ratio Histogram:\n")
   print(df_ar)
 
-  # Angle histogram
   angle_bins <- seq(0, 180, by = 10)
   angle_labels <- paste0("\"", angle_bins[-length(angle_bins)], " - ", angle_bins[-1], " degrees\"")
   angle_hist <- table(cut(as.vector(angles_deg), breaks = angle_bins, labels = angle_labels, right = FALSE))
@@ -96,51 +91,6 @@ analyze_mesh_quality <- function(mesh, output_csv = "/mnt/Meshes/Comparisons/fme
 
   cat("\nAngle Histogram:\n")
   print(df_ang)
-
-  # Write to csv file 
-  writeLines("Metric,Value", con = output_csv)
-  write.table(summary_metrics, file = output_csv, append = TRUE, sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
-
-  write("\nAspectRatioRange,Count", file = output_csv, append = TRUE)
-  write.table(df_ar, file = output_csv, append = TRUE, sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
-
-  write("\nAngleRange,Count", file = output_csv, append = TRUE)
-  write.table(df_ang, file = output_csv, append = TRUE, sep = ",", row.names = FALSE, col.names = FALSE, quote = FALSE)
-
-  cat(paste("\nFile saved in:", output_csv, "\n"))
 }
-
-
-
-loc <- matrix(c(
-  0.0, 100.0,
-  -22.45, 30.90,
-  -95.11, 30.90,
-  -36.33, -11.80,
-  -58.78, -80.90,
-  0.0, -38.20,
-  58.78, -80.90,
-  36.33, -11.80,
-  95.11, 30.90,
-  22.45, 30.90
-), ncol = 2, byrow = TRUE)
-
-segments <- cbind(1:nrow(loc), c(2:nrow(loc), 1))
-segm_obj <- fm_segm(loc = loc, idx = segments, closed=TRUE)
-boundary <- fm_as_segm(segm_obj)
-
-mesh <- fm_mesh_2d(
-  boundary = boundary,
-  max.edge = 25.,             
-  min.angle = 25,             
-  delaunay = TRUE
-)
-
-analyze_mesh_quality(mesh)
-
-output_dir <- "/mnt/Meshes/Test_fmesher"
-plot_file <- file.path(output_dir, "star.png")
-png(plot_file, width = 800, height = 800, bg = "transparent") 
-plot(mesh, asp = 1, lwd = 1.5)
 
 
