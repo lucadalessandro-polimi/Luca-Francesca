@@ -1140,27 +1140,36 @@ class Delaunay {
         return true;
     }   
 
-    
     // function splitting the first encroached segment that is not adjacent to a seditious edge
     bool split_first_encroached_segment_(std::unordered_set<halfedge_t*>& segments,
-        std::unordered_set<halfedge_t*>& encroached_segments, std::multimap<double, cell_t*>& bad_triangles,
-        double min_angle, double max_area) {
-
-        for (auto it = encroached_segments.begin(); it != encroached_segments.end(); ) {
+                                        std::unordered_set<halfedge_t*>& encroached_segments,
+                                        std::multimap<double, cell_t*>& bad_triangles,
+                                        double min_angle, double max_area) {
+        auto it = encroached_segments.begin();
+        while (it != encroached_segments.end()) {
             halfedge_t* e = *it;
+
+            if (!e || !e->twin()) {
+                it = encroached_segments.erase(it);
+                continue;
+            }
+            ++it;
             encroached_segments.erase(e);
             encroached_segments.erase(e->twin());
-            if (!e) continue;
 
             // check if adjacent edges to e are seditious; no split is performed if one of them is
-            if (!is_edge_seditious_(e->next()) && !is_edge_seditious_(e->prev())) {
-                split_segment_(e, segments, encroached_segments, bad_triangles, min_angle, max_area);
-                return true;
+            if (is_edge_seditious_(e->next()) || is_edge_seditious_(e->prev())) {
+                continue;
             }
+
+            split_segment_(e, segments, encroached_segments, bad_triangles, min_angle, max_area);
+            return true;
         }
-        
         return false;
     }
+
+
+
 
     // utility function removing all entries of a given cell from a multimap
     void remove_from_multimap_(std::multimap<double, cell_t*>& mmap, cell_t* target) const{
