@@ -79,7 +79,7 @@ clean:
 	@rm -f Meshes/Test_fdaPDEmesher/main  Meshes/Test_fdaPDEmesher/conflict Meshes/Test_fdaPDEmesher/refinement
 	@rm -f Meshes/Test_fdaPDEmesher/*.csv
 	@rm -f Meshes/Test_triangle/*.csv
-	@rm -f $(TRIANGLE_OUT)
+	@rm -f $(TRIANGLE_OUT) Meshes/Test_triangle/triangle
 	@rm -f Meshes/Test_triangle/*.1.node
 	@rm -f Meshes/Test_triangle/*.1.ele
 	@rm -f Meshes/Test_triangle/*.1.poly
