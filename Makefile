@@ -76,13 +76,14 @@ solve_PDE:
 # Cleaning directories
 .PHONY: clean
 clean:
-	rm -f Meshes/Test_fdaPDEmesher/main  Meshes/Test_fdaPDEmesher/conflict Meshes/Test_fdaPDEmesher/refinement
-	rm -f Meshes/Test_fdaPDEmesher/*.csv
-	rm -f Meshes/Test_triangle/*.csv
-	rm -f $(TRIANGLE_OUT)
-	rm -f Meshes/Test_triangle/*.1.node
-	rm -f Meshes/Test_triangle/*.1.ele
-	rm -f Meshes/Test_triangle/*.1.poly
-	rm -f Meshes/Test_fmesher/*.csv
+	@rm -f Meshes/Test_fdaPDEmesher/main  Meshes/Test_fdaPDEmesher/conflict Meshes/Test_fdaPDEmesher/refinement
+	@rm -f Meshes/Test_fdaPDEmesher/*.csv
+	@rm -f Meshes/Test_triangle/*.csv
+	@rm -f $(TRIANGLE_OUT)
+	@rm -f Meshes/Test_triangle/*.1.node
+	@rm -f Meshes/Test_triangle/*.1.ele
+	@rm -f Meshes/Test_triangle/*.1.poly
+	@rm -f Meshes/Test_fmesher/*.csv
+	@rm -f workingdir/test/script
 
 

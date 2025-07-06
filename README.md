@@ -30,7 +30,7 @@ Run the command:
       make delaunay
 
 
-To change the domain, modify the call in Mesh/Delaunay/main.cpp with a shape in domains.h:
+To change the domain, modify the call in Meshes/Test_fdaPDEmesher/main.cpp with a shape in domains.h:
 
       Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic,2>> {ext_bd, region1, ...}, min_angle, max_area, N, holes);
 
@@ -66,9 +66,18 @@ If R is installed locally, the user can bypass the Docker container and execute 
       Rscript Meshes/Test_fmesher/rectangle_timing.r
 
 
-### Generate bar plots of the quality metrics for comparing different meshers
+###  To solve a PDE predicting the density of wildifire spread in Southern Italy, utilizing all the features of the fdaPDE-cpp library:
 
-      make comparisons
+      make solve_PDE
+
+ A Docker environment is used to ensure that all the correct dependencies required to run the entire fdaPDE library are properly installed. Otherwise, it is possible to run directly the commands for the simulation by running:
+
+      cd workingdir/
+      cpp=$(pwd)/fdaPDE-cpp
+      core=$cpp/fdaPDE/core
+      cd $(pwd)/test
+      g++ -w -o script depde_fire.cpp -I$cpp -I$core -I/usr/include/eigen3 -O2 -std=c++20 -march=native -s
+      ./script
 
 
 ### Clean the directories from object files and csv files 
