@@ -51,16 +51,9 @@ template <int Order_, int EmbedDim_> class Simplex {
     const Eigen::Matrix<double, embed_dim, local_dim>& J() const { return J_; }
     const Eigen::Matrix<double, local_dim, embed_dim>& invJ() const { return invJ_; }
     double measure() const { return measure_; }
-    // simplex minimal enclosing rectangle
-    std::array<double, 2 * embed_dim> bbox() const {
-        NodeType ll = coords_.rowwise().minCoeff();
-        NodeType ur = coords_.rowwise().maxCoeff();
-        std::array<double, 2 * embed_dim> bbox_;
-        for (int i = 0; i < embed_dim; ++i) {
-            bbox_[i] = ll[i];
-            bbox_[i + embed_dim] = ur[i];
-        }
-        return bbox_;
+    // the smallest rectangle containing the simplex
+    std::pair<NodeType, NodeType> bounding_box() const {
+        return std::make_pair(coords_.rowwise().minCoeff(), coords_.rowwise().maxCoeff());
     }
     // the barycenter has all its barycentric coordinates equal to 1/(local_dim + 1)
     NodeType barycenter() const {
@@ -166,7 +159,6 @@ template <int Order_, int EmbedDim_> class Simplex {
     boundary_iterator boundary_end() const requires(Order_ >= 1) { return boundary_iterator(Order_ + 1, this); }
 
     // finds the best approximation of p in the simplex (q \in simplex : q = \argmin_{t \in simplex}{\norm{t - p}})
-    /*
     Eigen::Matrix<double, embed_dim, 1> nearest(const Eigen::Matrix<double, embed_dim, 1>& p) const {
         Eigen::Matrix<double, local_dim + 1, 1> q = barycentric_coords(p);
 	// check if point inside simplex
@@ -191,7 +183,7 @@ template <int Order_, int EmbedDim_> class Simplex {
             Simplex<Order_ - 1, embed_dim> s(coords_(Eigen::all, std::vector<int>(idx.begin(), idx.end() - 1)));
             return s.nearest(p);
         }
-    }*/
+    }
   
    protected:
     void initialize() {

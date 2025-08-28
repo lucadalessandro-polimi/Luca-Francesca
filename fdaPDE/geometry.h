@@ -35,7 +35,7 @@
 // algorithms
 #include "src/geometry/kd_tree.h"
 #include "src/geometry/r_tree.h"
-/* #include "src/geometry/tree_search.h" */
+#include "src/geometry/tree_search.h" 
 #include "src/geometry/walk_search.h"
 // data structures
 #include "src/geometry/triangulation.h"
@@ -43,7 +43,7 @@
 /* #include "src/geometry/linear_network.h" */
 #include "src/geometry/dcel.h"
 #include "src/geometry/polygon.h"
-/* #include "src/geometry/delaunay.h" */
+#include "src/geometry/delaunay.h" 
 
 // clang-format on
 

@@ -33,26 +33,26 @@ template <int LocalDim, int EmbedDim> class Polygon {
         fdapde_assert(nodes.rows() > 0 && nodes.cols() == embed_dim);
         
         // check if nodes are given in counterclockwise order
-        // Eigen::Matrix<double, Dynamic, Dynamic> corrected_nodes=nodes;
-        // if (!internals::are_2d_counterclockwise_sorted(nodes)) {
-        //     int n_nodes = nodes.rows();
-        //     for (int i = 0; i < n_nodes; ++i)
-        //         corrected_nodes.row(i) = nodes.row(n_nodes - 1 - i);
-        // }
-        // // check if holes' points are given in clockwise order
-        // std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> corrected_holes;
-        // for (const auto& hole : holes) {
-        //     if (internals::are_2d_counterclockwise_sorted(hole)) {
-        //         Eigen::Matrix<double, Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
-        //         for (int i = 0; i < hole.rows(); ++i)
-        //             reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
-        //         corrected_holes.push_back(reversed_hole);
-        //     } else {
-        //         corrected_holes.push_back(hole);
-        //     }
-        // }
+         Eigen::Matrix<double, Dynamic, Dynamic> corrected_nodes=nodes;
+         if (!internals::are_2d_counterclockwise_sorted(nodes)) {
+             int n_nodes = nodes.rows();
+             for (int i = 0; i < n_nodes; ++i)
+                 corrected_nodes.row(i) = nodes.row(n_nodes - 1 - i);
+         }
+         // check if holes' points are given in clockwise order
+         std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> corrected_holes;
+         for (const auto& hole : holes) {
+             if (internals::are_2d_counterclockwise_sorted(hole)) {
+                 Eigen::Matrix<double, Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
+                 for (int i = 0; i < hole.rows(); ++i)
+                     reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
+                 corrected_holes.push_back(reversed_hole);
+             } else {
+                 corrected_holes.push_back(hole);
+             }
+         }
 
-        // triangulate_(corrected_nodes, corrected_holes);
+         triangulate_(corrected_nodes, corrected_holes);
 
     }
     Polygon(const Eigen::Matrix<double, Dynamic, Dynamic>& nodes) noexcept : Polygon(nodes, {}) { }

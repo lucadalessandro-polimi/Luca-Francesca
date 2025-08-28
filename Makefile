@@ -1,11 +1,13 @@
 # LIBRARIES PATHS
 
-EIGEN_DIR := /home/francesca16/eigen
+#EIGEN_DIR := /home/francesca16/eigen
+EIGEN_DIR := /usr/include/eigen3
 FDAPDE_DIR := fdaPDE
 
 SYS_INCLUDE_DIR := /usr/include
 ARCH_INCLUDE_DIR := /usr/include/x86_64-linux-gnu
-NLOHMANN_DIR := /usr/include/nlohmann
+#NLOHMANN_DIR := /usr/include/nlohmann
+NLOHMANN_DIR := /usr/include/external/
 
 TRIANGLE_SRC := Meshes/Test_triangle/triangle.c
 TRIANGLE_NAME := skyline

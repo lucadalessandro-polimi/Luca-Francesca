@@ -5,10 +5,6 @@
 // capable of handling concave domains, internal holes, and subregions.
 // Also supports mesh refinement with constraints on minimum angle and maximum area.
 
-// delaunay class implementing Constrained Delaunay Triangulations (CDTs),
-// capable of handling concave domains, internal holes, and subregions.
-// Also supports mesh refinement with constraints on minimum angle and maximum area.
-
 #include "header_check.h"
 namespace fdapde {
   
@@ -59,8 +55,6 @@ class Delaunay {
         return dcel_.template to_triangulation<triangulation_t>();
     }
 
-    // function computing the total area of the domain if the user wants to use it to impose 
-    // the maximum area constraint in the refinement internally 
     // function computing the total area of the domain if the user wants to use it to impose 
     // the maximum area constraint in the refinement internally 
     double domain_area() const{
@@ -119,8 +113,6 @@ class Delaunay {
 
         // iterative refinement loop 
         // continues until there are no more encroached edges or bad triangles
-        // iterative refinement loop 
-        // continues until there are no more encroached edges or bad triangles
         while (true) {
             // attempt to split an encroached segment (has highest priority wrt to bad triangles)
             if (split_first_encroached_segment_(segments, encroached_segments, bad_triangles, min_angle, max_area))
@@ -132,16 +124,10 @@ class Delaunay {
             }
 
             // terminate since no encroached edges or bad trinangles are there
-
-            // terminate since no encroached edges or bad trinangles are there
             break;
         }
 
         // reassign IDs for cells and halfedges after refinement 
-        
-        int cont = 0;
-        // reassign IDs for cells and halfedges after refinement 
-        
         int cont = 0;
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it)
             it->set_id(cont++);
@@ -209,7 +195,6 @@ class Delaunay {
         std::cout << "  Mesh edges: " << dcel_.n_halfedges() / 2 << "\n";
 
         // initialize extrema for each metric
-        // initialize extrema for each metric
         double min_area = std::numeric_limits<double>::max();
         double max_area = 0.0;
 
@@ -233,7 +218,7 @@ class Delaunay {
             {"15 - 25", 0}, {"25 - 50", 0}, {"50 - 100", 0}, {"100 - 300", 0},
             {"300 - 1000", 0}, {"1000 - 10000", 0}, {"10000 - 100000", 0}, {"100000 -", 0}
         };
-
+        
         std::map<std::string, int> angle_bins = {
             {"0 - 10", 0}, {"10 - 20", 0}, {"20 - 30", 0}, {"30 - 40", 0}, {"40 - 50", 0},
             {"50 - 60", 0}, {"60 - 70", 0}, {"70 - 80", 0}, {"80 - 90", 0},
@@ -244,21 +229,15 @@ class Delaunay {
         // iterate through all triangles to compute stats
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             cell_t* t = &(*it);
-        // iterate through all triangles to compute stats
-        for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-            cell_t* t = &(*it);
             coords_t A = t->halfedge()->prev()->node()->coords();
             coords_t B = t->halfedge()->node()->coords();
             coords_t C = t->halfedge()->next()->node()->coords();
 
             // compute area 
             double area = fdapde::internals::measure_2d_tri(A, B, C);
-            // compute area 
-            double area = fdapde::internals::measure_2d_tri(A, B, C);
             min_area = std::min(min_area, area);
             max_area = std::max(max_area, area);
 
-            // compute squared edge lengths
             // compute squared edge lengths
             double ab2 = (B - A).squaredNorm();
             double bc2 = (C - B).squaredNorm();
@@ -269,18 +248,15 @@ class Delaunay {
             max_edge = std::max(max_edge, longest);
 
             // compute triangle altitude (from longest edge)
-            // compute triangle altitude (from longest edge)
             double triminaltitude2 = (2 * area) * (2 * area) / longest2;
             double altitude = std::sqrt(triminaltitude2);
             min_altitude = std::min(min_altitude, altitude);
 
             // aspect ratio = longest edge / shortest altitude
-            // aspect ratio = longest edge / shortest altitude
             double aspect2 = longest2 / triminaltitude2;
             double aspect = std::sqrt(aspect2);
             max_aspect_ratio = std::max(max_aspect_ratio, aspect);
 
-            // compute internal angles at all three vertices
             // compute internal angles at all three vertices
             double angleA = fdapde::internals::angle_between(C, A, B); // ∠CAB
             double angleB = fdapde::internals::angle_between(A, B, C); // ∠ABC
@@ -288,7 +264,6 @@ class Delaunay {
             min_angle = std::min({min_angle, angleA, angleB, angleC});
             max_angle = std::max({max_angle, angleA, angleB, angleC});
 
-            // fill histograms
             // fill histograms
             auto bin_angle = [&](double deg) -> std::string {
                 int d = static_cast<int>(deg);
@@ -324,13 +299,11 @@ class Delaunay {
         }
 
         // print scalar statistics
-        // print scalar statistics
         std::cout << std::fixed << std::setprecision(5);
         std::cout << "\n  Smallest area:    " << min_area << "   |  Largest area:          " << max_area;
         std::cout << "\n  Shortest edge:    " << min_edge << "   |  Longest edge:         " << max_edge;
         std::cout << "\n  Shortest altitude:" << min_altitude << "   |  Largest aspect ratio: " << max_aspect_ratio << "\n";
 
-        // print aspect ratio histogram 
         // print aspect ratio histogram 
         std::cout << "\n  Triangle aspect ratio histogram:\n";
         int aspect_i = 0;
@@ -341,14 +314,22 @@ class Delaunay {
         }
 
         // print angle statistics and histogram 
-        // print angle statistics and histogram 
         std::cout << "\n\n  Smallest angle:   " << min_angle << "   |  Largest angle:        " << max_angle << "\n";
         std::cout << "\n  Angle histogram:\n";
+        auto make_label = [](int lb){
+            return std::to_string(lb) + " - " + std::to_string(lb+10);
+        };
+        auto lb_from_angle = [](double ang){
+            int lb = static_cast<int>(std::floor(ang/10.0))*10;
+            return std::clamp(lb, 0, 170);
+        };
         int i = 0;
-        for (const auto& [range, count] : angle_bins) {
-            std::cout << "  " << std::setw(17) << std::left << range + " degrees:" << std::setw(8) << count;
-            if (++i % 2 == 0) std::cout << "\n";
-            else std::cout << "  |  ";
+        for (int lb = 0; lb <= 170; lb += 10) {
+            std::string label = make_label(lb);
+            int count = angle_bins[label];
+            std::cout << "  " << std::setw(17) << std::left << (label + " degrees:")
+                    << std::setw(8) << count
+                    << ((++i % 2 == 0) ? "\n" : "  |  ");
         }
 
         std::cout << std::endl;
@@ -422,7 +403,6 @@ class Delaunay {
             }
             holes_vertices[j] = holes_vertices_i;
         }
-        
         // initialize the triangulation
         initialize_triangulation_(boundary_vertices, holes_vertices);
         
@@ -438,7 +418,6 @@ class Delaunay {
                 complete_boundary_(holes[j][i], holes_vertices[j][i]);
             }
         }
-        
         flip();  // ensures initial triangulation satisfies Delaunay property
 
         int n_nodes_boundaries = dcel_.n_nodes();
@@ -576,7 +555,7 @@ class Delaunay {
 //------------------------- methods to initialize the triangulation -------------------------------------------
 
     //function performing the first raw triangulation of the domain using the polygon.h class
-    void initialize_triangulation_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
+        void initialize_triangulation_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
         
         dcel_= dcel_t::make_polygon(boundaries[0], holes[0]);
        
@@ -588,6 +567,20 @@ class Delaunay {
         else {  // regions
             cell_t* c_new_edges = &(*std::prev(dcel_.cells_end())); // cell to assign to the new emplaced halfedges
             for(int i=1; i< boundaries.size(); ++i){
+                for(auto it= dcel_.cells_begin(); it!= dcel_.cells_end(); ++it){
+                    cell_t* c= &(*it);
+                    halfedge_t* h= c->halfedge();
+                    halfedge_t* h_last= h;
+                    int cont=0;
+                    do{
+                        cont++;
+                        h=h->next();  
+                    }while(h!=h_last);
+                    if(cont>3){
+                        c_new_edges = c; 
+                        break;
+                    }
+                }
                 // creation of connection for internal regions
                 for(int j=0; j< boundaries[i].rows(); ++j){
                         coords_t co= boundaries[i].row(j);  
@@ -608,9 +601,6 @@ class Delaunay {
                         if (!h_between) {
                             insert_collinear_chain_(n1, n2);
                             h_between = dcel_.find_halfedge_between(co1, co2);
-                            if (h_between && !h_between->on_boundary()) {
-                                c_new_edges = h_between->twin()->cell();
-                            }
                         }
                         if (h_between) {
                             c_holes = h_between->cell();
@@ -781,7 +771,6 @@ class Delaunay {
         return vertex_points;
     }
 
-    // function dividing boundary points into vertices (points where the edge changes) and collinear points, returning only the vertices
     // function dividing boundary points into vertices (points where the edge changes) and collinear points, returning only the vertices
     // this function also includes the points that are attachments to the boundary for the internal regions, even if they are collinear
     Eigen::Matrix<double, Eigen::Dynamic, 2> split_boundary_points_with_attachments_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundary_vertices) 
@@ -957,7 +946,6 @@ class Delaunay {
         }
     
         // invalidate the conflicts node->cell for the points of the cavity
-        // invalidate the conflicts node->cell for the points of the cavity
         std::unordered_set<node_t*> invalidated_nodes;
         for (halfedge_t* h : D) {
             cell_t* current_cell = h->cell();
@@ -1032,14 +1020,12 @@ class Delaunay {
                                             : fdapde::internals::point_in_2d_tri(n->coords(), t3, t2, t1);
                     if (inside_triangle) {
                         // the conflict is from point to triangle and viceversa
-                        // the conflict is from point to triangle and viceversa
                         n->set_conflict(t); 
                         t->add_conflict(n);
                         found = true;
                     }
                 }
             }
-        } else {  // standard case: scan the cavity
         } else {  // standard case: scan the cavity
             for (halfedge_t* h : cells_to_check) {
                 cell_t* t = h->cell();
@@ -1078,14 +1064,12 @@ class Delaunay {
         } 
         bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u->coords(), h->node()->coords(), h->twin()->node()->coords());
         // test of circumcircle   
-        // test of circumcircle   
         bool inside;
         if (ccw) {
             inside = fdapde::internals::in_circle(u->coords(), h->node()->coords(), h->twin()->node()->coords(), x->coords());
         } else {
             inside = fdapde::internals::in_circle(u->coords(), h->twin()->node()->coords(), h->node()->coords(), x->coords());
         }
-        if (inside) {    // test fails so append vw to D and expand the cavity 
         if (inside) {    // test fails so append vw to D and expand the cavity 
             D.push_back(h);
             mark_cavity_(u, h->twin()->prev(), D, C);
@@ -1112,7 +1096,6 @@ class Delaunay {
         coords_t A = e->node()->coords();
         coords_t B = e->twin()->node()->coords();
         coords_t C = e->prev()->node()->coords();
-        coords_t C = e->prev()->node()->coords();
         double angle = fdapde::internals::angle_between(B, C, A);
         return angle >= 90.0;
     }
@@ -1120,7 +1103,6 @@ class Delaunay {
     // overloaded version testing encroachment using a custom point (e.g., circumcenter for refinement algorithm) instead of C
     bool check_encroachment_(halfedge_t* e, const coords_t& c) const{
         coords_t A = e->node()->coords();
-        coords_t B = e->twin()->node()->coords();
         coords_t B = e->twin()->node()->coords();
         double angle = fdapde::internals::angle_between(B, c, A);
         return angle >= 90.0;
@@ -1140,14 +1122,18 @@ class Delaunay {
         if (fdapde::internals::angle_between(b,c,a) >= 60) return false; // angle is not too small
         
         // 2 edges of h's cell need to have same length and to be midpoints of another segment 
-        if (fdapde::internals::segment_length(c,a) != fdapde::internals::segment_length(c,b) )  return false;
+        double tol = 1e-6;
+        if (std::abs(fdapde::internals::segment_length(c, a) - fdapde::internals::segment_length(c, b)) > tol)   return false;
         coords_t d = h->prev()->twin()->prev()->node()->coords();  
         coords_t e = h->next()->twin()->next()->next()->node()->coords();
+
         if ( !( fdapde::internals::collinear(c, a, d) && 
-                fdapde::internals::collinear(c, b, e) ) )
-                return false;
-        
-        std::cout << "SEDITIOUS EDGE: " << h->id() << std::endl;
+                fdapde::internals::collinear(c, b, e) &&
+                std::abs(fdapde::internals::segment_length(c,a) - fdapde::internals::segment_length(d,a)) < tol &&
+                std::abs(fdapde::internals::segment_length(c,b) - fdapde::internals::segment_length(b,e)) < tol ) )
+            return false;
+
+        std::cout << "SEDITIOUS EDGE" << std::endl;
         return true;
     }   
 
@@ -1157,6 +1143,10 @@ class Delaunay {
                                         std::multimap<double, cell_t*>& bad_triangles,
                                         double min_angle, double max_area) {
         auto it = encroached_segments.begin();
+        for(auto is=encroached_segments.begin(); is != encroached_segments.end(); ++is) {
+            std::cout << "encroached segment: " << (*is)->id() << std::endl;
+        }
+        dcel_.export_to_json("Meshes/Delaunay/delaunay_output.json");
         while (it != encroached_segments.end()) {
             halfedge_t* e = *it;
 
@@ -1167,6 +1157,7 @@ class Delaunay {
             ++it;
             encroached_segments.erase(e);
             encroached_segments.erase(e->twin());
+            std::cout << "e: " << e->id()  << std::endl;
 
             // check if adjacent edges to e are seditious; no split is performed if one of them is
             if (is_edge_seditious_(e->next()) || is_edge_seditious_(e->prev())) {
@@ -1218,9 +1209,9 @@ class Delaunay {
             // project c onto the line ab s.t. b_split = bc
             coords_t split_pt_ref = c->coords();
             double r = (split_pt_ref - b->coords()).norm();
-            double r = (split_pt_ref - b->coords()).norm();
             coords_t ab = a->coords() - b->coords();
             double L = ab.norm();
+            if (r > L) r = 0.5 * L;
             double t = r / L;
             split_pt = b->coords() + t * ab;
         } else {  // split e in the middle
@@ -1247,7 +1238,6 @@ class Delaunay {
 
         // check whether the 2 new triangles are badly-shaped
         auto already_present = [&](cell_t* c) {return std::find_if(bad_triangles.begin(), bad_triangles.end(),[c](const auto& entry) { return entry.second == c; }) != bad_triangles.end();};
-        // check whether the 2 new triangles are badly-shaped
         double p1 = is_bad_triangle_(h1->cell(), min_angle, max_area);
         if (p1 >= 0.0 && !already_present(h1->cell()) ) 
             bad_triangles.insert({p1,h1->cell()});
@@ -1284,8 +1274,6 @@ class Delaunay {
                     flip_refinement_(encroached_segments, bad_triangles, min_angle, max_area);
                 }
         }
-        // perform local flips if necessary to maintain Delaunay property
-        //flip_refinement_(encroached_segments, bad_triangles, min_angle, max_area);
 
         // recheck the two new segments for possible encroachment
         segments.insert(h1);
@@ -1321,26 +1309,18 @@ class Delaunay {
             queue.pop();
 
             // retrieve the coordinates of the current triangle's vertices
-            // retrieve the coordinates of the current triangle's vertices
             const coords_t& A = current->halfedge()->node()->coords();
             const coords_t& B = current->halfedge()->next()->node()->coords();
             const coords_t& C = current->halfedge()->prev()->node()->coords();
 
             // check if point P lies inside the current triangle
-            // check if point P lies inside the current triangle
             if (fdapde::internals::point_in_2d_tri(P, A, B, C)) {
-                return current;  // found the containing triangle
                 return current;  // found the containing triangle
             }
 
             // explore neighboring triangles across the three edges
-            // explore neighboring triangles across the three edges
             for (int i = 0; i < 3; ++i) {
                 halfedge_t* e = current->halfedge();
-                for (int j = 0; j < i; ++j) e = e->next();  
-
-                cell_t* neighbor = e->twin()->cell();
-                if (neighbor && visited.count(neighbor) == 0) {
                 for (int j = 0; j < i; ++j) e = e->next();  
 
                 cell_t* neighbor = e->twin()->cell();
@@ -1363,24 +1343,18 @@ class Delaunay {
         int posexponent = 0;
 
         // normalize the input so that min_edge2 ≥ 1.0
-        // normalize the input so that min_edge2 ≥ 1.0
         if (min_edge2 >= 1.0) {
             length = min_edge2;
             posexponent = 1;  // mark as originally ≥ 1
-            posexponent = 1;  // mark as originally ≥ 1
         } else {
-            length = 1.0 / min_edge2;  // invert to bring into ≥ 1 range
             length = 1.0 / min_edge2;  // invert to bring into ≥ 1 range
             posexponent = 0;
         }
 
         // approximate log2(length) using repeated squaring and multiplication
-        // approximate log2(length) using repeated squaring and multiplication
         while (length > 2.0) {
             int expincrement = 1;
             double multiplier = 0.5;
-
-            // find the largest multiplier that keeps length * multiplier^2 > 1
 
             // find the largest multiplier that keeps length * multiplier^2 > 1
             while (length * multiplier * multiplier > 1.0) {
@@ -1391,25 +1365,19 @@ class Delaunay {
 
             exponent += expincrement;
             length *= multiplier;  // reduce length accordingly
-            length *= multiplier;  // reduce length accordingly
         }
 
-        // final adjustment: multiply by 2 and add 1 if still greater than sqrt(2)
         // final adjustment: multiply by 2 and add 1 if still greater than sqrt(2)
         exponent = 2 * exponent + (length > SQR2 ? 1 : 0);
 
         // map to integer in the range [0, 4095]
-        // map to integer in the range [0, 4095]
         int queuenumber;
         if (posexponent) {
             queuenumber = 2047 - exponent;  // for original values ≥ 1
-            queuenumber = 2047 - exponent;  // for original values ≥ 1
         } else {
-            queuenumber = 2048 + exponent;  // for original values < 1
             queuenumber = 2048 + exponent;  // for original values < 1
         }
 
-        return queuenumber;  // priority value in [0, 4095]
         return queuenumber;  // priority value in [0, 4095]
     }
 
@@ -1426,38 +1394,23 @@ class Delaunay {
         double a2 = (B - C).squaredNorm();  // edge opposite vertex A
         double b2 = (A - C).squaredNorm();  // edge opposite vertex B
         double c2 = (A - B).squaredNorm();  // edge opposite vertex C
-        // compute squared edge lengths
-        double a2 = (B - C).squaredNorm();  // edge opposite vertex A
-        double b2 = (A - C).squaredNorm();  // edge opposite vertex B
-        double c2 = (A - B).squaredNorm();  // edge opposite vertex C
 
-        double angle_deg;
-
-        // determine the smallest angle by identifying the shortest side
-        // and computing the angle opposite to it
         double angle_deg;
 
         // determine the smallest angle by identifying the shortest side
         // and computing the angle opposite to it
         if (a2 <= b2 && a2 <= c2) {
             angle_deg = fdapde::internals::angle_between(C, A, B); // ∠CAB
-            angle_deg = fdapde::internals::angle_between(C, A, B); // ∠CAB
         } else if (b2 <= c2) {
             angle_deg = fdapde::internals::angle_between(A, B, C); // ∠ABC
-            angle_deg = fdapde::internals::angle_between(A, B, C); // ∠ABC
         } else {
-            angle_deg = fdapde::internals::angle_between(B, C, A); // ∠BCA
             angle_deg = fdapde::internals::angle_between(B, C, A); // ∠BCA
         }
 
         // convert angle to cos² form for robust comparison
         double angle_cos2 = std::pow(std::cos(angle_deg * M_PI / 180.0), 2.0);
         double min_angle_cos2   = std::pow(std::cos(min_angle * M_PI / 180.0), 2.0);
-        // convert angle to cos² form for robust comparison
-        double angle_cos2 = std::pow(std::cos(angle_deg * M_PI / 180.0), 2.0);
-        double min_angle_cos2   = std::pow(std::cos(min_angle * M_PI / 180.0), 2.0);
 
-        // compute area of triangle
         // compute area of triangle
         double area = fdapde::internals::measure_2d_tri(A, B, C);
 
@@ -1479,21 +1432,16 @@ class Delaunay {
 
 
     // function attempting to split the worst triangle with highest priority (small angle) in the bad triangle queue
-    bool split_first_bad_triangle_(std::unordered_set<halfedge_t*>& segments,
+        bool split_first_bad_triangle_(std::unordered_set<halfedge_t*>& segments,
                                 std::unordered_set<halfedge_t*>& encroached_segments,
                                 std::multimap<double, cell_t*>& bad_triangles,
                                 double min_angle, double max_area) {
         
         // iterate over bad triangles in reverse priority order (worst triangle first)
-        for (auto it = bad_triangles.rbegin(); it != bad_triangles.rend(); ) {
-
-
+        for (auto it = bad_triangles.rbegin(); it != bad_triangles.rend(); ++it) {
+            
             cell_t* t = it->second;
-            auto erase_it = std::prev(it.base());
-            ++it; 
-            bad_triangles.erase(erase_it);  // remove the current triangle from the multimap
-            ++it; 
-            bad_triangles.erase(erase_it);  // remove the current triangle from the multimap
+            remove_from_multimap_(bad_triangles,t);
 
             if (!t || !t->halfedge()) continue;
 
@@ -1509,7 +1457,6 @@ class Delaunay {
             }
         }
 
-        return false;  
         return false;  
     }
 
@@ -1529,15 +1476,12 @@ class Delaunay {
         double area = fdapde::internals::measure_2d_tri(A, B, C);
         // handle the case of acute angles for which triangle do not pass the constraint of min_angle 
         // but passes the one of max_area, so do not split it 
-        // handle the case of acute angles for which triangle do not pass the constraint of min_angle 
-        // but passes the one of max_area, so do not split it 
         if(area <= max_area){
             for (halfedge_t* h : {h1, h2, h3}) {
                 if(is_edge_seditious_(h) || is_edge_seditious_(h->twin()))  return true;
             }
         }
 
-        // compute the circumcenter of triangle ABC
         // compute the circumcenter of triangle ABC
         coords_t c = fdapde::internals::circumcenter(A, B, C); 
         
@@ -1556,7 +1500,6 @@ class Delaunay {
         }
         if (flag) return false;
 
-        // if no encroachment is detected, insert the circumcenter into the mesh
         // if no encroachment is detected, insert the circumcenter into the mesh
         node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
         // insert the new node into the triangulation finally splitting the triangle of interest 
@@ -1787,13 +1730,7 @@ class Delaunay {
 
             // compute area of the triangle
             double area = fdapde::internals::measure_2d_tri(A, B, C);
-            double angle = std::min({angleA, angleB, angleC});     // smallest internal angle
 
-            // compute area of the triangle
-            double area = fdapde::internals::measure_2d_tri(A, B, C);
-
-            // check if the triangle violates any of the two constraints
-            if (angle < min_angle || area > max_area) {
             // check if the triangle violates any of the two constraints
             if (angle < min_angle || area > max_area) {
                 all_ok = false;
@@ -1801,7 +1738,6 @@ class Delaunay {
             }
         }
 
-        // summary output for diagnostic purposes
         // summary output for diagnostic purposes
         if (all_ok) {
             std::cout << "All triangles satisfy the quality constraints." << std::endl;
@@ -1815,11 +1751,10 @@ class Delaunay {
 
     //------------------ end of support methods to refine the CDT ----------------------------------------------
 
-
-    //------------------ end of support methods to refine the CDT ----------------------------------------------
     
 };
   
 }  // namespace fdapde
 
 #endif // _DELAUNAY_H_
+

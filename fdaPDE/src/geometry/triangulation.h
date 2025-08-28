@@ -70,16 +70,14 @@ template <int LocalDim, int EmbedDim, typename Derived> class TriangulationBase 
         n_nodes_ = nodes_.rows();
         n_cells_ = cells_.rows();
         // compute mesh bounding box
-	using point_t = Eigen::Matrix<double, embed_dim, 1>;
-        point_t ll = nodes_.colwise().minCoeff();
-        point_t ur = nodes_.colwise().maxCoeff();
-        bbox_ = {ll[0], ur[0], ll[1], ur[1]};
-        // set-up markers
-        cells_markers_.resize(n_cells_, Unmarked);
-        nodes_markers_.resize(n_nodes_, Unmarked);
+        bbox_.row(0) = nodes_.colwise().minCoeff();
+        bbox_.row(1) = nodes_.colwise().maxCoeff();
+	// set-up markers
+	cells_markers_.resize(n_cells_, Unmarked);
+	nodes_markers_.resize(n_nodes_, Unmarked);
     }
     TriangulationBase(const dbl_matrix_t& nodes, const int_matrix_t& cells, const int_matrix_t& boundary) :
-        TriangulationBase(nodes, cells, boundary, 0) { }
+        TriangulationBase(nodes, cells, boundary, /* flags = */ 0) { }
     TriangulationBase(
       const std::string& nodes, const std::string& cells, const std::string& boundary, bool header, bool index_col,
       int flags) :
@@ -89,8 +87,9 @@ template <int LocalDim, int EmbedDim, typename Derived> class TriangulationBase 
           read_table<int>(boundary, header, index_col).as_matrix(), flags) { }
     TriangulationBase(
       const std::string& nodes, const std::string& cells, const std::string& boundary, bool header, bool index_col) :
-        TriangulationBase(nodes, cells, boundary, header, index_col, 0) { }
-    // getters 
+        TriangulationBase(nodes, cells, boundary, header, index_col, /* flags = */ 0) { }
+
+    // getters
     Eigen::Matrix<double, embed_dim, 1> node(int id) const { return nodes_.row(id); }
     bool is_node_on_boundary(int id) const { return boundary_markers_[id]; }
     const Eigen::Matrix<double, Dynamic, Dynamic>& nodes() const { return nodes_; }
@@ -99,8 +98,7 @@ template <int LocalDim, int EmbedDim, typename Derived> class TriangulationBase 
     int n_cells() const { return n_cells_; }
     int n_nodes() const { return n_nodes_; }
     int n_boundary_nodes() const { return boundary_markers_.count(); }
-    const std::array<double, 2 * embed_dim>& bbox() const { return bbox_; }
-    int size() const { return n_cells_; }
+    Eigen::Matrix<double, 2, embed_dim> bbox() const { return bbox_; }
     double measure() const {
         return std::accumulate(
           cells_begin(), cells_end(), 0.0, [](double v, const auto& e) { return v + e.measure(); });
@@ -247,7 +245,7 @@ template <int LocalDim, int EmbedDim, typename Derived> class TriangulationBase 
     Eigen::Matrix<double, Dynamic, Dynamic> nodes_ {};                 // physical coordinates of mesh's vertices
     Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor> cells_ {};   // nodes composing each cell
     BinaryVector<Dynamic> boundary_markers_ {};                        // j-th element is 1 \iff node j is on boundary
-    std::array<double, 2 * embed_dim> bbox_ {};   // mesh bounding box (column i maps to the i-th dimension)
+    Eigen::Matrix<double, 2, embed_dim> bbox_ {};   // mesh bounding box (column i maps to the i-th dimension)
     int n_nodes_ = 0, n_cells_ = 0;
     int flags_ = 0;
     std::vector<int> cells_markers_;   // marker associated to i-th cell
@@ -259,14 +257,13 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
     fdapde_static_assert(N == 2 || N == 3, THIS_CLASS_IS_FOR_2D_OR_3D_TRIANGULATIONS_ONLY);
    public:
     using Base = TriangulationBase<2, N, Triangulation<2, N>>;
-    using SpatialIndex = RTree<N>;
     static constexpr int n_nodes_per_edge = 2;
     static constexpr int n_edges_per_cell = 3;
     static constexpr int n_faces_per_edge = 2;
     static constexpr int n_neighbors_per_cell = 3;
     static constexpr int n_facets_per_cell = n_edges_per_cell;
-    using CellType = typename Base::CellType;
-    using EdgeType = typename CellType::EdgeType;
+    using EdgeType = typename Base::CellType::EdgeType;
+    using LocationPolicy = TreeSearch<Triangulation<2, N>>;
     using Base::cells_;      // N \times 3 matrix of node identifiers for each triangle
     using Base::embed_dim;   // dimensionality of the ambient space
     using Base::local_dim;   // dimensionality of the tangent space
@@ -277,6 +274,7 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
         combinations(n_nodes_per_edge, n_nodes_per_cell));
     static constexpr auto facet_pattern = edge_pattern;
 
+    Triangulation() = default;
     Triangulation(
       const Eigen::Matrix<double, Dynamic, Dynamic>& nodes, const Eigen::Matrix<int, Dynamic, Dynamic>& cells,
       const Eigen::Matrix<int, Dynamic, Dynamic>& boundary, int flags = 0) :
@@ -466,15 +464,14 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
     static Triangulation<2, N> UnitSphere(int n_refinments, int flags = 0) { return Sphere(1.0, n_refinments, flags); }
     // getters
     const Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>& neighbors() const { return neighbors_; }
-    const CellType& cell(int id) const {
+    const typename Base::CellType& cell(int id) const {
         if (Base::flags_ & cache_cells) {   // cell caching enabled
             return cell_cache_[id];
         } else {
-            cell_ = CellType(id, this);
+            cell_ = typename Base::CellType(id, this);
             return cell_;
         }
     }
-    const CellType& operator[](int id) const { return cell(id); }
     bool is_edge_on_boundary(int id) const { return boundary_edges_[id]; }
     Eigen::Map<const Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>> edges() const {
         return Eigen::Map<const Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>>(
@@ -585,22 +582,23 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
         std::for_each(edges_markers_.begin(), edges_markers_.end(), [](int& marker) { marker = Unmarked; });
     }
     // point location
-    template <typename Points>
-        requires(internals::is_matrix_like_v<Points>)
-    std::vector<int> locate(const Points& pts) const {
-        fdapde_assert(pts.rows() > 0 && pts.cols() == embed_dim);
-        if (!spatial_index_.has_value()) {
-            spatial_index_ = SpatialIndex();
-            spatial_index_->bulk_load(*this);
-        }
-        std::vector<int> cells(pts.rows(), -1);
-        for (int i = 0, n = pts.rows(); i < n; ++i) {
-            std::vector<int> candidates = spatial_index_->locate_query(pts.row(i));
-            for (int j : candidates) {   // perform exact containment test
-                if (cell(j).contains(pts.row(i))) cells[i] = j;
-            }
-        }
-        return cells;
+    template <int Rows, int Cols>
+    std::conditional_t<Rows == Dynamic || Cols == Dynamic, Eigen::Matrix<int, Dynamic, 1>, int>
+    locate(const Eigen::Matrix<double, Rows, Cols>& p) const {
+        fdapde_static_assert(
+          (Cols == 1 && Rows == embed_dim) || (Cols == Dynamic && Rows == Dynamic),
+          YOU_PASSED_A_MATRIX_OF_POINTS_TO_LOCATE_OF_WRONG_DIMENSIONS);
+        if (!location_policy_.has_value()) { location_policy_ = LocationPolicy(this); }
+        return location_policy_->locate(p);
+    }
+    template <typename Derived> Eigen::Matrix<int, Dynamic, 1> locate(const Eigen::Map<Derived>& p) const {
+        if (!location_policy_.has_value()) location_policy_ = LocationPolicy(this);
+        return location_policy_->locate(p);
+    }
+    // the set of cells which have node id as vertex
+    std::vector<int> node_patch(int id) const {
+        if (!location_policy_.has_value()) location_policy_ = LocationPolicy(this);
+        return location_policy_->all_locate(Base::node(id));
     }
    protected:
     Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor> neighbors_ {};   // adjacent cells ids (-1: no adjacent cell)
@@ -610,17 +608,16 @@ template <int N> class Triangulation<2, N> : public TriangulationBase<2, N, Tria
     BinaryVector<Dynamic> boundary_edges_ {};   // j-th element is 1 \iff edge j is on boundary
     std::vector<int> edges_markers_ {};
     int n_edges_ = 0;
-    mutable std::optional<SpatialIndex> spatial_index_ {};
+    mutable std::optional<LocationPolicy> location_policy_ {};
     // cell caching
-    std::vector<CellType> cell_cache_;
-    mutable CellType cell_;   // currently active cell, used in case cell caching is off
+    std::vector<typename Base::CellType> cell_cache_;
+    mutable typename Base::CellType cell_;   // used in case cell caching is off
 };
 
 // face-based storage
 template <> class Triangulation<3, 3> : public TriangulationBase<3, 3, Triangulation<3, 3>> {
    public:
     using Base = TriangulationBase<3, 3, Triangulation<3, 3>>;
-    using SpatialIndex = RTree<3>;
     static constexpr int n_nodes_per_face = 3;
     static constexpr int n_nodes_per_edge = 2;
     static constexpr int n_edges_per_face = 3;
@@ -628,9 +625,9 @@ template <> class Triangulation<3, 3> : public TriangulationBase<3, 3, Triangula
     static constexpr int n_edges_per_cell = 6;
     static constexpr int n_neighbors_per_cell = 4;
     static constexpr int n_facets_per_cell = n_faces_per_cell;
-    using CellType = typename Base::CellType;
-    using FaceType = typename CellType::FaceType;
-    using EdgeType = typename CellType::EdgeType;
+    using FaceType = typename Base::CellType::FaceType;
+    using EdgeType = typename Base::CellType::EdgeType;
+    using LocationPolicy = TreeSearch<Triangulation<3, 3>>;
     using Base::embed_dim;
     using Base::local_dim;
     using Base::n_nodes_per_cell;
@@ -789,15 +786,14 @@ template <> class Triangulation<3, 3> : public TriangulationBase<3, 3, Triangula
     }
     // getters
     const Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>& neighbors() const { return neighbors_; }
-    const CellType& cell(int id) const {
+    const typename Base::CellType& cell(int id) const {
         if (Base::flags_ & cache_cells) {   // cell caching enabled
             return cell_cache_[id];
         } else {
-            cell_ = CellType(id, this);
+            cell_ = typename Base::CellType(id, this);
             return cell_;
         }
     }
-    const CellType& operator[](int id) const { return cell(id); }
     bool is_face_on_boundary(int id) const { return boundary_faces_[id]; }
     bool is_edge_on_boundary(int id) const { return boundary_edges_[id]; }
     Eigen::Map<const Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor>> faces() const {
@@ -994,22 +990,23 @@ template <> class Triangulation<3, 3> : public TriangulationBase<3, 3, Triangula
     }
 
     // point location
-    template <typename Points>
-        requires(internals::is_matrix_like_v<Points>)
-    std::vector<int> locate(const Points& pts) const {
-        fdapde_assert(pts.rows() > 0 && pts.cols() == embed_dim);
-        if (!spatial_index_.has_value()) {
-            spatial_index_ = SpatialIndex();
-            spatial_index_->bulk_load(*this);
-        }
-        std::vector<int> cells(pts.rows(), -1);
-        for (int i = 0, n = pts.rows(); i < n; ++i) {
-            std::vector<int> candidates = spatial_index_->locate_query(pts.row(i));
-            for (int j : candidates) {   // perform exact containment test
-                if (cell(j).contains(pts.row(i))) cells[i] = j;
-            }
-        }
-        return cells;
+    template <int Rows, int Cols>
+    std::conditional_t<Rows == Dynamic || Cols == Dynamic, Eigen::Matrix<int, Dynamic, 1>, int>
+    locate(const Eigen::Matrix<double, Rows, Cols>& p) const {
+        fdapde_static_assert(
+          (Cols == 1 && Rows == embed_dim) || (Cols == Dynamic && Rows == Dynamic),
+          YOU_PASSED_A_MATRIX_OF_POINTS_TO_LOCATE_OF_WRONG_DIMENSIONS);
+        if (!location_policy_.has_value()) location_policy_ = LocationPolicy(this);
+        return location_policy_->locate(p);
+    }
+    template <typename Derived> Eigen::Matrix<int, Dynamic, 1> locate(const Eigen::Map<Derived>& p) const {
+        if (!location_policy_.has_value()) location_policy_ = LocationPolicy(this);
+        return location_policy_->locate(p);
+    }
+    // the set of cells which have node id as vertex
+    std::vector<int> node_patch(int id) const {
+        if (!location_policy_.has_value()) location_policy_ = LocationPolicy(this);
+        return location_policy_->all_locate(Base::node(id));
     }
    protected:
     Eigen::Matrix<int, Dynamic, Dynamic, Eigen::RowMajor> neighbors_ {};   // adjacent cells ids (-1: no adjacent cell)
@@ -1023,10 +1020,10 @@ template <> class Triangulation<3, 3> : public TriangulationBase<3, 3, Triangula
     std::vector<int> faces_markers_;
     std::vector<int> edges_markers_;
     int n_faces_ = 0, n_edges_ = 0;
-    mutable std::optional<SpatialIndex> spatial_index_ {};
+    mutable std::optional<LocationPolicy> location_policy_ {};
     // cell caching
-    std::vector<CellType> cell_cache_;
-    mutable CellType cell_;   // currently active cell, used in case cell caching is off
+    std::vector<typename Base::CellType> cell_cache_;
+    mutable typename Base::CellType cell_;   // used in case cell caching is off
 };
 
 }   // namespace fdapde

@@ -1077,52 +1077,52 @@ template <int LocalDim, int EmbedDim> class DCEL {
 
    
     // to export DCEL to JSON format for visualization purposes (using python script)
-    // void export_to_json(const std::string& filename) const{
-    //     json j;  
-    //     j["nodes"] = json::array();
-    //     for (auto it = nodes_cbegin(); it != nodes_cend(); ++it) {
-    //         json node;
-    //         node["id"] = it->id();
-    //         node["coords"] = {it->coords()(0), it->coords()(1)};
-    //         node["boundary"] = it->on_boundary();
-    //         j["nodes"].push_back(node);
-    //     }  
-    //     j["edges"] = json::array();
-    //     for (auto it = halfedges_cbegin(); it != halfedges_cend(); ++it) {
-    //         json edge;
-    //         edge["id"] = it->id();
-    //         edge["from"] = it->node()->id();
-    //         edge["to"] = it->next()->node()->id();
-    //         edge["twin"] = it->twin() ? it->twin()->id() : -1; 
-    //         edge["segment"] = it->is_segment();
-    //         j["edges"].push_back(edge);
-    //     }
-    //     j["cells"] = json::array();
-    //     for (auto it = cells_cbegin(); it != cells_cend(); ++it) {
-    //         json cell;
-    //         cell["id"] = it->id();
-    //         cell["edges"] = json::array();
+     void export_to_json(const std::string& filename) const{
+         json j;  
+         j["nodes"] = json::array();
+         for (auto it = nodes_cbegin(); it != nodes_cend(); ++it) {
+             json node;
+             node["id"] = it->id();
+             node["coords"] = {it->coords()(0), it->coords()(1)};
+             node["boundary"] = it->on_boundary();
+             j["nodes"].push_back(node);
+         }  
+         j["edges"] = json::array();
+         for (auto it = halfedges_cbegin(); it != halfedges_cend(); ++it) {
+             json edge;
+             edge["id"] = it->id();
+             edge["from"] = it->node()->id();
+             edge["to"] = it->next()->node()->id();
+             edge["twin"] = it->twin() ? it->twin()->id() : -1; 
+             edge["segment"] = it->is_segment();
+             j["edges"].push_back(edge);
+         }
+         j["cells"] = json::array();
+         for (auto it = cells_cbegin(); it != cells_cend(); ++it) {
+             json cell;
+             cell["id"] = it->id();
+             cell["edges"] = json::array();
     
-    //         auto h = it->halfedge();
-    //         if (!h) { 
-    //           std::cerr << "Error: cell with null halfedge: cell's ID: " << it->id() << std::endl;
-    //         continue;
-    //         }
-    //         do {
-    //             if (!h) { 
-    //                 std::cerr << "ERROR: null halfedge in cell " << it->id() << std::endl;
-    //                 break;
-    //             }
-    //             cell["edges"].push_back(h->id());
-    //             h = h->next();
-    //         } while (h && h != it->halfedge());
-    //         j["cells"].push_back(cell);
-    //     }
-    //     std::ofstream file(filename);
-    //     file << j.dump(4);
-    //     file.close();
-    //     std::cout << "Exporting DCEL to " << filename << std::endl;
-    // }
+             auto h = it->halfedge();
+             if (!h) { 
+               std::cerr << "Error: cell with null halfedge: cell's ID: " << it->id() << std::endl;
+             continue;
+             }
+             do {
+                 if (!h) { 
+                     std::cerr << "ERROR: null halfedge in cell " << it->id() << std::endl;
+                     break;
+                 }
+                 cell["edges"].push_back(h->id());
+                 h = h->next();
+             } while (h && h != it->halfedge());
+             j["cells"].push_back(cell);
+         }
+         std::ofstream file(filename);
+         file << j.dump(4);
+         file.close();
+         std::cout << "Exporting DCEL to " << filename << std::endl;
+     }
 
     node_t* insert_node(const node_t& node) {
         nodes_.push_back(node);
