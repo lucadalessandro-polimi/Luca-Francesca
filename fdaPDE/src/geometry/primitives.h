@@ -20,6 +20,7 @@
 #include "header_check.h"
 
 namespace fdapde {
+
 namespace internals {
 
 // a collection of functions to perform common computational geometric tasks, see, e.g.
@@ -72,6 +73,7 @@ template <typename PolygonT> constexpr bool are_2d_clockwise_sorted(const Polygo
 // finds whether point p is on the positive side (left), negative side (right) or is collinear to the directed line
 // identified by points (a, b)
 enum Orientation { LEFT = 0, RIGHT = 1, COLLINEAR = 2 };
+/*
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr Orientation orientation(const PointT& p, const PointT& a, const PointT& b) {
@@ -80,11 +82,23 @@ constexpr Orientation orientation(const PointT& p, const PointT& a, const PointT
     if (signed_measure < machine_epsilon) return Orientation::RIGHT;
     return Orientation::COLLINEAR;
 }
+*/
+
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+inline Orientation orientation(const PointT& p, const PointT& a, const PointT& b) {
+    const int s = fdapde::robust::orient2d_sign(a, b, p);
+    if (s > 0) return Orientation::LEFT;
+    if (s < 0) return Orientation::RIGHT;
+    return Orientation::COLLINEAR;
+}
+
 // finds whether the triplet of 2D points {a, b, c} are collinear
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool collinear(const PointT& a, const PointT& b, const PointT& c) {
-    return almost_equal(signed_measure_2d_tri(a, b, c), 0.0);
+    //return almost_equal(signed_measure_2d_tri(a, b, c), 0.0);
+    return fdapde::robust::orient2d_sign(a, b, c) == 0;
 }
 // find whether the pair of 2D segments {{a, b}, {b, c}} form a convex turn
 template <typename point_t> bool convex_turn(const point_t& a, const point_t& b, const point_t& c) {
@@ -95,17 +109,35 @@ template <typename point_t> bool reflex_turn(const point_t& a, const point_t& b,
     return !convex_turn(a, b, c);   // reflex turn \iff not convex turn
 }
 
-// test whether point a belongs to the 2D segment identified by points b and c
+// test whether point p belongs to the 2D segment identified by points a and b
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
-constexpr bool contains(const PointT& a, const PointT& b, const PointT& c) { // -------------------- rename in point_in_2d_segment
-    if (!collinear(a, b, c)) return false;
+constexpr bool contains(const PointT& p, const PointT& a, const PointT& b) { // -------------------- rename in point_in_2d_segment
+    /*if (!collinear(a, b, c)) return false;
     // if bc is not vertical, check x coordinates, otherwise check y coordinates
     if (b[0] != c[0]) {
         return ((b[0] <= a[0]) && (a[0] <= c[0])) || ((b[0] >= a[0]) && (a[0] >= c[0]));
     } else {
         return ((b[1] <= a[1]) && (a[1] <= c[1])) || ((b[1] >= a[1]) && (a[1] >= c[1]));
+    }*/
+
+    // degenerate segment: true only if p coincides with a=b   
+    const double ax = double(a[0]), ay = double(a[1]);
+    const double bx = double(b[0]), by = double(b[1]);
+    const double px = double(p[0]), py = double(p[1]);
+    if (ax == bx && ay == by) {
+        return (px == ax && py == ay);
     }
+
+    // robust collinearity
+    if (fdapde::robust::orient2d_sign(a, b, p) != 0) return false;
+
+    // box closed on both coordinates
+    const double minx = (ax < bx) ? ax : bx;
+    const double maxx = (ax > bx) ? ax : bx;
+    const double miny = (ay < by) ? ay : by;
+    const double maxy = (ay > by) ? ay : by;
+    return (px >= minx && px <= maxx && py >= miny && py <= maxy);
 }
   
 // 2D segment-segment intersection test
@@ -113,12 +145,17 @@ template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool segment_proper_intersect_2d_segment(const PointT& a, const PointT& b, const PointT& c, const PointT& d) {
     // check proper intersection (points {c, d} lies on opposite sides of ab and points {a, b} on opposite sides of cd)
-    if (
+    /*if (
       (orientation(c, a, b) == Orientation::LEFT ^ orientation(d, a, b) == Orientation::LEFT) &&
       (orientation(a, c, d) == Orientation::LEFT ^ orientation(b, c, d) == Orientation::LEFT)) {
         return true;
     }
-    return false;
+    return false;*/
+    const int o1 = fdapde::robust::orient2d_sign(a, b, c);
+    const int o2 = fdapde::robust::orient2d_sign(a, b, d);
+    const int o3 = fdapde::robust::orient2d_sign(c, d, a);
+    const int o4 = fdapde::robust::orient2d_sign(c, d, b);
+    return (o1 * o2 < 0) && (o3 * o4 < 0);
 }
 
 template <typename PointT>
@@ -178,19 +215,23 @@ constexpr bool polygon_in_2d_polygon(const InnerPolygonT& P, const OuterPolygonT
     return true;
 }
 
+
 // checks if point D is inside the circumcircle of the triangle (A, B, C) (Delaunay criterion)
  template <typename PointT>
      requires(internals::is_subscriptable<PointT, int>)
  constexpr bool in_circle(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
-     double Ax = A[0] - D[0], Ay = A[1] - D[1];
+     
+    /*double Ax = A[0] - D[0], Ay = A[1] - D[1];
      double Bx = B[0] - D[0], By = B[1] - D[1];
      double Cx = C[0] - D[0], Cy = C[1] - D[1];
+     double det = Ax * (By * (Cx * Cx + Cy * Cy) - Cy * (Bx * Bx + By * By)) - Ay * (Bx * (Cx * Cx + Cy * Cy) - Cx * (Bx * Bx + By * By)) + (Ax * Ax + Ay * Ay) * (Bx * Cy - By * Cx);
+     return det > 0;  // D is inside the circumcircle if determinant is positive*/
 
-     double det = Ax * (By * (Cx * Cx + Cy * Cy) - Cy * (Bx * Bx + By * By)) -
-                  Ay * (Bx * (Cx * Cx + Cy * Cy) - Cx * (Bx * Bx + By * By)) +
-                  (Ax * Ax + Ay * Ay) * (Bx * Cy - By * Cx);
+    const int o = fdapde::robust::orient2d_sign(A,B,C);
+    if (o == 0) return false;   // tie-break
 
-     return det > 0;  // D is inside the circumcircle if determinant is positive
+    const int s = fdapde::robust::incircle_sign_ccw(A, B, C, D); // +1 if ABC is CCW
+    return (o > 0) ? (s > 0) : (s < 0);
  }
 
  // checks if a point is inside a polygon or not 

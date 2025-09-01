@@ -26,6 +26,7 @@
 
 // minimal geometric entites
 #include "src/geometry/utility.h"
+#include "src/geometry/predicates.h"
 #include "src/geometry/primitives.h"
 #include "src/geometry/hyperplane.h"
 #include "src/geometry/simplex.h"

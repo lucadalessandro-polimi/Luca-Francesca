@@ -19,7 +19,8 @@ class Delaunay {
     using node_t = typename DCEL<local_dim, embed_dim>::node_t;
     using halfedge_t = typename DCEL<local_dim, embed_dim>::halfedge_t;
     using cell_t = typename DCEL<local_dim, embed_dim>::cell_t;
-    using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<local_dim,embed_dim>>;
+    //using triangulation_t = TriangulationBase<local_dim, embed_dim, Triangulation<local_dim,embed_dim>>;
+    using triangulation_t = Triangulation<local_dim, embed_dim>;
     using dcel_t = DCEL<local_dim, embed_dim>;
     using polygon_t = Polygon<local_dim, embed_dim>;
 
@@ -652,40 +653,50 @@ class Delaunay {
             cell_t* c = &(*it);
             halfedge_t* h_start = c->halfedge();
             if (!h_start) continue;
-
             // loop through the edges of the current cell
             halfedge_t* h = h_start;
+            const double proj_eps_factor = 64 * std::numeric_limits<double>::epsilon();
             do {
+                if (!h || !h->twin()) { 
+                    h = h ? h->next() : h_start; 
+                    continue; 
+                }
                 node_t* n1 = h->node();
                 node_t* n2 = h->twin()->node();
-                if (!n1 || !n2) continue;
+                if (!n1 || !n2) { 
+                    h = h->next(); 
+                    continue; 
+                }
 
                 coords_t A = n1->coords();
                 coords_t B = n2->coords();
                 coords_t AB = B - A;
                 double ab2 = AB.squaredNorm();
-                if (ab2 < 1e-12) continue;
+                bool crossed = false;
 
-                // check if any third node lies strictly between A and B (collinear and internal)
+                // find internal points collinear with A and B inside the segment AB
                 for (auto nit = dcel_.nodes_begin(); nit != dcel_.nodes_end(); ++nit) {
                     node_t* P = &(*nit);
                     if (P == n1 || P == n2) continue;  // skip endpoints
 
-                    coords_t p = P->coords();
+                    const coords_t p = P->coords();
                     if (!fdapde::internals::collinear(A, p, B)) continue;
 
-                    coords_t AP = p - A;
-                    double t = AB.dot(AP) / ab2;
-                    if (t > 1e-6 && t < 1.0 - 1e-6) {
-                        // P lies strictly between A and B, mark the edge for removal
+                    // P is inside the line if both s1 and s2 are streactly positive
+                    const double s1 = AB.dot(p - A);
+                    const double s2 = AB.dot(B - p);
+                    const double eps_proj = proj_eps_factor * ab2;  // tolerance proportional to |AB|^2
+
+                    if (s1 > eps_proj && s2 > eps_proj) {
                         if (!edges_to_remove.count(h) && !edges_to_remove.count(h->twin())) {
                             edges_to_remove.insert(h);
                         }
-                        break;
+                        crossed = true;
+                        break; 
                     }
                 }
 
-                h = h->next();
+                h = h->next();  
             } while (h && h != h_start);
         }
 
