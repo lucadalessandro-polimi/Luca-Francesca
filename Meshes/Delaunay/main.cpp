@@ -12,10 +12,10 @@ int main() {
 
     std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>> domain={skyline, building1, building2, building3};  //insert the domain you want to triangulate, with its eventual subregions
     
-    Delaunay<2, 2> del({star},20,30, 0);
+    auto dom = fdapde::convex_hull(skyline, true);
+    Delaunay<2, 2> del({skyline}, 0);
     del.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");
-    del.print_statistics();
-    //del.flip();
+    //del.print_statistics();
 
     return 0;
 }

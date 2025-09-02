@@ -70,7 +70,6 @@ class Delaunay {
         return total_area;
     }
 
-
     // function running refinement algorithm
     void refinement(double min_angle, double max_area) {
         // set of edges that are encroached (i.e. internal points are present in the diametral lens of the corresponding edge)
@@ -1761,9 +1760,78 @@ class Delaunay {
 
 
     //------------------ end of support methods to refine the CDT ----------------------------------------------
-
     
 };
+
+
+//----------------------------- helper functions ---------------------------------------------------------------
+
+// compute the convex hull of a given matrix of external boundary points, following Andrew's monotone chain algorithm
+    inline Eigen::Matrix<double, Eigen::Dynamic, 2> convex_hull(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary, bool keep_collinear=false){
+        const int n = boundary.rows();
+        if(n<=1) 
+            return boundary;
+
+        // sort points lexicographically (by x, then by y)
+        std::vector<int> ord(n);
+        std::iota(ord.begin(), ord.end(), 0);
+        std::sort(ord.begin(), ord.end(), [&](int a, int b){
+            if (boundary(a,0) < boundary(b,0)) return true;
+            if (boundary(a,0) > boundary(b,0)) return false;
+            return boundary(a,1) < boundary(b,1);
+        });
+
+        // remove adjacent duplicates, if there are any
+        ord.erase(std::unique(ord.begin(), ord.end(), [&](int a, int b){
+            return boundary(a,0) == boundary(b,0) && boundary(a,1) == boundary(b,1);
+            }), ord.end());
+
+        // check if all points are collinear (linear case)
+        bool all_collinear = true;
+        for (size_t t = 2; t < ord.size() && all_collinear; ++t)
+            if (fdapde::internals::signed_measure_2d_tri(boundary.row(ord[0]), boundary.row(ord[1]), boundary.row(ord[t])) != 0.0) { 
+                all_collinear = false; 
+                break; 
+        }
+        if (all_collinear) {
+            Eigen::Matrix<double, Eigen::Dynamic, 2> c_hull((int)ord.size(), 2);
+            for (int r = 0; r < (int)ord.size(); ++r) 
+                c_hull.row(r) = boundary.row(ord[r]);
+            return c_hull; 
+        }
+        
+        // build the stack of the hull as an index vector (lower + upper hull)
+        std::vector<int> H; 
+        H.reserve(ord.size()*2);
+
+        auto push_idx = [&](int idx, std::size_t min_size){
+            while (H.size() >= min_size) {
+                double a2 = fdapde::internals::signed_measure_2d_tri(boundary.row(H[H.size()-2]), boundary.row(H[H.size()-1]), boundary.row(idx));
+                if (keep_collinear) {
+                    if (a2 >= 0.0) break;   
+                } else {
+                    if (a2 > 0.0)  break; 
+                }
+                H.pop_back();
+            }
+            H.push_back(idx);
+        };
+
+        // lower
+        for (int i : ord) 
+            push_idx(i, 2);
+        // upper: uses threshold t to avoid deleting lower hull
+        std::size_t t = H.size() + 1;
+        for (int k = (int)ord.size() - 2; k >= 0; --k)
+            push_idx(ord[k], t);
+
+        H.pop_back(); // remove the last point because it's repeated
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> c_hull(H.size(), 2);
+        for (int r = 0; r < (int)H.size(); ++r) 
+            c_hull.row(r) = boundary.row(H[r]);
+        return c_hull;
+    }
   
 }  // namespace fdapde
 
