@@ -169,6 +169,35 @@ constexpr bool intersect(const PointT& a, const PointT& b, const PointT& c, cons
     return false;
 }
 
+
+// intersection of two lines going through (a,b) and (c,d).
+// returns false if parallel/collinear
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr bool line_intersection(const PointT& a, const PointT& b,const PointT& c, const PointT& d, PointT& out)
+{
+
+    const double dx1 = b[0] - a[0];
+    const double dy1 = b[1] - a[1];
+    const double dx2 = d[0] - c[0];
+    const double dy2 = d[1] - c[1];
+
+    const double den = dx1*dy2 - dy1*dx2;   // cross((b-a),(d-c))
+    if (!den) return false;     // parallel or collinear lines
+
+    const double rx = c[0] - a[0];
+    const double ry = c[1] - a[1];
+
+    // s = cross(c-a, d-c) / cross(b-a, d-c)
+    const double s = (rx*dy2 - ry*dx2) / den;
+
+    out[0] = a[0] + s*dx1;
+    out[1] = a[1] + s*dy1;
+    return true;
+}
+
+
+
 // 2D point in triangle test
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)

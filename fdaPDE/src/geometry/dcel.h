@@ -961,14 +961,32 @@ template <int LocalDim, int EmbedDim> class DCEL {
     DCEL() : nodes_(), halfedges_() {}   
     // constructs a closed loop structure linking nodes one after the other, with the possibility to add holes
     static DCEL<local_dim, embed_dim> make_polygon(
-        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary,
-        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes={}) {
+        const Eigen::Matrix<double, Eigen::Dynamic, embed_dim>& boundary_entry,
+        const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& holes_entry={}) {
     
-        fdapde_assert(boundary.cols() == embed_dim);
-        for(int i=0; i< holes.size(); ++i) {
-            fdapde_assert(holes[i].cols() == embed_dim);
+        fdapde_assert(boundary_entry.cols() == embed_dim);
+        for(int i=0; i< holes_entry.size(); ++i) {
+            fdapde_assert(holes_entry[i].cols() == embed_dim);
         }
         DCEL<local_dim, embed_dim> dcel;
+
+        auto boundary = boundary_entry;
+        if (!internals::are_2d_counterclockwise_sorted(boundary_entry)) {
+            for (int i = 0; i < boundary.rows(); ++i)
+                boundary.row(i) = boundary_entry.row(boundary.rows() - 1 - i);
+        }
+        std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>> holes;
+        for(const auto& hole: holes_entry){
+            if (internals::are_2d_counterclockwise_sorted(hole)) {
+                Eigen::Matrix<double, Eigen::Dynamic, embed_dim> reversed_hole(hole.rows(), embed_dim);
+                for (int i = 0; i < hole.rows(); ++i)
+                    reversed_hole.row(i) = hole.row(hole.rows() - 1 - i);
+                holes.push_back(reversed_hole);
+            }
+            else{
+                holes.push_back(hole);
+            }
+        }
 
         // external boundary
         int n_nodes = boundary.rows();

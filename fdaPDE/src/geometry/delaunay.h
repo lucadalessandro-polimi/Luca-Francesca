@@ -558,7 +558,7 @@ class Delaunay {
         void initialize_triangulation_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
         
         dcel_= dcel_t::make_polygon(boundaries[0], holes[0]);
-       
+        dcel_.export_to_json("Meshes/Delaunay/delaunay_output.json");
         if(boundaries.size() == 1 ){
             polygon_t polygon(boundaries[0], holes[0]);
             auto triangulation = polygon.triangulation();
@@ -1766,7 +1766,7 @@ class Delaunay {
 
 //----------------------------- helper functions ---------------------------------------------------------------
 
-// compute the convex hull of a given matrix of external boundary points, following Andrew's monotone chain algorithm
+    // compute the convex hull of a given matrix of external boundary points, following Andrew's monotone chain algorithm
     inline Eigen::Matrix<double, Eigen::Dynamic, 2> convex_hull(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary, bool keep_collinear=false){
         const int n = boundary.rows();
         if(n<=1) 
@@ -1832,7 +1832,76 @@ class Delaunay {
             c_hull.row(r) = boundary.row(H[r]);
         return c_hull;
     }
-  
+
+    // compute the enlarged bounding box of a given vector of matrices of points, with a small margin factor eps
+    inline Eigen::Matrix<double, Eigen::Dynamic, 2> offset_polygon(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary_initial, double eps)
+    {
+        using coords_t = fdapde::DCEL<2,2>::coords_t;
+
+        if (eps==0.0) return boundary_initial;
+        const int n = boundary_initial.rows();
+        if (n < 3) return boundary_initial;
+
+        auto signed_area2 = [](const Eigen::Ref<const Eigen::MatrixXd>& P){
+            double A2=0; int n=P.rows();
+            for (int i=0;i<n;++i){ int j=(i+1)%n; A2 += P(i,0)*P(j,1) - P(j,0)*P(i,1); }
+            return A2;
+        };
+        auto ensure_cw = [&](Eigen::MatrixXd P){
+            if (P.rows()>=2 && (P.row(0)-P.row(P.rows()-1)).norm()<1e-12)
+                P.conservativeResize(P.rows()-1,2);
+            if (signed_area2(P) > 0.0){               // se CCW, inverti
+                Eigen::MatrixXd R(P.rows(),2);
+                for (int i=0,n=P.rows(); i<n; ++i) R.row(i)=P.row(n-1-i);
+                P.swap(R);
+            }
+            return P;
+        };
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> boundary = ensure_cw(boundary_initial);
+
+        // prepare local geometry (directions and inward normals)
+        auto nleft = [](const coords_t& u){ coords_t n; n<<-u(1), u(0); return n.normalized(); };
+
+        struct VLoc { coords_t p,uL,uR,nL,nR; };
+        std::vector<VLoc> L(n);
+        for (int i=0;i<n;++i){
+            coords_t p_prev = boundary.row((i-1+n)%n);
+            coords_t p_curr = boundary.row(i);
+            coords_t p_next = boundary.row((i+1)%n);
+            coords_t uL = (p_curr - p_prev).normalized();   // previous edge
+            coords_t uR = (p_next - p_curr).normalized();   // next edge
+            L[i].p  = p_curr;
+            L[i].uL = uL;  L[i].uR = uR;
+            L[i].nL = nleft(uL); L[i].nR = nleft(uR); // outward normal
+        }
+
+        // position of front at time t=eps (intersection of the 2 offset lines)
+        auto vertex_pos_at = [&](const VLoc& v, double t)->coords_t{
+            coords_t qL = v.p + v.nL * t;
+            coords_t qR = v.p + v.nR * t;
+            double det = v.uL(0)*v.uR(1) - v.uL(1)*v.uR(0);
+            if (std::fabs(det) == 0.){
+                // parallel --> bevel
+                coords_t s = v.nL + v.nR; if (s.squaredNorm()>0) s.normalize(); else s = v.nL;
+                return (v.p + s * t).eval();
+            } else {
+                coords_t r = qR - qL;
+                double s1 = (r(0)*v.uR(1) - r(1)*v.uR(0)) / det;
+                return (qL + v.uL * s1).eval();
+            }
+        };
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> offset_domain(n,2);
+        for (int i=0;i<n;++i){
+            coords_t v = vertex_pos_at(L[i], eps);
+            offset_domain.row(i) = v;
+        }
+
+        return offset_domain;
+    }
+
+
 }  // namespace fdapde
 
 #endif // _DELAUNAY_H_

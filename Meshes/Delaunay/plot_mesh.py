@@ -92,7 +92,7 @@ def plot_dcel(filename, out_png="Meshes/Delaunay/delaunay_plot.png", label_edges
                 n /= n_norm
             text_xy = mid + n * label_offset
 
-            #ax.text(text_xy[0], text_xy[1], str(edge.get("id", "")),ha="center", va="center", fontsize=7, color=color, zorder=2,path_effects=[pe.withStroke(linewidth=2, foreground="white")])
+            ax.text(text_xy[0], text_xy[1], str(edge.get("id", "")),ha="center", va="center", fontsize=7, color=color, zorder=2,path_effects=[pe.withStroke(linewidth=2, foreground="white")])
 
     # Disegna triangoli (celle)
     halfedge_to_node = {edge["id"]: edge["from"] for edge in data["edges"]}
