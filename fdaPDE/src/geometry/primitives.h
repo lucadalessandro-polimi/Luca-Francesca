@@ -42,11 +42,13 @@ constexpr double measure_2d_tri(const PointT& a, const PointT& b, const PointT& 
 }
 // finds whether 2D points a, b, and c are sorted clockwise or counterclockwise
 template <typename PointT> constexpr bool are_2d_clockwise_sorted(const PointT& a, const PointT& b, const PointT& c) {
-    return signed_measure_2d_tri(a, b, c) < 0;
+    //return signed_measure_2d_tri(a, b, c) < 0;
+    return fdapde::robust::orient2d_sign(a, b, c) < 0;
 }
 template <typename PointT>
 constexpr bool are_2d_counterclockwise_sorted(const PointT& a, const PointT& b, const PointT& c) {
-    return signed_measure_2d_tri(a, b, c) > 0;
+    //return signed_measure_2d_tri(a, b, c) > 0;
+    return fdapde::robust::orient2d_sign(a, b, c) > 0;
 }
 // area of 2D polygon given counterclockwise sorted vertices v_0, v_1, \ldots, v_{n - 1} (lemma 1.3.3 of (1))
 template <typename PolygonT>
@@ -86,7 +88,7 @@ constexpr Orientation orientation(const PointT& p, const PointT& a, const PointT
 
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
-inline Orientation orientation(const PointT& p, const PointT& a, const PointT& b) {
+constexpr Orientation orientation(const PointT& p, const PointT& a, const PointT& b) {
     const int s = fdapde::robust::orient2d_sign(a, b, p);
     if (s > 0) return Orientation::LEFT;
     if (s < 0) return Orientation::RIGHT;
@@ -109,35 +111,17 @@ template <typename point_t> bool reflex_turn(const point_t& a, const point_t& b,
     return !convex_turn(a, b, c);   // reflex turn \iff not convex turn
 }
 
-// test whether point p belongs to the 2D segment identified by points a and b
+// test whether point a belongs to the 2D segment identified by points b and c
 template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
-constexpr bool contains(const PointT& p, const PointT& a, const PointT& b) { // -------------------- rename in point_in_2d_segment
-    /*if (!collinear(a, b, c)) return false;
+constexpr bool contains(const PointT& a, const PointT& b, const PointT& c) { // -------------------- rename in point_in_2d_segment
+    if (!collinear(a, b, c)) return false;
     // if bc is not vertical, check x coordinates, otherwise check y coordinates
     if (b[0] != c[0]) {
         return ((b[0] <= a[0]) && (a[0] <= c[0])) || ((b[0] >= a[0]) && (a[0] >= c[0]));
     } else {
         return ((b[1] <= a[1]) && (a[1] <= c[1])) || ((b[1] >= a[1]) && (a[1] >= c[1]));
-    }*/
-
-    // degenerate segment: true only if p coincides with a=b   
-    const double ax = double(a[0]), ay = double(a[1]);
-    const double bx = double(b[0]), by = double(b[1]);
-    const double px = double(p[0]), py = double(p[1]);
-    if (ax == bx && ay == by) {
-        return (px == ax && py == ay);
     }
-
-    // robust collinearity
-    if (fdapde::robust::orient2d_sign(a, b, p) != 0) return false;
-
-    // box closed on both coordinates
-    const double minx = (ax < bx) ? ax : bx;
-    const double maxx = (ax > bx) ? ax : bx;
-    const double miny = (ay < by) ? ay : by;
-    const double maxy = (ay > by) ? ay : by;
-    return (px >= minx && px <= maxx && py >= miny && py <= maxy);
 }
   
 // 2D segment-segment intersection test
@@ -145,17 +129,12 @@ template <typename PointT>
     requires(internals::is_subscriptable<PointT, int>)
 constexpr bool segment_proper_intersect_2d_segment(const PointT& a, const PointT& b, const PointT& c, const PointT& d) {
     // check proper intersection (points {c, d} lies on opposite sides of ab and points {a, b} on opposite sides of cd)
-    /*if (
+    if (
       (orientation(c, a, b) == Orientation::LEFT ^ orientation(d, a, b) == Orientation::LEFT) &&
       (orientation(a, c, d) == Orientation::LEFT ^ orientation(b, c, d) == Orientation::LEFT)) {
         return true;
     }
-    return false;*/
-    const int o1 = fdapde::robust::orient2d_sign(a, b, c);
-    const int o2 = fdapde::robust::orient2d_sign(a, b, d);
-    const int o3 = fdapde::robust::orient2d_sign(c, d, a);
-    const int o4 = fdapde::robust::orient2d_sign(c, d, b);
-    return (o1 * o2 < 0) && (o3 * o4 < 0);
+    return false;
 }
 
 template <typename PointT>
@@ -168,35 +147,6 @@ constexpr bool intersect(const PointT& a, const PointT& b, const PointT& c, cons
         return true; }
     return false;
 }
-
-
-// intersection of two lines going through (a,b) and (c,d).
-// returns false if parallel/collinear
-template <typename PointT>
-    requires(internals::is_subscriptable<PointT, int>)
-constexpr bool line_intersection(const PointT& a, const PointT& b,const PointT& c, const PointT& d, PointT& out)
-{
-
-    const double dx1 = b[0] - a[0];
-    const double dy1 = b[1] - a[1];
-    const double dx2 = d[0] - c[0];
-    const double dy2 = d[1] - c[1];
-
-    const double den = dx1*dy2 - dy1*dx2;   // cross((b-a),(d-c))
-    if (!den) return false;     // parallel or collinear lines
-
-    const double rx = c[0] - a[0];
-    const double ry = c[1] - a[1];
-
-    // s = cross(c-a, d-c) / cross(b-a, d-c)
-    const double s = (rx*dy2 - ry*dx2) / den;
-
-    out[0] = a[0] + s*dx1;
-    out[1] = a[1] + s*dy1;
-    return true;
-}
-
-
 
 // 2D point in triangle test
 template <typename PointT>
@@ -263,7 +213,7 @@ constexpr bool polygon_in_2d_polygon(const InnerPolygonT& P, const OuterPolygonT
     return (o > 0) ? (s > 0) : (s < 0);
  }
 
- // checks if a point is inside a polygon or not 
+// checks if a point is inside a polygon or not 
 // algorithm of Ray-Casting 
 template <typename Derived, typename PointT>
 constexpr bool point_in_polygon(const Eigen::MatrixBase<Derived>& polygon, const PointT& p) {

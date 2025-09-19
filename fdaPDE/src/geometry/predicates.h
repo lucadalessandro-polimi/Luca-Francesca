@@ -170,17 +170,19 @@ namespace robust {
     inline double absolute(double x) { return x < 0.0 ? -x : x; }
 
 
-    template<class P>
-    inline double orient2d_fast(const P& A, const P& B, const P& C) {
-          const double acx = double(A[0]) - double(C[0]);
-          const double acy = double(A[1]) - double(C[1]);
-          const double bcx = double(B[0]) - double(C[0]);
-          const double bcy = double(B[1]) - double(C[1]);
+    template <typename PointT>
+        requires(internals::is_subscriptable<PointT, int>)
+    constexpr double orient2d_fast(const PointT& A, const PointT& B, const PointT& C) {
+          const double acx = A[0] - C[0];
+          const double acy = A[1] - C[1];
+          const double bcx = B[0] - C[0];
+          const double bcy = B[1] - C[1];
           return acx * bcy - acy * bcx;
     }
 
-    template<class PointT>
-    inline int orient2d_sign(const PointT& A, const PointT& B, const PointT& C) {
+    template <typename PointT>
+        requires(internals::is_subscriptable<PointT, int>)
+    constexpr int orient2d_sign(const PointT& A, const PointT& B, const PointT& C) {
           constexpr double eps  = std::numeric_limits<double>::epsilon();
           constexpr double errA = (3.0 + 16.0 * eps) * eps;
           constexpr double errB = (2.0 + 12.0 * eps) * eps;
@@ -188,10 +190,10 @@ namespace robust {
           constexpr double rErr = (3.0 + 8.0   * eps) * eps;
 
           // fast computation
-          const double acx = double(A[0]) - double(C[0]);
-          const double acy = double(A[1]) - double(C[1]);
-          const double bcx = double(B[0]) - double(C[0]);
-          const double bcy = double(B[1]) - double(C[1]);
+          const double acx = A[0] - C[0];
+          const double acy = A[1] - C[1];
+          const double bcx = B[0] - C[0];
+          const double bcy = B[1] - C[1];
           const double det    = acx * bcy - acy * bcx;
           const double detsum = absolute(acx * bcy) + absolute(acy * bcx);
 
@@ -253,17 +255,18 @@ namespace robust {
     }
 
 
-    template<class P>
-    inline double incircle_fast_det(const P& A, const P& B, const P& C, const P& D) {
+    template <typename PointT>
+        requires(internals::is_subscriptable<PointT, int>)
+    constexpr double incircle_fast_det(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
         constexpr double eps  = std::numeric_limits<double>::epsilon();
         constexpr double errA = (10.0 + 96.0 * eps) * eps;
 
-        const double adx = double(A[0]) - double(D[0]);
-        const double ady = double(A[1]) - double(D[1]);
-        const double bdx = double(B[0]) - double(D[0]);
-        const double bdy = double(B[1]) - double(D[1]);
-        const double cdx = double(C[0]) - double(D[0]);
-        const double cdy = double(C[1]) - double(D[1]);
+        const double adx = A[0] - D[0];
+        const double ady = A[1] - D[1];
+        const double bdx = B[0] - D[0];
+        const double bdy = B[1] - D[1];
+        const double cdx = C[0] - D[0];
+        const double cdy = C[1] - D[1];
 
         const double bdxcdy = bdx * cdy, cdxbdy = cdx * bdy;
         const double cdxady = cdx * ady, adxcdy = adx * cdy;
@@ -353,12 +356,12 @@ namespace robust {
         double _i, _j;
         double _0;
 
-        adx = (double) (pa[0] - pd[0]);
-        bdx = (double) (pb[0] - pd[0]);
-        cdx = (double) (pc[0] - pd[0]);
-        ady = (double) (pa[1] - pd[1]);
-        bdy = (double) (pb[1] - pd[1]);
-        cdy = (double) (pc[1] - pd[1]);
+        adx = pa[0] - pd[0];
+        bdx = pb[0] - pd[0];
+        cdx = pc[0] - pd[0];
+        ady = pa[1] - pd[1];
+        bdy = pb[1] - pd[1];
+        cdy = pc[1] - pd[1];
 
         two_product(bdx, cdy, bdxcdy1, bdxcdy0);
         two_product(cdx, bdy, cdxbdy1, cdxbdy0);
@@ -786,14 +789,15 @@ namespace robust {
     }
 
 
-    template<class P>
-    inline int incircle_sign_ccw(const P& A, const P& B, const P& C, const P& D) {
+    template <typename PointT>
+        requires(internals::is_subscriptable<PointT, int>)
+    constexpr int incircle_sign_ccw(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
         double det = incircle_fast_det(A,B,C,D);
         if (std::isnan(det)) {
-            const double pa[2]{ double(A[0]), double(A[1]) };
-            const double pb[2]{ double(B[0]), double(B[1]) };
-            const double pc[2]{ double(C[0]), double(C[1]) };
-            const double pd[2]{ double(D[0]), double(D[1]) };
+            const double pa[2]{ A[0], A[1] };
+            const double pb[2]{ B[0], B[1] };
+            const double pc[2]{ C[0], C[1] };
+            const double pd[2]{ D[0], D[1] };
 
             const double adx = pa[0] - pd[0], ady = pa[1] - pd[1];
             const double bdx = pb[0] - pd[0], bdy = pb[1] - pd[1];
@@ -813,8 +817,9 @@ namespace robust {
     }
 
     // assumes counterclockwise ordering of A, B, C
-    template<class P>
-    inline bool in_circle_ccw(const P& A, const P& B, const P& C, const P& D) {
+    template <typename PointT>
+        requires(internals::is_subscriptable<PointT, int>)
+    constexpr bool in_circle_ccw(const PointT& A, const PointT& B, const PointT& C, const PointT& D) {
         return incircle_sign_ccw(A,B,C,D) > 0;
     }
 
