@@ -7,6 +7,8 @@
 
 #include "header_check.h"
 namespace fdapde {
+
+template<int LocalDim, int EmbedDim> class Adaptivity;
   
 template <int LocalDim, int EmbedDim>
 class Delaunay {
@@ -24,6 +26,8 @@ class Delaunay {
     using dcel_t = DCEL<local_dim, embed_dim>;
     using polygon_t = Polygon<local_dim, embed_dim>;
 
+    template<int local_dim, int embed_dim>  // for adaptivity purposes
+    friend class fdapde::Adaptivity;
 
     // costructor with random generated points and refinement
     Delaunay(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, double min_angle, double max_area, int N=0, const std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes = {{}}){
@@ -139,10 +143,10 @@ class Delaunay {
 
     // function perfoming the flip alghoritm to tranform every non-Delaunay triangulation into a Delaunay one
     // not used for the actual costruction for the O(n^2) complexity
-    void flip() {
+    void flip(std::unordered_set<halfedge_t*> halfedges_to_check={}) {
 
-        // create a list of halfedges to check whether they are locally delaunay or not (in this case flippable)
-        std::unordered_set<halfedge_t*> halfedges_to_check;
+        //std::unordered_set<halfedge_t*> halfedges_to_check;
+        if(halfedges_to_check.empty())  // create a list of halfedges to check whether they are locally delaunay or not (in this case flippable)
         for (auto it = dcel_.halfedges_begin(); it != dcel_.halfedges_end(); ++it,++it) {
             // exclude already the edges of the triangulation being automatically locally delaunay
             if(!it->is_segment()) {
@@ -163,7 +167,6 @@ class Delaunay {
             coords_t D = edge->twin()->prev()->node()->coords();
             // test if D lies inside the circumcircle of triangle ABC or C lies inside the circumcircle of triangle ABD
             if (fdapde::internals::in_circle(A, B, C, D) || fdapde::internals::in_circle(A, D, B, C)) {
-                
                 // flip since edge is not locally delaunay
                 halfedge_t* prev= edge->prev();
                 halfedge_t* twin_prev = edge->twin()->prev();
@@ -405,7 +408,7 @@ class Delaunay {
         }
         // initialize the triangulation
         initialize_triangulation_(boundary_vertices, holes_vertices);
-        
+
         // now add all the segments' collinear points back to the triangulation
         if(boundaries.size()==1) 
             complete_boundary_(boundaries[0], boundary_vertices[0]);
@@ -558,7 +561,7 @@ class Delaunay {
         void initialize_triangulation_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
         
         dcel_= dcel_t::make_polygon(boundaries[0], holes[0]);
-        dcel_.export_to_json("Meshes/Delaunay/delaunay_output.json");
+        
         if(boundaries.size() == 1 ){
             polygon_t polygon(boundaries[0], holes[0]);
             auto triangulation = polygon.triangulation();
@@ -871,6 +874,7 @@ class Delaunay {
 
                 // insert new edges
                 halfedge_t* h1 = dcel_.emplace_halfedge(m, true);
+                m->set_halfedge(h1);
                 h1->set_cell(next->cell());
                 dcel_.insert_edge(next, h1);
                 h1->twin()->set_segment(true);
@@ -1001,7 +1005,9 @@ class Delaunay {
         }
         // create new cells 
         for (halfedge_t* h : C) { 
-            add_triangle_(h, std::vector<node_t*> {u});
+            add_triangle_(h, u);
+            if(h==C.front())
+                u->set_halfedge(h->prev()); 
         }
         
         // reassign the conflicts to the new cells  
@@ -1091,8 +1097,8 @@ class Delaunay {
         }
     }
 
-    halfedge_t* add_triangle_(halfedge_t* v,const std::vector<node_t*>& node){
-        return dcel_.add_polygon(v ,node);
+    halfedge_t* add_triangle_(halfedge_t* v,node_t* node){
+        return dcel_.add_polygon(v ,{node});
     }
 
 
@@ -1123,25 +1129,26 @@ class Delaunay {
     // if it is, it is the triangle's shortest edge since its opposing angle is < 60 degrees and the triangle is isosceles
     bool is_edge_seditious_(halfedge_t* h) const{
         if (h->is_segment()) return false;  // segments can't be seditious
-        
+        //std::cout << "qui1" << std::endl;
         if (!(h->prev()->is_segment() && h->next()->is_segment())) return false;  
+        //std::cout << "qui2" << std::endl;
         coords_t a = h->node()->coords();
         coords_t b = h->next()->node()->coords();
         coords_t c = h->prev()->node()->coords();
         // angle in c^ is angle of interest
         if (fdapde::internals::angle_between(b,c,a) >= 60) return false; // angle is not too small
-        
+        std::cout << "qui3" << std::endl;
         // 2 edges of h's cell need to have same length and to be midpoints of another segment 
         double tol = 1e-6;
         if (std::abs(fdapde::internals::segment_length(c, a) - fdapde::internals::segment_length(c, b)) > tol)   return false;
         coords_t d = h->prev()->twin()->prev()->node()->coords();  
         coords_t e = h->next()->twin()->next()->next()->node()->coords();
-
-        if ( !( fdapde::internals::collinear(c, a, d) && 
-                fdapde::internals::collinear(c, b, e) &&
-                std::abs(fdapde::internals::segment_length(c,a) - fdapde::internals::segment_length(d,a)) < tol &&
-                std::abs(fdapde::internals::segment_length(c,b) - fdapde::internals::segment_length(b,e)) < tol ) )
-            return false;
+        std::cout << "qui4" << std::endl;
+        /*if ( !( fdapde::internals::collinear(c, a, d) && 
+                fdapde::internals::collinear(c, b, e) ))//&&
+                //std::abs(fdapde::internals::segment_length(c,a) - fdapde::internals::segment_length(d,a)) < tol &&
+                //std::abs(fdapde::internals::segment_length(c,b) - fdapde::internals::segment_length(b,e)) < tol ) )
+            return false;*/
 
         std::cout << "SEDITIOUS EDGE" << std::endl;
         return true;
@@ -1153,10 +1160,7 @@ class Delaunay {
                                         std::multimap<double, cell_t*>& bad_triangles,
                                         double min_angle, double max_area) {
         auto it = encroached_segments.begin();
-        for(auto is=encroached_segments.begin(); is != encroached_segments.end(); ++is) {
-            std::cout << "encroached segment: " << (*is)->id() << std::endl;
-        }
-        dcel_.export_to_json("Meshes/Delaunay/delaunay_output.json");
+        
         while (it != encroached_segments.end()) {
             halfedge_t* e = *it;
 
@@ -1167,7 +1171,6 @@ class Delaunay {
             ++it;
             encroached_segments.erase(e);
             encroached_segments.erase(e->twin());
-            std::cout << "e: " << e->id()  << std::endl;
 
             // check if adjacent edges to e are seditious; no split is performed if one of them is
             if (is_edge_seditious_(e->next()) || is_edge_seditious_(e->prev())) {
@@ -1230,7 +1233,7 @@ class Delaunay {
 
         // insert the split point in the dcel_
         node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), e->on_boundary(), split_pt));
-
+        
         halfedge_t* prev = e->prev(); //ca
         halfedge_t* twin_prev = e->twin()->prev();   
         halfedge_t* next = e->next();  //bc
@@ -1238,12 +1241,13 @@ class Delaunay {
         // create new connections between am, mb, bc before removing e
         halfedge_t* h1 = dcel_.emplace_halfedge(m, true);
         h1->set_cell(next->cell());
-        dcel_.insert_edge(next, h1); //mb
+        halfedge_t* h_node= dcel_.insert_edge(h1, next); //mb
+        m->set_halfedge(h1);
         h1->twin()->set_segment(true);
         halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);  //am
         h2->set_segment(true);
         h2->twin()->set_segment(true);
-        dcel_.insert_edge(prev, h1);  //mc
+        dcel_.insert_edge(h1, prev);  //mc
         dcel_.remove_edge(e);
 
         // check whether the 2 new triangles are badly-shaped
@@ -1607,7 +1611,8 @@ class Delaunay {
         auto already_present = [&](cell_t* c) {return std::find_if(bad_triangles.begin(), bad_triangles.end(),[c](const auto& entry) { return entry.second == c; }) != bad_triangles.end();};
 
         if(vw->is_segment()){ // vw cannot be removed, so directly create a new triangle from vw and u
-            add_triangle_(vw,std::vector<node_t*> {u});
+            add_triangle_(vw,u);
+            u->set_halfedge(vw->prev());
             cell_t* t = vw->cell();
             double p1 = is_bad_triangle_(t, min_angle, max_area);
             if (p1 >= 0.0 && !already_present(t)) 
@@ -1642,7 +1647,8 @@ class Delaunay {
             dig_cavity_(u, vx, encroached_segments, bad_triangles, min_angle, max_area);
             dig_cavity_(u, xw, encroached_segments, bad_triangles, min_angle, max_area);
         } else {  // create triangle u-vw since it's Delaunay
-            add_triangle_(vw,std::vector<node_t*> {u});
+            add_triangle_(vw,u);
+            u->set_halfedge(vw->prev());
             cell_t* t = vw->cell();
             double p2 = is_bad_triangle_(t, min_angle, max_area);
             if (p2 >= 0.0 && !already_present(t)) 
@@ -1714,6 +1720,96 @@ class Delaunay {
         }
     }
 
+    // overload of insert_vertex_ that does not keep track of encroached segments and bad triangles
+    void insert_vertex_(node_t* u, cell_t* triangle) {
+
+        halfedge_t* vw = triangle->halfedge();
+        halfedge_t* wx = vw->next();
+        halfedge_t* xv = vw->prev();
+    
+        const coords_t& v = vw->node()->coords();
+        const coords_t& w = wx->node()->coords();
+        const coords_t& x = xv->node()->coords();
+        bool found_on_edge = false;
+    
+        // if u falls on vw, cavity is expanded on both sides of vw
+        if (fdapde::internals::contains(u->coords(), v, w)) {
+            halfedge_t* twin_next = vw->twin()->next();
+            halfedge_t* twin_prev = vw->twin()->prev();
+  
+            dcel_.remove_edge(vw);
+            dig_cavity_(u, wx);
+            dig_cavity_(u, xv);
+            dig_cavity_(u, twin_next);
+            dig_cavity_(u, twin_prev);
+            found_on_edge = true;
+        } else if (fdapde::internals::contains(u->coords(), w, x)) {
+            halfedge_t* twin_next = wx->twin()->next();
+            halfedge_t* twin_prev = wx->twin()->prev();
+    
+            dcel_.remove_edge(wx);
+            dig_cavity_(u, vw);
+            dig_cavity_(u, xv);
+            dig_cavity_(u, twin_next);
+            dig_cavity_(u, twin_prev);
+            found_on_edge = true;
+        } else if (fdapde::internals::contains(u->coords(), x, v)) {
+            halfedge_t* twin_next = xv->twin()->next();
+            halfedge_t* twin_prev = xv->twin()->prev();
+
+            dcel_.remove_edge(xv);
+            dig_cavity_(u, vw);
+            dig_cavity_(u, wx);
+            dig_cavity_(u, twin_next);
+            dig_cavity_(u, twin_prev);
+            found_on_edge = true;
+        }
+    
+        if (!found_on_edge) { // u does not fall on any edge, cavity is expanded starting from triangle edges
+            dig_cavity_(u, vw);
+            dig_cavity_(u, wx);
+            dig_cavity_(u, xv);
+        }
+    }
+
+    // overload of dig_cavity_ that does not keep track of encroached segments and bad triangles
+    void dig_cavity_(node_t* u, halfedge_t* vw) { 
+
+        if(vw->is_segment()){ // vw cannot be removed, so directly create a new triangle from vw and u
+            add_triangle_(vw,u);
+            u->set_halfedge(vw->prev());
+            cell_t* t = vw->cell();
+            return;
+        }
+
+        // 3rd node of vw triangle
+        node_t* x = dcel_.adjacent(vw);
+        if (!x) {
+            return;
+        }
+        bool ccw = fdapde::internals::are_2d_counterclockwise_sorted(u->coords(), vw->node()->coords(), vw->twin()->node()->coords());
+          
+        bool inside;
+        if (ccw) {
+            inside = fdapde::internals::in_circle(u->coords(), vw->node()->coords(), vw->twin()->node()->coords(), x->coords());
+        } else {
+            inside = fdapde::internals::in_circle(u->coords(), vw->twin()->node()->coords(), vw->node()->coords(), x->coords());
+        }
+        if (inside) { // u-vw is not Delaunay, cavity is expanded
+            halfedge_t* wv = vw->twin();
+            halfedge_t* vx = vw->twin()->next();
+            halfedge_t* xw = vw->twin()->prev(); 
+            dcel_.remove_edge(vw);  // remove vw since, after u insertion, it's not locally Delaunay
+            dig_cavity_(u, vx);
+            dig_cavity_(u, xw);
+        } else {  // create triangle u-vw since it's Delaunay
+            add_triangle_(vw,u);
+            u->set_halfedge(vw->prev());
+            cell_t* t = vw->cell();
+            return;
+        } 
+    }
+
 //--------------------- end of methods to implement the Bowyer-Watson algorithm --------------------------------------
 
     // checks the global quality of the current triangulation.
@@ -1761,6 +1857,7 @@ class Delaunay {
 
     //------------------ end of support methods to refine the CDT ----------------------------------------------
     
+
 };
 
 
@@ -1833,7 +1930,7 @@ class Delaunay {
         return c_hull;
     }
 
-    // compute the enlarged bounding box of a given vector of matrices of points, with a small margin factor eps
+    // compute the enlarged bounding box of a given matrix of points, with a small margin factor eps
     inline Eigen::Matrix<double, Eigen::Dynamic, 2> offset_polygon(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary_initial, double eps)
     {
         using coords_t = fdapde::DCEL<2,2>::coords_t;
@@ -1882,9 +1979,9 @@ class Delaunay {
             coords_t qR = v.p + v.nR * t;
             double det = v.uL(0)*v.uR(1) - v.uL(1)*v.uR(0);
             if (std::fabs(det) == 0.){
-                // parallel --> bevel
-                coords_t s = v.nL + v.nR; if (s.squaredNorm()>0) s.normalize(); else s = v.nL;
-                return (v.p + s * t).eval();
+                // parallel edges
+                coords_t n_edge = v.nL; // outward
+                return (v.p + n_edge * t).eval();
             } else {
                 coords_t r = qR - qL;
                 double s1 = (r(0)*v.uR(1) - r(1)*v.uR(0)) / det;
