@@ -211,9 +211,12 @@ namespace robust {
           
           double det2 = det + (acx * bcytail + acytail * bcx) - (acy * bcxtail + acxtail * bcy);
 
+          double scale = std::max({fabs(acx), fabs(acy), fabs(bcx), fabs(bcy)});
+          if (std::fabs(det2 / (scale * scale)) < 1e-12) return 0;
+
           const double errbound = errB * detsum + rErr * absolute(det2);
           if (det2 >  errbound) return +1;
-          if (det2 < -errbound) return -1;
+          if (det2 < -errbound) return -1; 
 
           // ---- exact fallback with expansions ----
           // (acx+acxtail)*(bcy+bcytail) - (acy+acytail)*(bcx+bcxtail)

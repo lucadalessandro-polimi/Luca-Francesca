@@ -8,7 +8,7 @@
 #include "header_check.h"
 namespace fdapde {
 
-template<int LocalDim, int EmbedDim> class Adaptivity;
+template<int LocalDim, int EmbedDim, AdaptiveStrategy Strategy> class Adaptivity;
   
 template <int LocalDim, int EmbedDim>
 class Delaunay {
@@ -53,6 +53,10 @@ class Delaunay {
 
     // getter const, to ensure delaunay triangulation is preserved
     const dcel_t& dcel() const {
+        return dcel_;
+    }
+
+    dcel_t& dcel() {
         return dcel_;
     }
 
@@ -121,7 +125,6 @@ class Delaunay {
             // attempt to split an encroached segment (has highest priority wrt to bad triangles)
             if (split_first_encroached_segment_(segments, encroached_segments, bad_triangles, min_angle, max_area))
                 continue;
-
             // otherwise, attempt to split the worst triangle in order of priority
             if (split_first_bad_triangle_(segments, encroached_segments, bad_triangles, min_angle, max_area)) {
                 continue;
@@ -406,6 +409,7 @@ class Delaunay {
             }
             holes_vertices[j] = holes_vertices_i;
         }
+
         // initialize the triangulation
         initialize_triangulation_(boundary_vertices, holes_vertices);
 
@@ -558,10 +562,9 @@ class Delaunay {
 //------------------------- methods to initialize the triangulation -------------------------------------------
 
     //function performing the first raw triangulation of the domain using the polygon.h class
-        void initialize_triangulation_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
+    void initialize_triangulation_(const std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>& boundaries, std::vector<std::vector<Eigen::Matrix<double, Eigen::Dynamic, embed_dim>>>& holes) {
         
         dcel_= dcel_t::make_polygon(boundaries[0], holes[0]);
-        
         if(boundaries.size() == 1 ){
             polygon_t polygon(boundaries[0], holes[0]);
             auto triangulation = polygon.triangulation();
@@ -588,8 +591,8 @@ class Delaunay {
                 for(int j=0; j< boundaries[i].rows(); ++j){
                         coords_t co= boundaries[i].row(j);  
                         if(dcel_.find_node(co)) continue; // node already added in dcel_
-                        // create a new node and halfedge for the segment point (it's not on the boundary)
-                        node_t* n1 = dcel_.insert_node(node_t(dcel_.n_nodes(), false, co)); 
+                        // create a new node and halfedge for the segment point 
+                        node_t* n1 = dcel_.insert_node(node_t(dcel_.n_nodes(), true, co)); // internal boundary
                         halfedge_t* h1 = dcel_.emplace_halfedge(n1, true);  //is_segment=true
                         n1->set_halfedge(h1);
                         h1->set_cell(c_new_edges);
@@ -1129,21 +1132,17 @@ class Delaunay {
     // if it is, it is the triangle's shortest edge since its opposing angle is < 60 degrees and the triangle is isosceles
     bool is_edge_seditious_(halfedge_t* h) const{
         if (h->is_segment()) return false;  // segments can't be seditious
-        //std::cout << "qui1" << std::endl;
         if (!(h->prev()->is_segment() && h->next()->is_segment())) return false;  
-        //std::cout << "qui2" << std::endl;
         coords_t a = h->node()->coords();
         coords_t b = h->next()->node()->coords();
         coords_t c = h->prev()->node()->coords();
         // angle in c^ is angle of interest
         if (fdapde::internals::angle_between(b,c,a) >= 60) return false; // angle is not too small
-        std::cout << "qui3" << std::endl;
         // 2 edges of h's cell need to have same length and to be midpoints of another segment 
         double tol = 1e-6;
         if (std::abs(fdapde::internals::segment_length(c, a) - fdapde::internals::segment_length(c, b)) > tol)   return false;
         coords_t d = h->prev()->twin()->prev()->node()->coords();  
         coords_t e = h->next()->twin()->next()->next()->node()->coords();
-        std::cout << "qui4" << std::endl;
         /*if ( !( fdapde::internals::collinear(c, a, d) && 
                 fdapde::internals::collinear(c, b, e) ))//&&
                 //std::abs(fdapde::internals::segment_length(c,a) - fdapde::internals::segment_length(d,a)) < tol &&
@@ -1232,7 +1231,7 @@ class Delaunay {
         }
 
         // insert the split point in the dcel_
-        node_t* m = dcel_.insert_node(node_t(dcel_.n_nodes(), e->on_boundary(), split_pt));
+        node_t* m = dcel_.insert_node(node_t(std::prev(dcel_.nodes_end())->id() + 1, e->is_segment(), split_pt));
         
         halfedge_t* prev = e->prev(); //ca
         halfedge_t* twin_prev = e->twin()->prev();   
@@ -1347,6 +1346,36 @@ class Delaunay {
 
         return nullptr;  // fallback if no containing triangle is found (should not happen in practice)
     }
+
+    /*cell_t* find_triangle_local_(const coords_t& P, cell_t* start) const{
+        std::vector<halfedge_t*> candidate_edges = dcel_.rtree().locate_query(P);
+
+        for (halfedge_t* edge : candidate_edges) {
+            halfedge_t* h = edge;
+            if(!h->cell()) continue;
+            Eigen::Matrix<double,  3, embed_dim> poly; 
+            for (int i = 0; i < 3; ++i) {
+                poly.row(i) = h->node()->coords();
+                h = h->next();
+            }
+            if (fdapde::internals::point_in_2d_polygon(poly, P)) {
+                //std::cout << "Found containing cell id: " << h->cell()->id() << std::endl;
+                return h->cell();
+            }
+            h = edge->twin();
+            if(!h->cell()) continue;
+            for (int i = 0; i < 3; ++i) {
+                poly.row(i) = h->node()->coords();
+                h = h->next();
+            }
+            if (fdapde::internals::point_in_2d_polygon(poly, P)) {
+                //std::cout << "Found containing cell id: " << h->cell()->id() << std::endl;
+                return h->cell();
+            }
+        }
+
+        return nullptr;
+    }*/
 
     // function computing a priority value in the range [0, 4095] based on the squared length of the shortest edge
     // used to order bad triangles using the key of the associated multimap, ensuring that triangles with small angles have the priority on the ones with large area
@@ -1515,7 +1544,7 @@ class Delaunay {
         if (flag) return false;
 
         // if no encroachment is detected, insert the circumcenter into the mesh
-        node_t* circ = dcel_.insert_node(node_t(dcel_.n_nodes(), false, c));
+        node_t* circ = dcel_.insert_node(node_t(std::prev(dcel_.nodes_end())->id() + 1, false, c));
         // insert the new node into the triangulation finally splitting the triangle of interest 
         insert_vertex_(circ, cf, encroached_segments, bad_triangles, min_angle, max_area);
         return true;
@@ -1996,6 +2025,107 @@ class Delaunay {
         }
 
         return offset_domain;
+    }
+
+    // compute the enlarged convex hull of a given matrix of points, with a margin factor eps
+    inline Eigen::Matrix<double, Eigen::Dynamic, 2> convex_offset(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary_initial, double eps){
+        Eigen::Matrix<double, Eigen::Dynamic, 2> c_hull = convex_hull(boundary_initial, eps);
+        Eigen::Matrix<double, Eigen::Dynamic, 2> offset_poly = offset_polygon(c_hull, eps);
+        return offset_poly;
+    }
+
+
+    // helper function that simplifies a 2D polygonal curve using a recursive Ramer–Douglas–Peucker algorithm with an elliptic tolerance region (adapted from fmesher::fm_simplify_helper)
+    inline Eigen::Matrix<double, Eigen::Dynamic, 2> simplify_helper(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary_initial, double eps, double eps_rel){
+        if (boundary_initial.rows()<3 || eps==0.0 || eps_rel==0.0 || std::min(eps, eps_rel)==0.0) return boundary_initial;
+
+        using coords_t = fdapde::DCEL<2,2>::coords_t;
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> boundary = boundary_initial;
+        int n = boundary.rows();
+        coords_t segm = boundary.row(n-1) - boundary.row(0);
+        double segm_len = segm.norm();
+    
+        if(segm_len < 1e-12){ // end and start point coincide, then split the boundary
+            // find the farthest point from the first
+            double max_dist2 = -1.0;
+            int  split = 1; // index of farthest point
+            for (int i = 1; i < n - 1; ++i) { // exclude first and last (same point)
+                coords_t diff = boundary.row(i) - boundary.row(0);
+                double dist2 = diff.squaredNorm();
+                if (dist2 > max_dist2) {
+                    max_dist2 = dist2;
+                    split = i;
+                }
+            }
+
+            // split the curve into two subcurves
+            auto first_part = boundary.topRows(split + 1);
+            auto second_part = boundary.bottomRows(n - split);
+
+            auto simplified_first = simplify_helper(first_part, eps, eps_rel);
+            auto simplified_second = simplify_helper(second_part, eps, eps_rel);
+            // concatenate and remove duplicate point
+            Eigen::Matrix<double, Eigen::Dynamic, 2> result(simplified_first.rows() + simplified_second.rows() - 1, 2);
+            result << simplified_first, simplified_second.bottomRows(simplified_second.rows() - 1);
+            return result;
+        }
+
+        coords_t segm_mid = (boundary.row(n-1) + boundary.row(0)) / 2.0;
+        segm = segm/segm_len; //normalize
+        coords_t segm_perp = coords_t(-segm(1), segm(0)); // rotate 90 degrees
+        
+        // displacement vectors of intermediate points from midpoint
+        Eigen::Matrix<double, Eigen::Dynamic, 2> vec = boundary.block(1, 0, n - 2, 2).rowwise() - segm_mid;
+
+        double epsi = std::min({eps, eps_rel * segm_len / 2.0, segm_len / 2.0});
+        
+        // projections along segment and perpendicular directions
+        Eigen::Matrix<double, Eigen::Dynamic, 1> dist1 = (vec * segm.transpose()).array().abs() / (segm_len / 2.0) * epsi;
+        Eigen::Matrix<double, Eigen::Dynamic, 1> dist2 = (vec * segm_perp.transpose()).array().abs();
+        // elliptic distance metric
+        Eigen::Matrix<double, Eigen::Dynamic, 1> dist = ((dist1.array().square()) + (dist2.array().square())).sqrt();
+       
+        // find furthest point in the ellipse metric
+        auto it = std::max_element(dist.data(), dist.data() + dist.size());
+        int split = static_cast<int>(std::distance(dist.data(), it)) + 1; 
+        double max_dist = *it; 
+
+        // check if all points lie within the ellipse
+        if (max_dist < epsi) {
+            // flat segment, eliminate middle points
+            Eigen::Matrix<double, Eigen::Dynamic, 2> result(2, 2);
+            result << boundary.row(0), boundary.row(n - 1);
+            return result;
+        }
+
+        // split at furthest point and recurse on the two halves
+        auto first_part  = boundary.topRows(split + 1);
+        auto second_part = boundary.bottomRows(n - split);
+
+        auto simplified_first  = simplify_helper(first_part,  eps, eps_rel);
+        auto simplified_second = simplify_helper(second_part, eps, eps_rel);
+
+        Eigen::Matrix<double, Eigen::Dynamic, 2> result(simplified_first.rows() + simplified_second.rows() - 1, 2);
+        result << simplified_first, simplified_second.bottomRows(simplified_second.rows() - 1);
+
+        return result;
+    }
+
+    // function that simplifies a 2D polygonal curve by callinfìg the helper function simplify_helper
+    inline Eigen::Matrix<double, Eigen::Dynamic, 2> simplify_boundary(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary_initial, double eps, double eps_rel){
+        if (boundary_initial.rows()<3 || eps==0.0 || eps_rel==0.0 || std::min(eps, eps_rel)==0.0) return boundary_initial;
+        using coords_t = fdapde::DCEL<2,2>::coords_t;
+        int n = boundary_initial.rows();
+        coords_t segm = boundary_initial.row(n-1) - boundary_initial.row(0);
+        double segm_len = segm.norm();
+        if(segm_len >= 1e-12){
+            Eigen::Matrix<double, Eigen::Dynamic, 2> boundary(n+1, 2);
+            boundary << boundary_initial, boundary_initial.row(0);
+            boundary = simplify_helper(boundary, eps, eps_rel);
+            return boundary.topRows(boundary.rows()-1);
+        }
+        else return simplify_helper(boundary_initial, eps, eps_rel);
     }
 
 

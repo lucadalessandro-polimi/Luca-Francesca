@@ -44,8 +44,8 @@
 /* #include "src/geometry/linear_network.h" */
 #include "src/geometry/dcel.h"
 #include "src/geometry/polygon.h"
-#include "src/geometry/delaunay.h" 
 #include "src/geometry/adaptivity_costs.h"
+#include "src/geometry/delaunay.h" 
 #include "src/geometry/adaptivity.h"
 
 // clang-format on

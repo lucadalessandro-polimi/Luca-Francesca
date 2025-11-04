@@ -33,6 +33,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
     struct halfedge_t;
     struct cell_t;
     using coords_t = Eigen::Matrix<double, 1, embed_dim>;
+    using rtree_t = RTree<EmbedDim, halfedge_t*>;
     // internal data structures
     struct node_t {
         private:
@@ -133,6 +134,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
         void set_it(std::list<halfedge_t>::iterator it) { it_ = it; }
         void set_segment(bool sub) { segment_ = sub; }
 
+        static constexpr int embed_dim = EmbedDim;
+        std::array<double, 2 * embed_dim> bbox() const {  // for compatibility with rtree
+            coords_t a = node()->coords();
+            coords_t b = twin()->node()->coords();
+            double xmin = std::min({a[0], b[0]});
+            double xmax = std::max({a[0], b[0]});
+            double ymin = std::min({a[1], b[1]});
+            double ymax = std::max({a[1], b[1]});
+            return {xmin, ymin, xmax, ymax};
+        }
+
         // iterator (follows the chain of directed edges until no next valid edge or this edge is found)
         struct circulator {
             using value_type = halfedge_t;
@@ -181,15 +193,15 @@ template <int LocalDim, int EmbedDim> class DCEL {
         void set_id(int id) {id_=id;}
         void set_it(std::list<cell_t>::iterator it) { it_ = it; }
           
-         bool operator==(const cell_t& other) const {
-           return id_ == other.id_;  
-         }
- 
-         // code for conflict graph algorithm in delaunay.h
-         void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
-         std::list<node_t*>& conflicting_points() const{ return conflicting_points_; }
-         std::list<node_t*>& conflicting_points() { return conflicting_points_; }
-         void clear_conflicts() { conflicting_points_.clear(); }
+        bool operator==(const cell_t& other) const {
+        return id_ == other.id_;  
+        }
+
+        // code for conflict graph algorithm in delaunay.h
+        void add_conflict(node_t* point) { conflicting_points_.push_back(point); }
+        std::list<node_t*>& conflicting_points() const{ return conflicting_points_; }
+        std::list<node_t*>& conflicting_points() { return conflicting_points_; }
+        void clear_conflicts() { conflicting_points_.clear(); }
       
  
         private:
@@ -309,6 +321,8 @@ template <int LocalDim, int EmbedDim> class DCEL {
             node_offset += hole_nodes; 
         }
 
+        dcel.build_rtree_();
+
         return dcel;
     }
 
@@ -392,6 +406,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
          std::cout << "Exporting DCEL to " << filename << std::endl;
     }
 
+
+    //rtree operations
+    rtree_t& rtree() { return rtree_; }
+    const rtree_t& rtree() const { return rtree_; }
+
+
     node_t* insert_node(const node_t& node) {
         nodes_.push_back(node);
         auto it = std::prev(nodes_.end());
@@ -456,13 +476,14 @@ template <int LocalDim, int EmbedDim> class DCEL {
         do{
             l=l->next();
         }while(l!=h1 && l!=h2);
+        cell_t* c1 = nullptr;
         if(l==h1){  // the newly created halfedges don't belong to the same cell
             h1->set_cell(h1->prev()->cell());
             if(h1->cell())  // h1 is not a boundary edge
                 h1->cell()->set_halfedge(h1);
             int id = std::prev(cells_.end())->id() + 1; // get the last cell id and increment it
             cells_.push_back(cell_t(id));
-            cell_t* c1 = std::addressof(cells_.back());
+            c1 = std::addressof(cells_.back());
             c1->set_it(std::prev(cells_.end()));
             c1->set_halfedge(h2);
             halfedge_t* end = h2;
@@ -479,6 +500,13 @@ template <int LocalDim, int EmbedDim> class DCEL {
                 h1->set_cell(h1->prev()->cell());
             h2->set_cell(h1->cell());
         }
+        /*if(h1->id() < h2->id()){ 
+            update_rtree_(h1);
+            //std::cout << "RTREE UPDATE: " << h1->id() << std::endl;
+        } else {
+            update_rtree_(h2);
+            //std::cout << "RTREE UPDATE: " << h2->id() << std::endl;
+        }*/
 
         return h1;
     }
@@ -486,18 +514,17 @@ template <int LocalDim, int EmbedDim> class DCEL {
     // function to add a polygon to a DCEL; if buidling_dcel is true, it means the DCEL is being built from scratch (i.e. in from_triangulation)
     halfedge_t* add_polygon(halfedge_t* v, const std::vector<node_t*>& nodes, bool building_dcel=false){
         int nodes_polygon= nodes.size();                                                                         
-        cell_t* c= v->cell();                                                                                    
-    
+        cell_t* c= v->cell(); 
+        
         std::vector<halfedge_t*> halfedges_to_call(nodes_polygon +2 ); 
         halfedges_to_call[0] = v;
         halfedges_to_call[1] = v->next();
-    
         // fill halfedges_to_call in order to make the right calls  to insert_edge
         for (int i = 0; i < nodes_polygon; ++i) {
             halfedge_t* h = find_halfedge(nodes[i],c, building_dcel);
             if(!h){ //halfedge doesn't exist yet
-                    h = emplace_halfedge(nodes[i]);
-                    h->set_cell(c);
+                h = emplace_halfedge(nodes[i]);
+                h->set_cell(c);
             }
             nodes[i]->set_halfedge(h);
             halfedges_to_call[i+2] = h;
@@ -512,7 +539,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
         return v->prev();
     }
 
-    // remove node from DCEL (to remove its connected edges, use DCEL::remove_edge)
+    // remove node from DCEL (to remove its connected edges, first use DCEL::remove_edge)
     void remove_node(node_t* n) {
         nodes_.erase(n->it());
     }
@@ -542,17 +569,21 @@ template <int LocalDim, int EmbedDim> class DCEL {
             } while (begin != end);
         }
         // if v1 is a boundary edge, set the halfedges in v1's cell to boundary halfedges, cell=null and remove v1's cell
-        else{
+        else if (v2!=v1->next() && v2!=v1->prev()){
             begin= v1->next();
             end = v1;
             do {
                 begin->set_cell(nullptr);
                 begin->node()->set_boundary(true);
                 begin->twin()->node()->set_boundary(true);
+                begin->set_segment(true);
+                begin->twin()->set_segment(true);
                 begin = begin->next();
             } while (begin != end);
             // remove v1's cell
-            cells_.erase(c1->it());  
+            if(c1) {
+                cells_.erase(c1->it()); 
+            }
         }
 
         // set halfedge of nodes  to the next halfedge of their twin
@@ -571,7 +602,16 @@ template <int LocalDim, int EmbedDim> class DCEL {
         if (c2 && c2!=c1){ // if v2's cell is different from v1's cell (v1!v2->next() && v2!=v1->next() )
             cells_.erase(c2->it());
         }
+
         // remove v1 and v2
+        /*if(v1->id()< v2->id()) {
+            remove_from_rtree_(v1);
+            std::cout << "RTREE REMOVE: " << v1->id() << std::endl;
+        }
+        else {
+            remove_from_rtree_(v2);
+            std::cout << "RTREE REMOVE: " << v2->id() << std::endl;
+        }*/
         halfedge_t* next= v2->next();
         halfedges_.erase(v1->it());  
         halfedges_.erase(v2->it());
@@ -635,6 +675,81 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
         return nullptr;
     }
+
+    // function locating the cell containing a given point P, starting from an initial cell and expanding locally.
+    cell_t* find_cell(const coords_t& P, cell_t* start) const {
+        if (!start) return nullptr;
+
+        std::unordered_set<cell_t*> visited;
+        std::queue<cell_t*> queue;
+
+        queue.push(start);
+        visited.insert(start);
+
+        while (!queue.empty()) {
+            cell_t* current = queue.front();
+            queue.pop();
+
+            halfedge_t* h0 = current->halfedge();
+            halfedge_t* h = h0;
+            std::vector<Eigen::Vector2d> poly_coords;
+
+            do {
+                poly_coords.push_back(h->node()->coords());
+                h = h->next();
+            } while (h != h0);
+
+            Eigen::Matrix<double, Eigen::Dynamic, 2> poly(poly_coords.size(), 2);
+            for (size_t i = 0; i < poly_coords.size(); ++i)
+                poly.row(i) = poly_coords[i];
+
+            if (fdapde::internals::point_in_2d_polygon(poly, P)) {
+                return current; // trovato
+            }
+
+            h = h0;
+            do {
+                cell_t* neighbor = h->twin()->cell();
+                if (neighbor && !visited.count(neighbor)) {
+                    queue.push(neighbor);
+                    visited.insert(neighbor);
+                }
+                h = h->next();
+            } while (h != h0);
+        }
+
+        return nullptr;
+    }
+
+    /*cell_t* find_cell(const coords_t& P) const {
+        std::vector<halfedge_t*> candidate_edges = rtree_.locate_query(P);
+
+        for (halfedge_t* edge : candidate_edges) {
+            halfedge_t* h = edge;
+            if(!h->cell()) continue;
+            Eigen::Matrix<double,  3, embed_dim> poly;      // IPOTIZZO TRIANGOLO!!!
+            for (int i = 0; i < 3; ++i) {
+                poly.row(i) = h->node()->coords();
+                h = h->next();
+            }
+            if (fdapde::internals::point_in_2d_polygon(poly, P)) {
+                std::cout << "Found containing cell id: " << h->cell()->id() << std::endl;
+                return h->cell();
+            }
+            h = edge->twin();
+            if(!h->cell()) continue;
+            for (int i = 0; i < 3; ++i) {
+                poly.row(i) = h->node()->coords();
+                h = h->next();
+            }
+            if (fdapde::internals::point_in_2d_polygon(poly, P)) {
+                std::cout << "Found containing cell id: " << h->cell()->id() << std::endl;
+                return h->cell();
+            }
+        }
+
+        return nullptr;
+    }*/
     
   
     // utils
@@ -692,12 +807,6 @@ template <int LocalDim, int EmbedDim> class DCEL {
         const auto& coords = triangulation.nodes();
         const auto& markers = triangulation.boundary_nodes();
         int n = boundary_nodes.rows();
-        
-        /*int mid = n / 2;  // punto di taglio (metà inferiore se dispari)
-        // Prima metà
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> part1 = boundary_nodes.topRows(mid);
-        // Seconda metà
-        Eigen::Matrix<double, Eigen::Dynamic, embed_dim> part2 = boundary_nodes.bottomRows(n - mid);*/
         
         int idx = 0;
         for (int i = 0; i < n_boundary_external; ++i) {
@@ -808,11 +917,12 @@ template <int LocalDim, int EmbedDim> class DCEL {
             if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
                 std::swap(p1, p2);
             }
+            
             halfedge_t* h = find_halfedge_between(p0->coords(), p1->coords());
             bool building_dcel = true; 
             if (h) {
                 add_polygon(h, {p2}, building_dcel);
-            } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {
+            } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {                
                 add_polygon(h, {p0}, building_dcel);
             } else if ((h = find_halfedge_between(p2->coords(), p0->coords()))) {
                 add_polygon(h, {p1}, building_dcel);
@@ -858,11 +968,41 @@ template <int LocalDim, int EmbedDim> class DCEL {
         }
     }
 
+
+
+
+
+    void update_rtree_(halfedge_t* h) {
+        rtree_.insert(h, h);
+    }
+
 private:
+
+    // functions to build and keep rtree_ updated
+
+    
+
+    void remove_from_rtree_(halfedge_t* h) {
+        rtree_.erase(h, h);
+    }
+
+    void build_rtree_() {
+        rtree_.clear();
+        rtree_ = rtree_t(8,4);
+        std::vector<halfedge_t*> edges;
+        edges.reserve(halfedges_.size());
+        for (auto& h : halfedges_) {
+           if(h.id() < h.twin()->id()) 
+             edges.push_back(&h);
+        }
+        rtree_.bulk_load(edges);
+    }
+
     // internal storage (use list to avoid reallocations)
     std::list<node_t> nodes_;
     std::list<halfedge_t> halfedges_;
     std::list<cell_t> cells_;
+    rtree_t rtree_;
 };
 
 
