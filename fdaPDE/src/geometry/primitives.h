@@ -247,6 +247,20 @@ constexpr bool is_point_in_polygon(const Eigen::MatrixBase<Derived>& boundary,
     return true;
 }
 
+// function that computes the diameter of a 2D triangle (max|x-y| distance, x,y in T) given its vertices
+template <typename PointT>
+    requires(internals::is_subscriptable<PointT, int>)
+constexpr double triangle_diameter_2d(const PointT& t1, const PointT& t2, const PointT& t3) {
+   
+    const double d12 = (t1[0] - t2[0]) * (t1[0] - t2[0]) + (t1[1] - t2[1]) * (t1[1] - t2[1]);
+    const double d23 = (t2[0] - t3[0]) * (t2[0] - t3[0]) + (t2[1] - t3[1]) * (t2[1] - t3[1]);
+    const double d31 = (t3[0] - t1[0]) * (t3[0] - t1[0]) + (t3[1] - t1[1]) * (t3[1] - t1[1]);
+
+    const double d2_max = (d12 > d23) ? ((d12 > d31) ? d12 : d31): ((d23 > d31) ? d23 : d31);
+    return std::sqrt(d2_max);
+}
+
+
  // computes circumcenter of triangle given its 2D coordinates
  template <typename PointT>
  requires(internals::is_subscriptable<PointT, int>)

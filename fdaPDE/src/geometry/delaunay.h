@@ -8,7 +8,8 @@
 #include "header_check.h"
 namespace fdapde {
 
-template<int LocalDim, int EmbedDim, AdaptiveStrategy Strategy> class Adaptivity;
+//template<int LocalDim, int EmbedDim, AdaptiveStrategy Strategy> class Adaptivity;
+template<int LocalDim, int EmbedDim> class Adaptivity;
   
 template <int LocalDim, int EmbedDim>
 class Delaunay {
@@ -59,6 +60,8 @@ class Delaunay {
     dcel_t& dcel() {
         return dcel_;
     }
+
+    Delaunay(const Delaunay& other) { dcel_ = other.dcel_; }
 
     triangulation_t triangulation() const{
         return dcel_.template to_triangulation<triangulation_t>();
@@ -189,6 +192,17 @@ class Delaunay {
                 }
             }
         }
+    }
+
+    double min_triangle_diameter() const{
+        double min_diam = std::numeric_limits<double>::max();
+        for(auto it = dcel_.cells_cbegin(); it != dcel_.cells_cend(); ++it){
+            const cell_t* c = &(*it);
+            double diameter = fdapde::internals::triangle_diameter_2d(c->halfedge()->node()->coords(),c->halfedge()->next()->node()->coords(),c->halfedge()->prev()->node()->coords());
+            if(diameter < min_diam)
+                min_diam = diameter;
+        }
+        return min_diam;
     }
     
     // function printing global mesh statistics in order to make comparisons with other meshers:
@@ -340,6 +354,8 @@ class Delaunay {
 
         std::cout << std::endl;
     }
+
+
 
 
 
@@ -1246,6 +1262,7 @@ class Delaunay {
         halfedge_t* h2 = dcel_.insert_edge(prev->next(), h1);  //am
         h2->set_segment(true);
         h2->twin()->set_segment(true);
+        h2->node()->set_halfedge(h2); 
         dcel_.insert_edge(h1, prev);  //mc
         dcel_.remove_edge(e);
 
@@ -1869,6 +1886,7 @@ class Delaunay {
             // check if the triangle violates any of the two constraints
             if (angle < min_angle || area > max_area) {
                 all_ok = false;
+                std::cout << "Triangle ID: " << t->id() << " violates quality constraints. Angle: " << angle << ", Area: " << area << std::endl;
                 bad_count++;
             }
         }

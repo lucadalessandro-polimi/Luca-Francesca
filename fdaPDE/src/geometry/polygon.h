@@ -193,7 +193,7 @@ template <int LocalDim, int EmbedDim> class Polygon {
             auto prev = it->prev()->coords();
             auto curr = it->coords();
             auto next = it->next()->coords();
-            double m_signed = internals::signed_measure_2d_tri(prev, curr, next);
+            double m_signed = robust::orient2d_sign(prev, curr, next);
             if (m_signed >= 0) {   // interior angle less or equal than \pi
                 if (below(prev, curr) && below(next, curr)) {
                     node_category[nodes[it->id()]] = node_category_t::start;
@@ -406,11 +406,13 @@ template <int LocalDim, int EmbedDim> class Polygon {
         std::deque<int> reflex_chain;   // queue of reflex nodes
         reflex_chain.push_back(node[0]);
         reflex_chain.push_back(node[1]);
+
         int node_i, node_j, node_k;
         bool on_left = is_l_chain(node[1]);   // whether the currently pointed node is on the left or right chain
         // start triangulating
         int cont=0;
         for (std::size_t j = 2, n = node.size(); j < n; ++j) {
+            
             cont=0;
             node_i = *(reflex_chain.end() - 1);
             node_j = node[j];
@@ -430,36 +432,31 @@ template <int LocalDim, int EmbedDim> class Polygon {
                 }
                 reflex_chain.push_back(node_j);
             } else {   // check if the triplet (node_i, node_j, node_k) makes a reflex turn or not
-                /*if (node_j==min){
-                    reflex_chain.clear();
-                    reflex_chain.insert(reflex_chain.begin(), node.rbegin(), node.rend());
-                    for(auto r:reflex_chain)
-                    {
-                        std::cout << "reflex_chain " << r << std::endl;
-                    }
-                }*/
                 node_k = *(reflex_chain.end() - 2);
-                double m_signed =
-                  internals::signed_measure_2d_tri(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));
+                int m_signed =
+                  fdapde::robust::orient2d_sign(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));
                 if ((on_left && m_signed < 0) || (!on_left && m_signed > 0)) {    // reflex turn
                     reflex_chain.push_back(node_j);
                 } else {
+                    //std::cout << "do while\n";
                     do {
                         // check if the triplet (node_i, node_j, node_k) is not collinear
-                        if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
+                        //if(!fdapde::internals::collinear(nodes.row(node_i), nodes.row(node_j), nodes.row(node_k))){
+                        if(m_signed != 0){
                             // add triangle
 		                    push_cell(node_i, node_j, node_k);
                             // triangulate until convex turn is found
-                            reflex_chain.pop_back();
+                            reflex_chain.pop_back(); 
                         }
                         if (reflex_chain.size() > 1) {
                             node_i = *(reflex_chain.end() - 1);
                             node_k = *(reflex_chain.end() - 2);
                             m_signed =
-                              internals::signed_measure_2d_tri(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));
+                              fdapde::robust::orient2d_sign(nodes.row(node_j), nodes.row(node_k), nodes.row(node_i));
                         }
                     } while (reflex_chain.size() > 1 && ((on_left && m_signed > 0) || (!on_left && m_signed < 0)));
                     reflex_chain.push_back(node_j);
+                    //std::cout << "end do while\n";
                 }
             }
         }

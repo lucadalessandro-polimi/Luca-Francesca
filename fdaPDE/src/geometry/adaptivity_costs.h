@@ -46,8 +46,13 @@ struct StrategyData<EmbedDim, AdaptiveStrategy::GradientMagnitude> {
 
 Eigen::Matrix<double, Eigen::Dynamic, 2> convex_hull(const Eigen::Matrix<double, Eigen::Dynamic, 2>& boundary, bool keep_collinear);
 
+
+
+
+
+
 template<int LocalDim, int EmbedDim, AdaptiveStrategy Strategy>
-class Metric {
+class NodeMetric {
 public:
     using dcel_t  = DCEL<LocalDim, EmbedDim>;
     using node_t = typename dcel_t::node_t;
@@ -58,7 +63,7 @@ public:
     using storage_t = typename StrategyData<EmbedDim, Strategy>::storage_t;
 
     // constructor
-    Metric(dcel_t& dcel, const storage_t& data_points, double max_area): dcel_(dcel), data_points_(data_points)  {
+    NodeMetric(dcel_t& dcel, const storage_t& data_points, double max_area): dcel_(dcel), data_points_(data_points)  {
         if constexpr (Strategy == AdaptiveStrategy::NodeDensity) {
             kdtree_ = KDTree<EmbedDim>(data_points_);
         }
@@ -127,14 +132,23 @@ public:
         }
 
         for (node_t* v : nodes_modified) {
+            //double rho_mean = 0.0;
+            //for (auto &kv : node_resolution_metric_all_()) {rho_mean += kv.second;}
+            //rho_mean /= std::max<size_t>(1, node_resolution_metric_all_().size());
+            //auto clamp = [](double x, double a, double b){ return std::max(a, std::min(b,x)); };
+
             double rho_v; 
             if constexpr(Strategy==AdaptiveStrategy::NodeDensity) 
                 rho_v = node_density_(v);
             else if constexpr(Strategy==AdaptiveStrategy::GradientMagnitude){
                 rho_v = node_resolution_metric_single_(v);
             }
-            
-            node_metric_[v] = metPar_.c * clamp_rho(rho_v);
+            //double rho = clamp(rho_v, metPar_.rho_min, metPar_.rho_max);
+            //double h_i = h_target_ / std::sqrt(rho / rho_mean);
+            //h_i = std::min(h_i, h_target_);
+            //double lambda = 1.0 / (h_i * h_i);
+            //node_metric_[v] = lambda;
+            node_metric_[v] = rho_v;
         }
     }
 
@@ -176,16 +190,98 @@ public:
         return S;
     }
 
+    std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> node_metric() const{
+        std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> nodal_metric;
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+            node_t* v = &(*it);
+            Eigen::Matrix<double,EmbedDim, EmbedDim> M = Eigen::Matrix<double,EmbedDim, EmbedDim>::Identity() * node_metric_.at(v);  
+            nodal_metric.emplace(v, M);
+        }
+        return nodal_metric;
+    }
+
     MetricParams metPar() const { return metPar_; }
     void set_Lmin(double Lmin) { metPar_.Lmin = Lmin; }
     void set_Lmax(double Lmax) { metPar_.Lmax = Lmax; }
+
+    std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> node_density_knn() const 
+    //std::unordered_map<node_t*, double> node_density_knn(int k = 20, double R = 0.01) const 
+    {
+        std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> rho;
+        //std::unordered_map<node_t*, double> rho;
+        rho.reserve(dcel_.n_nodes());
+
+        auto it = dcel_.nodes_begin();
+        coords_t minBB = it->coords();
+        coords_t maxBB = it->coords();
+        ++it;
+        for (; it != dcel_.nodes_end(); ++it) {
+            const coords_t& p = it->coords();
+            for (int d = 0; d < EmbedDim; ++d) {
+                if (p(d) < minBB(d)) minBB(d) = p(d);
+                if (p(d) > maxBB(d)) maxBB(d) = p(d);
+            }
+        }
+        int N = data_points_.rows();
+        double beta = 2.0;
+        Eigen::Vector2d diag = maxBB - minBB;
+        double L = diag.norm();
+        double h = L / std::sqrt(N); 
+        double R = beta * h; 
+        int k = std::sqrt(N);  //std::log(N); 
+        std::cout << "Bounding box coordinates: min " << minBB << ", max " << maxBB << std::endl;
+        std::cout << "R: " << R << "  k: " << k << std::endl;
+
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it)
+        {
+            node_t* v = &(*it);
+            coords_t x = v->coords();
+
+            std::unordered_set<int> ids;
+
+            // 1) Espansione del box finché non contiene almeno k punti
+            while (true)
+            {
+                typename KDTree<EmbedDim>::RangeType box;
+                box.ll = x.array() - R;
+                box.ur = x.array() + R;
+
+                ids = kdtree_.range_search(box);
+
+                if ((int)ids.size() >= k)
+                    break;
+
+                R *= 2;
+                if (R > 1e6) break;
+            }
+
+            // 2) Calcola la distanza esatta ai punti trovati
+            std::vector<double> dists;
+            dists.reserve(ids.size());
+            for (int idx : ids)
+            {
+                coords_t p = data_points_.row(idx);
+                dists.push_back((p - x).norm());
+            }
+
+            std::nth_element(dists.begin(), dists.begin() + (k-1), dists.end());
+            double Rk = dists[k-1];   // distanza al k-esimo nearest
+
+            // 3) Densità KNN
+            double density = double(k) / (M_PI * Rk * Rk);
+
+            rho[v] = 1/density * Eigen::Matrix<double,EmbedDim,EmbedDim>::Identity();
+        }
+
+        return rho;
+    }
 
 
 private:
     dcel_t& dcel_;
     const storage_t data_points_;
     MetricParams metPar_;
-    std::unordered_map<const node_t*, double> node_metric_; // node* -> lambda
+    std::unordered_map<node_t*, double> node_metric_; // node* -> lambda
     KDTree<EmbedDim> kdtree_;
     double h_target_;
 
@@ -194,7 +290,8 @@ private:
 
 
     void build_metric_() {
-        std::unordered_map<const node_t*, double> rho_i;
+
+        std::unordered_map<node_t*, double> rho_i;
         if constexpr(Strategy==AdaptiveStrategy::NodeDensity) 
             rho_i = node_density_();
         else if constexpr(Strategy==AdaptiveStrategy::GradientMagnitude){
@@ -208,28 +305,28 @@ private:
 
         node_metric_.clear();
         for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
-            const node_t* v = &(*it);
+            node_t* v = &(*it);
             double rho = clamp(rho_i.at(v), metPar_.rho_min, metPar_.rho_max);
-
             double h_i = h_target_ / std::sqrt(rho / rho_mean);
             h_i = std::min(h_i, h_target_);
-
-            //double lambda = metPar_.c * rho; // isotrope: M_i = lambda I
             double lambda = 1.0 / (h_i * h_i);
+            lambda = 1/lambda;
             node_metric_.emplace(v, lambda);
         }
     }
 
+
+
     // ----------------------------------- Metric based on density of data points -----------------------------------
 
     // nodal density: rho(node) = (weighted point count at node) / (barycentric dual area)
-    std::unordered_map<const node_t*, double> node_density_() const {
-        std::unordered_map<const node_t*, double> nodal_count; // accumulates weights
-        std::unordered_map<const node_t*, double> nodal_area;  // barycentric dual area
+    std::unordered_map<node_t*, double> node_density_() const {
+        std::unordered_map<node_t*, double> nodal_count; // accumulates weights
+        std::unordered_map<node_t*, double> nodal_area;  // barycentric dual area
 
         // init maps with all nodes present (0.0)
         for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
-            const node_t* v = &(*it);
+            node_t* v = &(*it);
             nodal_count.emplace(v, 0.0);
             nodal_area.emplace(v, 0.0);
         }
@@ -237,9 +334,9 @@ private:
         // precompute barycentric dual area: A*(i) = sum_T( area(T)/3 ) over incident triangles
         for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
             const cell_t* c = &(*it);
-            const node_t* A = c->halfedge()->node();
-            const node_t* B = c->halfedge()->next()->node();
-            const node_t* C = c->halfedge()->prev()->node();
+            node_t* A = c->halfedge()->node();
+            node_t* B = c->halfedge()->next()->node();
+            node_t* C = c->halfedge()->prev()->node();
             const double area = fdapde::internals::measure_2d_tri(A->coords(), B->coords(), C->coords());
             if (area <= 0.0) continue;
             nodal_area[A] += area/3.0;
@@ -247,7 +344,7 @@ private:
             nodal_area[C] += area/3.0;
         }
 
-        auto add = [&](const node_t* v, double w){
+        auto add = [&](node_t* v, double w){
             auto it = nodal_count.find(v);
             if (it != nodal_count.end()) it->second += w;
             else nodal_count.emplace(v, w); // safety (in case mesh changed)
@@ -301,7 +398,8 @@ private:
         // convert counts to densities
         for (auto& kv : nodal_count) {
             const node_t* v = kv.first;
-            const double  area = nodal_area[v];
+            //std::cout << "Node " << v->id() << ": count = " << kv.second << ", area = " << nodal_area[v] << std::endl;
+            const double  area = 1; //nodal_area[v];
             kv.second = (area > 0.0) ? (kv.second / area) : 0.0;
         }
 
@@ -504,35 +602,62 @@ private:
     // ----------------------------------- Metric based on gradient magnitude of data points -----------------------------------
     
     // node density based on gradient magnitude of data_points_
-    std::unordered_map<const node_t*, double> node_resolution_metric_all_(double alpha = 1.5, double eps = 0.05) const {
+    std::unordered_map<const node_t*, double> node_resolution_metric_all_(double alpha = 2.0, double eps = 0.05) const {
         using DataPoint = typename StrategyData<EmbedDim, AdaptiveStrategy::GradientMagnitude>::DataPoint;
         std::unordered_map<const node_t*, double> nodal_rho;
         double r_initial = r_initial_();
+        auto minmax_it = std::minmax_element(data_points_.begin(),data_points_.end(),[](const DataPoint& a, const DataPoint& b) {return a.grad_norm < b.grad_norm;});
+        double gmin = minmax_it.first->grad_norm;
+        double gmax = minmax_it.second->grad_norm;
+        const double RHO_MAX_CALC = rho_from_grad_(gmax, gmin, gmax, alpha, eps); // norm=1 -> max rho
+        const double RHO_MIN_CALC = rho_from_grad_(gmin, gmin, gmax, alpha, eps); // norm=0 -> min rho
+        double rho_range_calc = RHO_MAX_CALC - RHO_MIN_CALC;
+        if (rho_range_calc < 1e-12) { // if all gradients are equal, assign uniform density
+            for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it)
+                nodal_rho.emplace(&(*it), 1.0);
+            return nodal_rho;
+        }
+        constexpr double RHO_MIN_TARGET = 0.0; 
+        constexpr double RHO_MAX_TARGET = 1.0; 
+        double rho_range_target = RHO_MAX_TARGET - RHO_MIN_TARGET;
         for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
             const node_t* v = &(*it);
             const coords_t& P = v->coords();
             const double g_interpolated = shepard_interpolation_kd_combined_(P, r_initial);
-            auto minmax_it = std::minmax_element(data_points_.begin(),data_points_.end(),[](const DataPoint& a, const DataPoint& b) {return a.grad_norm < b.grad_norm;});
-            double gmin = minmax_it.first->grad_norm;
-            double gmax = minmax_it.second->grad_norm;
-            const double rho = rho_from_grad_(g_interpolated, gmin, gmax, alpha, eps);
-            nodal_rho.emplace(v, rho);
+            const double rho_calc = rho_from_grad_(g_interpolated, gmin, gmax, alpha, eps);
+            double rho_normalized = ((rho_calc - RHO_MIN_CALC) / rho_range_calc) * rho_range_target + RHO_MIN_TARGET;
+            nodal_rho.emplace(v, rho_normalized);
         }
         return nodal_rho;
+        //for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it) {
+        //    const node_t* v = &(*it);
+        //    const coords_t& P = v->coords();
+        //    const double g_interpolated = shepard_interpolation_kd_combined_(P, r_initial);
+        //    const double rho = rho_from_grad_(g_interpolated, gmin, gmax, alpha, eps);
+        //    nodal_rho.emplace(v, rho);
+        //}
+        //return nodal_rho;
     }
 
-    double node_resolution_metric_single_(const node_t* v, double alpha = 1.5, double eps = 0.05) const {
+    double node_resolution_metric_single_(const node_t* v, double alpha = 2.0, double eps = 0.05) const {
         using DataPoint = typename StrategyData<EmbedDim, AdaptiveStrategy::GradientMagnitude>::DataPoint;
         if (!v) return 0.0;
         const double g_interpolated = shepard_interpolation_kd_combined_(v->coords(), r_initial_());
         auto minmax_it = std::minmax_element(data_points_.begin(),data_points_.end(),[](const DataPoint& a, const DataPoint& b) {return a.grad_norm < b.grad_norm;});
         double gmin = minmax_it.first->grad_norm;
         double gmax = minmax_it.second->grad_norm;
-        const double rho = rho_from_grad_(g_interpolated, gmin, gmax, alpha, eps);       // CALCOLA G_MIN E G_MAX !!!!!!!!!!!!!!!!!!!
-        return rho;
+        const double RHO_MAX_CALC = rho_from_grad_(gmax, gmin, gmax, alpha, eps); // norm=1 -> max rho
+        const double RHO_MIN_CALC = rho_from_grad_(gmin, gmin, gmax, alpha, eps); // norm=0 -> min rho
+        double rho_range_calc = RHO_MAX_CALC - RHO_MIN_CALC;
+        constexpr double RHO_MIN_TARGET = 0.0; 
+        constexpr double RHO_MAX_TARGET = 1.0; 
+        double rho_range_target = RHO_MAX_TARGET - RHO_MIN_TARGET;
+        const double rho_calc = rho_from_grad_(g_interpolated, gmin, gmax, alpha, eps);
+        double rho_normalized = ((rho_calc - RHO_MIN_CALC) / rho_range_calc) * rho_range_target + RHO_MIN_TARGET;       
+        return rho_normalized;
     }
 
-    double rho_from_grad_(double g, double gmin, double gmax, double alpha=1.5, double eps=0.05) const{
+    double rho_from_grad_(double g, double gmin, double gmax, double alpha=6.0, double eps=0.1) const{
         double norm = (g - gmin) / (gmax - gmin + 1e-12);
         norm = std::clamp(norm, 0.0, 1.0);
         return std::pow(norm + eps, alpha);
@@ -834,6 +959,7 @@ public:
           }
           mean_qoi_ = sum_qoi / dcel_.n_cells();
     }
+
 
 private:
     dcel_t& dcel_;

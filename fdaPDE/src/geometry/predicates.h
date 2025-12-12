@@ -194,7 +194,9 @@ namespace robust {
           const double acy = A[1] - C[1];
           const double bcx = B[0] - C[0];
           const double bcy = B[1] - C[1];
-          const double det    = acx * bcy - acy * bcx;
+          const double p1 = acx * bcy;
+          const double p2 = acy * bcx;
+          const double det = p1 - p2;
           const double detsum = absolute(acx * bcy) + absolute(acy * bcx);
 
           if (det >  errA * detsum) return +1;

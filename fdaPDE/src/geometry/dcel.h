@@ -93,6 +93,7 @@ template <int LocalDim, int EmbedDim> class DCEL {
          cell_t* conflict() const { return conflicting_triangle_; }
          void remove_conflict() { conflicting_triangle_ = nullptr; }
          void set_it(std::list<node_t>::iterator it) { it_ = it; }
+         void set_coords(coords_t new_coords) {coords_ = new_coords; }
  
 
     };
@@ -914,17 +915,20 @@ template <int LocalDim, int EmbedDim> class DCEL {
             node_t* p1 = find_node(coords.row(row1));
             node_t* p2 = find_node(coords.row(row2));
 
-            if (!fdapde::internals::are_2d_counterclockwise_sorted(p0->coords(), p1->coords(), p2->coords())) {
+            if (fdapde::robust::orient2d_sign(p0->coords(), p1->coords(), p2->coords()) < 0 && fdapde::internals::signed_measure_2d_tri(p0->coords(), p1->coords(), p2->coords()) < 0) {
                 std::swap(p1, p2);
             }
-            
+
             halfedge_t* h = find_halfedge_between(p0->coords(), p1->coords());
             bool building_dcel = true; 
             if (h) {
+                if(!h->cell()) h= h->twin();
                 add_polygon(h, {p2}, building_dcel);
-            } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {                
+            } else if ((h = find_halfedge_between(p1->coords(), p2->coords()))) {   
+                if(!h->cell()) h= h->twin();             
                 add_polygon(h, {p0}, building_dcel);
             } else if ((h = find_halfedge_between(p2->coords(), p0->coords()))) {
+                if(!h->cell()) h= h->twin();
                 add_polygon(h, {p1}, building_dcel);
             } else {
                 // there might be 2 or more halfedges departing from same node and belonging to same cell
