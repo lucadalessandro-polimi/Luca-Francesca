@@ -11,11 +11,66 @@ using coords_t = typename Eigen::Matrix<double, 1, 2>;
 using node_t = typename DCEL<2, 2>::node_t;
 
 
-struct TensorDecomposition {
-    Eigen::Vector2d ev;       // Autovalori (ev(0) = lambda_min, ev(1) = lambda_max)
-    Eigen::Matrix2d R;     // Matrice degli autovettori
-};
+// function to obtain .mesh and .sol files to use in MMG adaptation
+void write_mesh_and_metric(fdapde::DCEL<2,2>& dcel,const std::unordered_map<node_t*, Eigen::Matrix2d>& node_metrics,const std::string& mesh_filename,const std::string& sol_filename) {
+    std::ofstream mesh_out(mesh_filename);
+    std::ofstream sol_out(sol_filename);
 
+    const std::size_t N = dcel.n_nodes();
+    const std::size_t T = dcel.n_cells();
+
+    std::unordered_map<node_t*, std::size_t> node_id;
+    node_id.reserve(N);
+    std::size_t id = 1;
+    for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+        node_id[&(*it)] = id++;
+    }
+
+    mesh_out << "MeshVersionFormatted 2\n\n";
+    mesh_out << "Dimension 2\n\n";
+    mesh_out << "Vertices\n";
+    mesh_out << N << "\n";
+
+    for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+        const auto& coords = it->coords();
+        mesh_out << coords(0) << " " << coords(1) << " 0\n";
+    }
+
+    mesh_out << "\nTriangles\n";
+    mesh_out << T << "\n";
+
+    for (auto cit = dcel.cells_begin(); cit != dcel.cells_end(); ++cit) {
+        const auto* c = &(*cit);
+        auto h = c->halfedge();
+        node_t* n0 = h->node();
+        node_t* n1 = h->next()->node();
+        node_t* n2 = h->next()->next()->node();
+        mesh_out << node_id.at(n0) << " " << node_id.at(n1) << " " << node_id.at(n2) << " 0\n";
+    }
+
+    mesh_out << "\nEnd\n";
+
+    sol_out << "MeshVersionFormatted 2\n\n";
+    sol_out << "Dimension 2\n\n";
+    sol_out << "SolAtVertices\n";
+    sol_out << N << "\n";
+    sol_out << "1 3\n"; 
+
+    for (auto it = dcel.nodes_begin(); it != dcel.nodes_end(); ++it) {
+        node_t* node = &(*it);
+        auto mit = node_metrics.find(node);
+        const Eigen::Matrix2d& M = mit->second;
+        sol_out << " " << M(0,0) << " " << M(0,1) << " " << M(1,1) << "\n";
+    }
+
+    sol_out << "\nEnd\n";
+}
+
+
+struct TensorDecomposition {
+    Eigen::Vector2d ev;       // ev(0) = lambda_min, ev(1) = lambda_max
+    Eigen::Matrix2d R;        // eigenvectors matrix
+};
 TensorDecomposition decomposeTensor(const Eigen::Matrix2d& M) {
     Eigen::Matrix2d Ms = 0.5 * (M + M.transpose()); 
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> es(Ms);
@@ -24,7 +79,7 @@ TensorDecomposition decomposeTensor(const Eigen::Matrix2d& M) {
     result.ev = es.eigenvalues();
     result.R = es.eigenvectors();
     
-    // Ordiniamo: ev(0) = min, ev(1) = max (essenziale per la logica FF++)
+    // order ev(0) = min, ev(1) = max 
     if (result.ev(0) > result.ev(1)) {
         std::swap(result.ev(0), result.ev(1));
         result.R.col(0).swap(result.R.col(1));
@@ -32,35 +87,34 @@ TensorDecomposition decomposeTensor(const Eigen::Matrix2d& M) {
     return result;
 }
 
-// Funzione Helper 2: Replica della costruzione M finale (dentro il loop FF++)
+// build the scaled metric at a node given its tensor decomposition
 Eigen::Matrix2d build_metric_scaled(const TensorDecomposition& decomposition,double R_max, double Beta, double hmax_tilde_sq  ) {
     double ev0 = decomposition.ev(0);
     double ev1 = decomposition.ev(1);
 
-    // Alpha (radice del determinante) e Gamma (rapporto di anisotropia)
+    // alpha-->density, gamma-->shape
     double alpha_global = std::sqrt(ev0 * ev1);
     double gamma_global = ev0 / alpha_global;   
     double gammabeta = std::pow(gamma_global, Beta); 
     double sqlaK = alpha_global * gammabeta;   
     
-    // Calcolo degli autovalori finali INVERSI (1/h^2)
-    // invsqlambda1 = lambda_min (lato lungo); invsqlambda2 = lambda_max (lato corto)
-    double invsqlambda1 = 1.0 / (hmax_tilde_sq * alpha_global * gammabeta);   //CAMBIO
+    // inverse final eigenvectors (1/h^2)
+    double invsqlambda1 = 1.0 / (hmax_tilde_sq * alpha_global * gammabeta);   
     double invsqlambda2 = gammabeta / (hmax_tilde_sq * alpha_global); 
 
-    // Vincolo di Anisotropia (ratiomax)
+    // anisotropy constraint
     double ratio = invsqlambda2 / invsqlambda1;
     if (ratio > R_max) { 
         invsqlambda1 = invsqlambda2 / (R_max * R_max);
     }  
     
-    // 5. Ricostruzione finale M = R * diag(lambda1, lambda2) * R^T
-    // Usiamo il prodotto tensoriale per replicare l'assemblaggio R*diag*R^T
+    // final reconstruction of M = R * diag(invsqlambda1, invsqlambda2) * R^T
     Eigen::Matrix2d M_final = decomposition.R.col(0) * decomposition.R.col(0).transpose() * invsqlambda1 + decomposition.R.col(1) * decomposition.R.col(1).transpose() * invsqlambda2;
 
     return M_final;
 }
 
+// function that normalizes the metric on dcel vertices given a raw metric function
 std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_metric_fun(std::function<Eigen::Matrix2d(const coords_t&)> Mraw, fdapde::DCEL<2, 2>& dcel_, const double H_MAX_USER  = 0.4,const double BETA_POWER  = 2.0, const double R_MAX_ANISOTROPY = 2.5) {
  
     std::vector<TensorDecomposition> Decomposed_nodes(dcel_.n_nodes());
@@ -68,8 +122,8 @@ std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_metric_fun(st
 
     auto it = dcel_.nodes_begin();
     for (size_t i = 0; i < dcel_.n_nodes(); ++i, ++it) {
-        Eigen::Matrix2d Mraw_i = Mraw(it->coords()); // Calcola Mraw
-        Decomposed_nodes[i] = decomposeTensor(Mraw_i);           // Decomponi in ev e R
+        Eigen::Matrix2d Mraw_i = Mraw(it->coords()); 
+        Decomposed_nodes[i] = decomposeTensor(Mraw_i);           
     }
 
     double sqlaK_max = 0.0;
@@ -77,11 +131,9 @@ std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_metric_fun(st
         double ev0 = decomp.ev(0); // lambda_min
         double ev1 = decomp.ev(1); // lambda_max
         
-        // Calcola alphaV e gammaV
         double alphaV_i = std::sqrt(ev0 * ev1);
         double gammaV_i = ev0 / alphaV_i;
         
-        // Calcola sqlaK (alpha * gamma^beta)
         double sqlaK_i = alphaV_i * std::pow(gammaV_i, BETA_POWER);
         if (sqlaK_i > sqlaK_max) {
             sqlaK_max = sqlaK_i;
@@ -97,10 +149,9 @@ std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_metric_fun(st
     }
 
     return node_metrics;
-
 }
 
-std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_matrix(std::unordered_map<DCEL<2,2>::node_t*,Eigen::Matrix2d> map, fdapde::DCEL<2, 2>& dcel_, const double HMAX  = 0.4,const double C_DENSITY = 1.0, const double BETA  = 2.0, const double R_MAX = 2.5) {
+std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_matrix(std::unordered_map<DCEL<2,2>::node_t*,Eigen::Matrix2d> map, fdapde::DCEL<2, 2>& dcel_, const double HMAX  = 0.4,const double C_DENSITY = 1.0,    const double BETA  = 2.0, const double R_MAX = 2.5) {
     
     const size_t N = dcel_.n_nodes();
     std::vector<TensorDecomposition> dec(N);
@@ -117,11 +168,12 @@ std::unordered_map<node_t*, Eigen::Matrix<double, 2, 2>> normalize_matrix(std::u
         sqlaK_max = std::max(sqlaK_max, alpha * std::pow(gamma, BETA));
     }
     const double hmax_tilde_sq = (HMAX * HMAX) / sqlaK_max;
-    std::cout << "BETA: " << BETA << ", hmax_tilde_sq: " << hmax_tilde_sq << std::endl;
 
     i = 0;
-    for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it, ++i)
+    for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it, ++i){
         map[&(*it)] = C_DENSITY* build_metric_scaled(dec[i], R_MAX, BETA, hmax_tilde_sq);
+        //std::cout << "Node " << it->id() << ": Metric after normalization:\n" << map[&(*it)] << "\n";
+    }
 
     return map;
 }
@@ -179,31 +231,7 @@ int main() {
             P.row(i) = p;
         }
         return P;
-    };
-
-    // Punti attorno a una RETTA y = m x + q (x ∈ [xmin, xmax])
-    const auto random_points_around_line = [](int n,double m, double q,double xmin, double xmax,double sigma_perp,double sigma_tang = 0.0,unsigned long long seed = 42ULL)-> Eigen::Matrix<double, Eigen::Dynamic, 2>
-    {
-        Eigen::Matrix<double, Eigen::Dynamic, 2> P(n, 2);
-        std::mt19937_64 rng(seed);
-        std::uniform_real_distribution<double> Ux(xmin, xmax);
-        std::normal_distribution<double> Z(0.0, 1.0);
-
-        double denom = std::sqrt(1.0 + m*m);
-        Eigen::Vector2d t_hat(1.0/denom, m/denom);
-        Eigen::Vector2d n_hat(-m/denom, 1.0/denom);
-
-        for (int i = 0; i < n; ++i) {
-            double x = Ux(rng);
-            double y = m * x + q;
-            Eigen::Vector2d base(x, y);
-            double z_perp = Z(rng);
-            double z_tang = (sigma_tang > 0.0 ? Z(rng) : 0.0);
-            Eigen::Vector2d p = base + sigma_perp * z_perp * n_hat + sigma_tang * z_tang * t_hat;
-            P.row(i) = p;
-        }
-        return P;
-    };
+    }; 
 
     auto export_data_to_txt = [](const Eigen::Matrix<double, Eigen::Dynamic, 2>& data, const std::string& filename) {
         std::ofstream f(filename);
@@ -257,14 +285,17 @@ int main() {
 
 
 
-    auto data = random_points_in_rectangle(1000, 0.05, 0.3, 0.05, 0.5, 42ULL);    
-    //auto data = random_points_around_segment(200, Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(4000.0, 2000.0), 50.0, 5.0, 12345);
-    //auto data = random_points_around_line(500, 1.0, -2000.0, 3000.0, 4000.0, 20.0, 5.0, 12345);  
+    //auto data1 = random_points_around_segment(300, Eigen::Vector2d(0.1, 0.1), Eigen::Vector2d(0.9, 0.9), 0.05, 0.05, 12345);
+    /*auto data1 = random_points_in_rectangle(250, 0, 0.6, 0, 1, 67890);
+    auto data2 = random_points_in_rectangle(250, 0, 1, 0.5, 1, 67890);
+    Eigen::MatrixXd data(data1.rows() + data2.rows(), data1.cols());
+    data << data1, data2;*/
+    auto data = random_points_in_rectangle(50, 0, 0.2, 0.7, 1, 67890);
     export_data_to_txt(data, "Meshes/Delaunay/data_points.txt");
 
     
-    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{rectangle}, 0);
-    del.refinement(20, del.domain_area()/100);
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{U}, 0);
+    del.refinement(30, del.domain_area()/100);
     del.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");
 
     //Adaptivity<2,2, fdapde::AdaptiveStrategy::GradientMagnitude> adapt(del,data, 20, del.domain_area()/100, 1e-1);
@@ -273,26 +304,26 @@ int main() {
     double prev_diameter = delaunay.min_triangle_diameter();
     double tol = 5e-3;
 
-    std::vector<double> rmax = {1.0, 2.5, 5.0, 10.0};
-    //for(auto r: rmax)
     for(int i=0; i<100; ++i){
         std::cout << "Iter " << i+1 << " of adaptivity." << std::endl;
         std::cout << "Current number of cells: " << delaunay.dcel().n_cells() << std::endl;
 
-        //NodeMetric<2,2,AdaptiveStrategy::NodeDensity> node_metrics_obj(delaunay.dcel(), data, del.domain_area()/100);
-        //auto node_metrics = node_metrics_obj.node_density_knn(); 
-        //node_metrics = normalize_matrix(node_metrics, delaunay.dcel(), 0.5, 1.5);
+        NodeMetric<2,2,AdaptiveStrategy::NodeDensity> node_metrics_obj(delaunay.dcel(), data, del.domain_area()/100);
+        auto node_metrics = node_metrics_obj.node_density_knn_geodesic(); 
+        node_metrics = normalize_matrix(node_metrics, delaunay.dcel(), 0.05, 0.1);  //hmax,c
 
-        auto node_metrics = normalize_metric_fun(metric_fun, delaunay.dcel(), 0.75, 2.5, 2.5);
+        //auto node_metrics = normalize_metric_fun(metric_fun, delaunay.dcel(), 0.075, 2.5, 2.5);
+        //write_mesh_and_metric(delaunay.dcel(), node_metrics, "Meshes/Delaunay/mesh_init100.mesh", "Meshes/Delaunay/metric100.sol");
 
         Adaptivity<2,2> adapt(delaunay, node_metrics);
-        adapt.adaptivity_cycle_two(0, del.domain_area(), 1e-2);
-        adapt.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");    //("Meshes/Delaunay/rmax_var/quadratic_" + std::to_string(r) + ".json");
+        adapt.adaptivity_cycle(20, del.domain_area());
+        adapt.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");  //()"Meshes/Delaunay/c_var/datapoints_" + std::to_string(c) + ".json");
         std::cout << adapt.dcel().n_cells() << " cells after adaptivity." << std::endl;
 
         // stopping criterion
         double curr_diameter = adapt.delaunay().min_triangle_diameter();
         std::cout << "curr: " << curr_diameter << "   prev: " << prev_diameter << std::endl;
+        // errore tra ultima iter di adapt e iter i+1-esima è perchè i valori interpolati dentro al ciclo sono diversi dai valori reali della funzione
         if(std::abs(curr_diameter - prev_diameter)/prev_diameter < tol){
             std::cout << "Converged: relative change in min triangle diameter is below threshold. Iter " << i+1 << std::endl;
             break;
@@ -303,7 +334,7 @@ int main() {
         
     }
 
-    // errore tra ultima iter di adapt e iter i+1-esima è perchè i valori interpolati dentro al ciclo sono diversi dai valori reali della funzione
+    
 
 
 

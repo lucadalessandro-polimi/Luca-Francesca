@@ -139,8 +139,8 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
             p1 = nodes[from_id]
             p2 = nodes[to_id]
 
-            color = color if len(filenames) > 1 else "black" if is_sub else "green"
-            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, linewidth=1.5, zorder=1)
+            color = color if len(filenames) > 1 else "red" if is_sub else "black"
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, linewidth=0.5, zorder=1)
 
             if label_edges:
                 # punto medio e normale per posizionare l’etichetta "sopra" l’arco
@@ -192,7 +192,7 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
 
         pts = _load_xy_txt("Meshes/Delaunay/data_points.txt")
         if pts is not None and pts.size > 0 and plot_pts:
-            ax.scatter(pts[:,0], pts[:,1], s=18, c="crimson", marker="o", edgecolors="white", linewidths=0.3, zorder=4, label="data")
+            ax.scatter(pts[:,0], pts[:,1], s=15, c="crimson", marker="o", edgecolors="white", linewidths=0.3, zorder=4, label="data")
         '''
         pts = _load_xy_txt("Meshes/Delaunay/data_points2.txt")
         if pts is not None and pts.size > 0 and plot_pts:

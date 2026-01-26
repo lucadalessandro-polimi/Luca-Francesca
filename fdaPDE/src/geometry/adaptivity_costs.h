@@ -205,7 +205,6 @@ public:
     void set_Lmax(double Lmax) { metPar_.Lmax = Lmax; }
 
     std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> node_density_knn() const 
-    //std::unordered_map<node_t*, double> node_density_knn(int k = 20, double R = 0.01) const 
     {
         std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> rho;
         //std::unordered_map<node_t*, double> rho;
@@ -223,14 +222,11 @@ public:
             }
         }
         int N = data_points_.rows();
-        double beta = 2.0;
         Eigen::Vector2d diag = maxBB - minBB;
         double L = diag.norm();
         double h = L / std::sqrt(N); 
-        double R = beta * h; 
-        int k = std::sqrt(N);  //std::log(N); 
-        std::cout << "Bounding box coordinates: min " << minBB << ", max " << maxBB << std::endl;
-        std::cout << "R: " << R << "  k: " << k << std::endl;
+        double R = 2.0 * h; 
+        int k = std::sqrt(N);  
 
         for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it)
         {
@@ -239,7 +235,7 @@ public:
 
             std::unordered_set<int> ids;
 
-            // 1) Espansione del box finché non contiene almeno k punti
+            // expand box until it contains at least k points
             while (true)
             {
                 typename KDTree<EmbedDim>::RangeType box;
@@ -255,19 +251,18 @@ public:
                 if (R > 1e6) break;
             }
 
-            // 2) Calcola la distanza esatta ai punti trovati
+            // calculate exact distance to the found points
             std::vector<double> dists;
             dists.reserve(ids.size());
             for (int idx : ids)
             {
                 coords_t p = data_points_.row(idx);
-                dists.push_back((p - x).norm());
+                dists.push_back((p - x).norm());  //euclidean distance
             }
 
             std::nth_element(dists.begin(), dists.begin() + (k-1), dists.end());
-            double Rk = dists[k-1];   // distanza al k-esimo nearest
-
-            // 3) Densità KNN
+            double Rk = dists[k-1];   // distance from k-th nearest
+            // KNN density
             double density = double(k) / (M_PI * Rk * Rk);
 
             rho[v] = 1/density * Eigen::Matrix<double,EmbedDim,EmbedDim>::Identity();
@@ -276,10 +271,170 @@ public:
         return rho;
     }
 
+    // returns a map associating each mesh node with an isotropic metric tensor derived from a k-nearest-neighbor density estimate of the data locations,
+    // where distances are computed geodesically along the mesh topology
+    std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> node_density_knn_geodesic() {
+
+        std::vector<node_t*> nodes_;
+        nodes_.reserve(dcel_.n_nodes());
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it)
+            nodes_.push_back(&(*it));
+        node_coords_.resize(nodes_.size(), EmbedDim);
+        for (size_t i = 0; i < nodes_.size(); ++i)
+            node_coords_.row(i) = nodes_[i]->coords();
+
+        auto kdtree_nodes_ = KDTree<EmbedDim>(node_coords_);   // KDTREE on nodes coords, not data
+
+        auto nearest_mesh_node = [&](const coords_t& p) -> node_t* {
+            auto it = kdtree_nodes_.nn_search(p.transpose());
+            if (!it) return nullptr;
+            int idx = *it;
+            return nodes_[idx];   // node at position idx, not its actual id
+        };
+
+        // associate data to nearest node          
+        std::unordered_map<node_t*, std::vector<int>> data_on_node;
+        for (int i = 0; i < data_points_.rows(); ++i) {
+            coords_t p = data_points_.row(i);
+            node_t* v = nearest_mesh_node(p);
+            if (!v) continue;
+            data_on_node[v].push_back(i);
+        }
+
+        // node density via geodesic KNN
+        std::unordered_map<node_t*, Eigen::Matrix<double,EmbedDim, EmbedDim>> rho;
+        int N = data_points_.rows();
+        int k = std::sqrt(N);   
+
+        struct QueueItem {
+            node_t* v;
+            double dist;
+        };
+        auto comparison = [](const QueueItem& a, const QueueItem& b) {
+            return a.dist > b.dist;
+        };
+
+        for (auto it = dcel_.nodes_begin(); it != dcel_.nodes_end(); ++it)
+        {
+            node_t* v0 = &(*it);
+            std::priority_queue<QueueItem, std::vector<QueueItem>, decltype(comparison)> pq(comparison);
+            std::unordered_map<node_t*, double> best;        // best geodesic distance from v0
+            std::unordered_map<node_t*, node_t*> parent;     // predecessor to reconstruct shortest path
+
+            best.reserve(dcel_.n_nodes());
+            parent.reserve(dcel_.n_nodes());
+
+            best[v0] = 0.0;
+            parent[v0] = nullptr;
+            pq.push({v0, 0.0});
+
+            // KNN stopping criterion 
+            int found = 0;
+            double Rk = 0.0;
+            node_t* v_k = nullptr; // node that "closes" found>=k (determines Rk)
+
+            // Dijkstra loop 
+            while (!pq.empty() && found < k)
+            {
+                auto [v, dist] = pq.top();
+                pq.pop();
+
+                // discard outdated queue entries
+                auto itb = best.find(v);
+                if (itb == best.end() || dist != itb->second) continue;
+
+                // data associated to this node
+                auto it_map = data_on_node.find(v);
+                int n_here = (it_map != data_on_node.end()) ? int(it_map->second.size()) : 0;
+
+                if (n_here > 0)
+                {
+                    found += n_here;
+                    Rk = dist;
+                    v_k = v; 
+                }
+
+                // expand to neighboring nodes
+                for (halfedge_t* h : halfedges_from_node_(v))
+                {
+                    node_t* u = h->twin()->node();
+                    if (!u) continue;
+
+                    double w = (u->coords() - v->coords()).norm();
+                    if (!std::isfinite(w) || w < 0.0) continue;
+
+                    double candidate = dist + w;
+
+                    auto itu = best.find(u);
+                    if (itu == best.end() || candidate < itu->second)
+                    {
+                        best[u] = candidate;
+                        parent[u] = v;           // store predecessor
+                        pq.push({u, candidate});
+                    }
+                }
+            }
+
+            if (!v_k || found == 0)  // fallback metric if no data is reached
+            {
+                rho[v0] = Eigen::Matrix<double,EmbedDim,EmbedDim>::Identity();
+                continue;
+            }
+
+            // change Rk=0 (all k points mapped onto v0) to something reasonable (Rk goes at denominator)
+            if (Rk <= 0.0) 
+                Rk = local_mean_edge_length_(v0)*0.3;
+
+            // compute density + isotropic metric tensor 
+            double density = double(k) / (double(N) * M_PI * Rk * Rk);
+            if (!std::isfinite(density) || density <= 0.0) {
+                // fallback if something went weird
+                rho[v0] = Eigen::Matrix<double,EmbedDim,EmbedDim>::Identity();
+                continue;
+            }
+            rho[v0] = (1.0 / density) * Eigen::Matrix<double,EmbedDim,EmbedDim>::Identity();
+        }
+
+        return rho;
+    }
+
+    std::list<halfedge_t*> halfedges_from_node_(node_t* n) const{
+        std::list<halfedge_t*> star;
+        if(n->halfedge()->cell()==nullptr) n->set_halfedge(n->halfedge()->twin()->next()); // in case the boundary node starts from an external halfedge
+        halfedge_t* h_start = n->halfedge();
+        halfedge_t* h = h_start;
+        do {
+            star.push_back(h);
+            h = h->prev()->twin();
+            if(!h->cell() && h->on_boundary()) {h=h->prev()->twin(); } // in case of boundary node don't count the external halfedge
+        } while (h != h_start);
+        return star;
+    }
+
+    double local_mean_edge_length_(node_t* v0) const{
+        double sum = 0.0;
+        int cnt = 0;
+
+        for (halfedge_t* h : halfedges_from_node_(v0)) {
+            node_t* u = h->twin()->node();
+            if (!u) continue;
+
+            double l = (u->coords() - v0->coords()).norm();
+            if (std::isfinite(l) && l > 0.0) {
+                sum += l;
+                cnt++;
+            }
+        }
+
+        return sum / cnt;
+    }
+
+
 
 private:
     dcel_t& dcel_;
     const storage_t data_points_;
+    Eigen::Matrix<double, Eigen::Dynamic, EmbedDim> node_coords_;
     MetricParams metPar_;
     std::unordered_map<node_t*, double> node_metric_; // node* -> lambda
     KDTree<EmbedDim> kdtree_;

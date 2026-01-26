@@ -18,6 +18,18 @@ inline Eigen::Matrix<double, 4, 2> rectangle =
         0.0, 1.0
     ).finished();
 
+inline Eigen::Matrix<double, 8, 2> U =
+    (Eigen::Matrix<double, 8, 2>() <<
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.3, 1.0,
+        0.3, 0.2, 
+        0.2, 0.2,
+        0.2, 1.0,
+        0.0, 1.0
+    ).finished();
+
 
 inline Eigen::Matrix<double, 4, 2> rectangle1 = 
     (Eigen::Matrix<double, 4, 2>() <<

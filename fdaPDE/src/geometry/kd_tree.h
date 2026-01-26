@@ -79,14 +79,32 @@ template <int K> class KDTree {
         const data_type& data = data_;
         std::stack<iterator> stack;
         // given a point p \in R^K, traverse the tree until a leaf is not found, following the kd-tree structure
-        auto walk_down = [&stack, &data, &p](const iterator& start) {
+        /*auto walk_down = [&stack, &data, &p](const iterator& start) {
             if (!start) return;
             iterator it = start;
             while (it.l_child() || it.r_child()) {   // cycle until leaf not reached
+                std::cout << "prima prima" << std::endl;
                 stack.push(it);
+                std::cout << "prima" << std::endl;
                 it = p[it.depth() % K] < data(*it, it.depth() % K) ? it.l_child() : it.r_child();
+                std::cout << "dopo" << std::endl;
             }
+            std::cout << "dentro walk down" << std::endl;
             stack.push(it);   // push leaf node
+        };*/
+        auto walk_down = [&](iterator it) {
+            if (!it) return;
+            while (true) {
+                auto left  = it.l_child();
+                auto right = it.r_child();
+                if (!left && !right) break;  // leaf
+                stack.push(it);
+                int d = it.depth() % K;
+                double split = data(*it, d);
+                if (left && right) {it = (p[d] < split) ? left : right;
+                } else {it = left ? left : right; }
+            }
+            stack.push(it);
         };
         // initialization
         walk_down(kdtree_.root());   // intialize stack

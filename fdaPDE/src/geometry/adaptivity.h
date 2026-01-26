@@ -46,11 +46,9 @@ class Adaptivity {
         using coords_t = Eigen::Matrix<double, 1, embed_dim>;
         using dcel_t = DCEL<local_dim, embed_dim>;
 
-        Metric(std::function<Eigen::Matrix<double, embed_dim, embed_dim>(const coords_t&)> metric_fun, dcel_t& dcel, const double N_target, double max_area):  dcel_(dcel) {
+        Metric(std::function<Eigen::Matrix<double, embed_dim, embed_dim>(const coords_t&)> metric_fun, dcel_t& dcel):  dcel_(dcel) {
             if (!metric_fun) {throw std::invalid_argument("Metric function not provided.");}
-            //metric_fun_ = normalize_metric_ffpp_(metric_fun, N_target);
             metric_fun_ = metric_fun;
-            apply_nelements(N_target);            
         }
 
         Metric(std::unordered_map<node_t*, Eigen::Matrix<double, embed_dim, embed_dim>>& node_metrics, dcel_t& dcel):  dcel_(dcel), node_metrics_(node_metrics) {
@@ -66,23 +64,6 @@ class Adaptivity {
             double len2 = (AB * M * AB.transpose())(0, 0);
             double lenM = std::sqrt(std::max(0.0, len2));
             return lenM; 
-            // ANISOTROPA --> prova
-            /*Eigen::Matrix<double,2,2> MA = node_metrics_.at(A);
-            Eigen::Matrix<double,2,2> MB = node_metrics_.at(B);
-            coords_t u = AB/std::sqrt(AB.squaredNorm());
-            // h at endpoints, projected along edge direction
-            double lambdaA = (u * MA * u.transpose())(0,0);
-            double lambdaB = (u * MB * u.transpose())(0,0);
-            double hA = 1.0 / sqrt(lambdaA);
-            double hB = 1.0 / sqrt(lambdaB);
-            // geometric interpolation
-            double a = hB / hA;
-            // avoid log singularity
-            if (fabs(a - 1.0) < 1e-12)
-                return std::sqrt(AB.squaredNorm()) / hA;
-            double la = std::sqrt(AB.squaredNorm()) / hA;
-            double L = la * (a - 1.0) / (a*log(a));
-            return L; */   
         }
 
         double compute_metric_error() const {
@@ -129,7 +110,6 @@ class Adaptivity {
 
         double Lmax() const { return Lmax_; }
         double Lmin() const { return Lmin_; }
-        double Lref() const { return Lref_; }
         std::function<Eigen::Matrix<double, embed_dim, embed_dim>(const coords_t&)> metric_fun()  {return metric_fun_;}
 
         
@@ -139,59 +119,6 @@ class Adaptivity {
         double Lmax_ = 1.3;
         double Lmin_ = 0.8;
         std::unordered_map<node_t*, Eigen::Matrix<double, embed_dim, embed_dim>> node_metrics_ = {};
-        double Lref_ = 1.0;
-
-
-        void compute_Lref_() {
-            std::list<node_t*> boundary_nodes;
-            for(auto it=dcel_.nodes_begin(); it!=dcel_.nodes_end(); ++it){
-                node_t* n = &(*it);
-                if(n->is_boundary()){
-                    boundary_nodes.push_back(n);
-                }
-                else break;
-            }
-            double xmin =  std::numeric_limits<double>::max(), xmax = -std::numeric_limits<double>::max();
-            double ymin =  std::numeric_limits<double>::max(), ymax = -std::numeric_limits<double>::max();
-
-            for (auto n : boundary_nodes) {
-                coords_t c = n->coords();
-                xmin = std::min(xmin, c.x);
-                xmax = std::max(xmax, c.x);
-                ymin = std::min(ymin, c.y);
-                ymax = std::max(ymax, c.y);
-            }
-            Lref_ = 0.5 * std::sqrt((xmax-xmin)*(xmax-xmin) + (ymax-ymin)*(ymax-ymin));
-            
-        }
-
-        auto normalize_metric_ffpp_(std::function<Eigen::Matrix<double,embed_dim,embed_dim>(const Eigen::Matrix<double,1,embed_dim>&)> Mraw, double N_target)
-        {
-            double integral = 0.0;
-
-            for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-                auto* c = &(*it);
-                coords_t A = c->halfedge()->node()->coords();
-                coords_t B = c->halfedge()->next()->node()->coords();
-                coords_t C = c->halfedge()->prev()->node()->coords();
-
-                double area = fdapde::internals::measure_2d_tri(A,B,C);
-                coords_t Xc = (A + B + C) / 3.0;
-
-                Eigen::Matrix<double, embed_dim, embed_dim> M = Mraw(Xc);
-                double detM = std::max(0.0, M.determinant());
-
-                integral += std::sqrt(detM) * area;
-            }
-
-            double N_target_prime = N_target*std::sqrt(3)/4;
-            double alpha = N_target_prime / integral; 
-
-            return [Mraw, alpha](const coords_t& x) {
-                return alpha * Mraw(x);
-            };
-        }
-        
 
         Eigen::Matrix<double, embed_dim, embed_dim> matrix_log_(Eigen::Matrix<double, embed_dim, embed_dim> M){
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, embed_dim, embed_dim>> es(M);
@@ -253,62 +180,12 @@ class Adaptivity {
         }
 
 
-        // predict how many elements the current metric would produce
-        double predict_nelements_() const {
-            double total_area_metric = 0.0;
-            for (auto it = dcel_.cells_begin(); it != dcel_.cells_end(); ++it) {
-                cell_t* c = &(*it);
-                if (!c || !c->halfedge()) continue;
-
-                auto* h = c->halfedge();
-                coords_t A = h->node()->coords();
-                coords_t B = h->next()->node()->coords();
-                coords_t C = h->prev()->node()->coords();
-
-                double area = fdapde::internals::measure_2d_tri(A, B, C);
-
-                coords_t Xc = (A + B + C) / 3.0;
-                Eigen::Matrix<double, embed_dim, embed_dim> M = metric_fun_(Xc);
-                M = 0.5 * (M + M.transpose());
-
-                double detM = M.determinant();
-                if (detM < 0.0) detM = 0.0; 
-
-                total_area_metric += area * std::sqrt(detM);
-            }
-
-            // ideal area of the smallest element in metric space = 0.5 * sqrt(3)/4 
-            const double smallest_ideal_area = 0.5 * (std::sqrt(3.0) / 4.0);
-
-            // predicted number of elements
-            double predicted = total_area_metric / smallest_ideal_area;
-
-            return predicted;
-        }
-
-        void scale_metric(double alpha) {
-            auto raw = metric_fun_;
-            metric_fun_ = [raw, alpha](const coords_t& X){
-                return alpha * raw(X);
-            };
-        }
-
-        // scale metric to obtain desired number of elements    PER ORA NON FUNZIONA
-        void apply_nelements(double nelements) {
-
-            double Npred = predict_nelements_();
-            double alpha = nelements / Npred;
-            
-            alpha = std::pow(alpha, 2.0/3.0);
-            scale_metric(alpha);
-        }
-
     };
 
 
 
-    Adaptivity(delaunay_t& mesh, const storage_t& data_points, const double min_angle, const double max_area,  std::function<Eigen::Matrix<double, embed_dim, embed_dim>(const coords_t&)> metric_fun, const double N_target, const double tol = 0.1): 
-        mesh_(mesh), data_points_(data_points), M_(metric_fun, mesh_.dcel(), N_target, max_area) {   
+    Adaptivity(delaunay_t& mesh, const storage_t& data_points, std::function<Eigen::Matrix<double, embed_dim, embed_dim>(const coords_t&)> metric_fun): 
+        mesh_(mesh), data_points_(data_points), M_(metric_fun, mesh_.dcel()) {   
     }
 
     Adaptivity(delaunay_t& mesh, std::unordered_map<node_t*, Eigen::Matrix<double, embed_dim, embed_dim>>& node_metrics): 
@@ -316,110 +193,80 @@ class Adaptivity {
 
 
     // method to adapt the mesh according to a metric M, by splitting and collapsing edges
-    int adaptivity_cycle_two(const double min_angle, const double max_area, const double tol){
-        int iter = 0;
+    void adaptivity_cycle(const double min_angle, const double max_area){
+        
+        std::cout << "Initial metric error: " << M_.compute_metric_error() << std::endl;
+
+        // nodes-based collapse, more efficient
+        int it1 = 0;
+        for(auto it= mesh_.dcel_.nodes_begin(); it != mesh_.dcel_.nodes_end();){
+            node_t* n = &(*it);
+            it= std::next(it);
+            std::unordered_set <cell_t*> modified={};
+            std::unordered_set <node_t*> deleted_nodes={};
+            if(n->on_boundary() || n->halfedge()->is_segment()) {
+                auto star = halfedges_from_node_(n);
+                halfedge_t* e;
+                for(auto h: star)
+                    if(h->on_boundary() || h->is_segment()){
+                        e = h;
+                        break;
+                    }
+                if(M_.metric_edge_length(e)<M_.Lmin() && !e->prev()->is_segment() && fdapde::internals::collinear(e->prev()->twin()->prev()->node()->coords(), n->coords(), e->next()->node()->coords() )){
+                    deleted_nodes.insert(n);
+                    modified = collapse_segment_(e, n);
+
+                }
+            }else{
+                halfedge_t* he = best_collapse_target_(n);
+                if(he){
+                    deleted_nodes.insert(n);
+                    modified = collapse_edge_(he, n);
+                }
+            }
+            if(!modified.empty()){
+                ++it1;
+                M_.delete_nodes(deleted_nodes);
+                //refinenement_local_(min_angle, max_area, modified);
+            }
+
+        }
+        std::cout << "it1: " << it1 << std::endl;
+        
         auto it  = mesh_.dcel_.halfedges_begin();
         auto end = mesh_.dcel_.halfedges_end();
-        
-        //double prev_mean = 1.0;
-        //double prev_frac = 0.0;
-        double err_diff = M_.compute_metric_error();
-        double prev_error = err_diff;
-        int stable_count = 0;
-        const int stable_iters_required = 10;
-        int max_iter = 1;
-
-        std::cout << "Initial metric error: " << err_diff << std::endl;
-        while (stable_count < stable_iters_required && iter < max_iter) {
-            bool structural_change = false;
-            bool collapsed_in_pass = false; 
-            bool split_in_pass = false;
-            ++iter;
-            int it1 = 0;
-            std::cout << "Adaptivity iteration " << iter << std::endl;
-            
-            // nodes-based collapse, more efficient
-            for(auto it= mesh_.dcel_.nodes_begin(); it != mesh_.dcel_.nodes_end();){
-                node_t* n = &(*it);
-                it= std::next(it);
+        bool split_done = false;
+        int it2=0;
+        do {
+            ++it2;
+            split_done = false;
+            for (auto it = mesh_.dcel_.halfedges_begin(); it != mesh_.dcel_.halfedges_end(); ++it) {
+                halfedge_t* e = &(*it);
+                if (e->id() >= e->twin()->id()) continue;
+                double id = M_.metric_edge_length(e);
                 std::unordered_set <cell_t*> modified={};
-                std::unordered_set <node_t*> deleted_nodes={};
-                if(n->on_boundary()) {
-                    auto star = halfedges_from_node_(n);
-                    halfedge_t* e;
-                    for(auto h: star)
-                        if(h->on_boundary()){
-                            e = h;
-                            break;
-                        }
-                    if(M_.metric_edge_length(e)<M_.Lmin() && !e->prev()->is_segment() && fdapde::internals::collinear(e->prev()->twin()->prev()->node()->coords(), n->coords(), e->next()->node()->coords() )){
-                        deleted_nodes.insert(n);
-                        modified = collapse_segment_(e, n);
-                    }
-                }else{
-                    halfedge_t* he = best_collapse_target_(n);
-                    if(he){
-                        deleted_nodes.insert(n);
-                        modified = collapse_edge_(he, n);
+                if (M_.metric_edge_length(e) > M_.Lmax()) {
+                    if(!e->is_segment())
+                        modified = split_edge_(e);
+                    else
+                        modified = split_segment_(e);
+                    if(!modified.empty()){
+                        split_done = true;
+                        //refinenement_local_(min_angle, max_area, modified);
+                        break; 
                     }
                 }
-                if(!modified.empty()){
-                    structural_change = true;
-                    ++it1;
-                    M_.delete_nodes(deleted_nodes);
-                    //refinenement_local_(min_angle, max_area, modified);
-                }
-
             }
-            std::cout << "it1: " << it1 << std::endl;
-            
-            int it2=0;
-            do {
-                ++it2;
-                split_in_pass = false;
-                for (auto it = mesh_.dcel_.halfedges_begin(); it != mesh_.dcel_.halfedges_end(); ++it) {
-                    halfedge_t* e = &(*it);
-                    double id = M_.metric_edge_length(e);
-                    if (e->id() >= e->twin()->id()) continue;
-                    std::unordered_set <cell_t*> modified={};
-                    std::unordered_set <node_t*> deleted_nodes={};
-                    if (M_.metric_edge_length(e) > M_.Lmax()) {
-                        if(!e->is_segment())
-                            modified = split_edge_(e);
-                        else
-                            modified = split_segment_(e);
-                        if(!modified.empty()){
-                            structural_change = true;
-                            split_in_pass = true;
-                            //if(it2<5) std::cout << id << "  split" << std::endl;
-                            //refinenement_local_(min_angle, max_area, modified);
-                            break; 
-                        }
-                    }
-                }
-            } while (split_in_pass); 
+        } while (split_done); 
+        std::cout << "it2: " << it2 << std::endl;
 
-            std::cout << "end split it2: " << it2 << std::endl;
-            smoothing_(1.8, 3);
-            std::cout << "n_cells: " << mesh_.dcel_.n_cells() << std::endl;
-            
-            mesh_.dcel_.export_to_json("Meshes/Delaunay/delaunay_output.json");
-            std::cout << M_.compute_metric_error() << std::endl;
-            double current_error = M_.compute_metric_error();
-            err_diff = std::abs(current_error - prev_error);
-            if (err_diff < tol){
-                stable_count++;
-            }
-            else stable_count = 0;
-            prev_error = current_error;
-        }
+        smoothing_(1.8, 3);  // smoothing routine
+        
+        std::cout << "Error: "<< M_.compute_metric_error() << std::endl;   // after refinement metric is not updated
         mesh_.check_quality_(min_angle, max_area);
-        std::cout << "num iters: " << iter << " error: "<< M_.compute_metric_error() << std::endl;
         mesh_.refinement(min_angle, max_area);
 
-        mesh_.check_quality_(min_angle, max_area);
-        return iter;
-
+        return;
     }
 
     struct CollapseSimulate {
@@ -432,15 +279,11 @@ class Adaptivity {
     dcel_t&  dcel()  { return mesh_.dcel_; }
     delaunay_t& delaunay() { return mesh_; }
 
-    //fdapde::Metric<local_dim, embed_dim, Strategy>& metric() { return M_; }
-
 
    private:
     delaunay_t& mesh_;
     const storage_t data_points_; // data points
     Metric<local_dim, embed_dim> M_;
-    //fdapde::Metric<local_dim, embed_dim, Strategy> M_;
-    //DataEquiCost<local_dim, embed_dim> cost_obj_;  // object to compute costs   PER ORA SOLO DATAEQUICOST
 
 
     void refinenement_local_(double min_angle, double max_area, std::unordered_set<cell_t*> modified){
@@ -532,48 +375,6 @@ class Adaptivity {
 
         return true;
     }
-
-
-    /*std::pair<node_t*, double> best_collapse_cost_(halfedge_t* e, double max_area = 0.0) {
-        node_t* u = e->node();
-        node_t* v = e->twin()->node();
-        std::vector<node_t*> candidates = {u, v, nullptr};  // nullptr stands for the midpoint (not insterted in the triangulation yet)
-
-        double best_cost = std::numeric_limits<double>::max();
-        node_t* best_node = nullptr;
-
-        for (auto n: candidates) {
-            auto result = simulate_collapse_(e, n);   
-            if (!result.valid()) continue;  // collapse not possible
-            //fdapde::Metric<LocalDim, EmbedDim, Strategy> M_temp(result.temp_dcel->dcel_, data_points_, max_area);
-            std::unordered_set<cell_t*> elems_modified;
-            for(auto it = result.temp_dcel->dcel_.cells_begin(); it != result.temp_dcel->dcel_.cells_end(); ++it)
-                elems_modified.insert(const_cast<cell_t*>(&*it));
-
-            double mean_length = 0.0;
-            std::unordered_set<halfedge_t*> new_edges = {};
-            for(auto cell: elems_modified){
-                auto h_start = cell->halfedge();
-                auto h = h_start;
-                do{
-                    if(new_edges.find(h) == new_edges.end() || new_edges.find(h->twin()) == new_edges.end()){
-                        new_edges.insert(h);
-                        new_edges.insert(h->twin());
-                        mean_length += M_.metric_edge_length(h);
-                    }
-                    h=h->next();
-                }while(h!=h_start);
-            }
-            mean_length /= (2*new_edges.size());   //PERCHE HO MOLTIPLICATO PER DUE???
-
-            double difference = std::abs(1 - mean_length);
-            if(difference<best_cost){
-                best_cost = difference;
-                best_node = n;
-            }
-        }
-        return {best_node,best_cost};
-    }*/
 
 
     // collapse edge e into node; if node==nullptr, insert the midpoint of the edge
@@ -1233,6 +1034,49 @@ class Adaptivity {
             }     
         }*/
 
+    
+    // VECCHIO COLLAPSE COST
+    /*std::pair<node_t*, double> best_collapse_cost_(halfedge_t* e, double max_area = 0.0) {
+        node_t* u = e->node();
+        node_t* v = e->twin()->node();
+        std::vector<node_t*> candidates = {u, v, nullptr};  // nullptr stands for the midpoint (not insterted in the triangulation yet)
+
+        double best_cost = std::numeric_limits<double>::max();
+        node_t* best_node = nullptr;
+
+        for (auto n: candidates) {
+            auto result = simulate_collapse_(e, n);   
+            if (!result.valid()) continue;  // collapse not possible
+            //fdapde::Metric<LocalDim, EmbedDim, Strategy> M_temp(result.temp_dcel->dcel_, data_points_, max_area);
+            std::unordered_set<cell_t*> elems_modified;
+            for(auto it = result.temp_dcel->dcel_.cells_begin(); it != result.temp_dcel->dcel_.cells_end(); ++it)
+                elems_modified.insert(const_cast<cell_t*>(&*it));
+
+            double mean_length = 0.0;
+            std::unordered_set<halfedge_t*> new_edges = {};
+            for(auto cell: elems_modified){
+                auto h_start = cell->halfedge();
+                auto h = h_start;
+                do{
+                    if(new_edges.find(h) == new_edges.end() || new_edges.find(h->twin()) == new_edges.end()){
+                        new_edges.insert(h);
+                        new_edges.insert(h->twin());
+                        mean_length += M_.metric_edge_length(h);
+                    }
+                    h=h->next();
+                }while(h!=h_start);
+            }
+            mean_length /= (2*new_edges.size());   //PERCHE HO MOLTIPLICATO PER DUE???
+
+            double difference = std::abs(1 - mean_length);
+            if(difference<best_cost){
+                best_cost = difference;
+                best_node = n;
+            }
+        }
+        return {best_node,best_cost};
+    }*/
+
 
 
 
@@ -1293,3 +1137,59 @@ class Adaptivity {
         }
         return {best_node,best_cost};
     }*/
+
+
+    // ADAPTIVITY COST per plottare percorsi geodesici
+        // Optional: save geodesic distance field for debugging / plotting
+        //std::vector<std::pair<coords_t, double>> dist_field;
+        //dist_field.reserve(1024);
+
+            // (optional) store finalized distances for visualization  (nel ciclo)
+            //dist_field.push_back({v->coords(), dist});
+
+        /*// --- Reconstruct TRUE shortest path v0 -> v_k ---
+        std::vector<node_t*> path_nodes;
+        path_nodes.reserve(256);
+        node_t* cur = v_k;
+        while (cur)
+        {
+            path_nodes.push_back(cur);
+            if (cur == v0) break;
+            auto itp = parent.find(cur);
+            if (itp == parent.end()) break; // safety
+            cur = itp->second;
+        }
+        std::reverse(path_nodes.begin(), path_nodes.end());
+
+        // --- Export TRUE path as CSV (no spaghetti) ---
+        std::string fname = "Meshes/Delaunay/sequenze/path_" +std::to_string(v0->id()) + "_to_" +std::to_string(v_k->id()) + ".csv";
+        std::ofstream out(fname);
+        if (out.is_open()){
+            out << "x,y\n";
+            for (auto* n : path_nodes){
+                auto c = n->coords();
+                out << c[0] << "," << c[1] << "\n";
+            }
+            out.close();
+        }*/
+
+
+    
+    // ANISOTROPA --> prova
+    /*Eigen::Matrix<double,2,2> MA = node_metrics_.at(A);
+    Eigen::Matrix<double,2,2> MB = node_metrics_.at(B);
+    coords_t u = AB/std::sqrt(AB.squaredNorm());
+    // h at endpoints, projected along edge direction
+    double lambdaA = (u * MA * u.transpose())(0,0);
+    double lambdaB = (u * MB * u.transpose())(0,0);
+    double hA = 1.0 / sqrt(lambdaA);
+    double hB = 1.0 / sqrt(lambdaB);
+    // geometric interpolation
+    double a = hB / hA;
+    // avoid log singularity
+    if (fabs(a - 1.0) < 1e-12)
+        return std::sqrt(AB.squaredNorm()) / hA;
+    double la = std::sqrt(AB.squaredNorm()) / hA;
+    double L = la * (a - 1.0) / (a*log(a));
+    return L; */   
+            
