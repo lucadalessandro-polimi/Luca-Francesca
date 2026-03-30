@@ -119,8 +119,9 @@ def json_to_medit_mesh(json_path: str, mesh_path: str, dim: int = 2):
     with open(mesh_path, "w", newline="\n") as f:
         f.write("\n".join(out))
 
-if __name__ == "__main__":
-    json_to_medit_mesh(
-        "Meshes/Delaunay/delaunay_output.json",
-        "Meshes/Delaunay/base&adapt_meshes/adapt100_sin.mesh"
-    )
+
+
+
+#if __name__ == "__main__":
+#    json_to_medit_mesh("Meshes/Delaunay/delaunay_output.json","Meshes/Delaunay/florida_base_400.mesh")
+

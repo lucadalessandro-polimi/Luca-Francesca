@@ -16,14 +16,15 @@ TRIANGLE_POLY := Meshes/Test_triangle/$(TRIANGLE_NAME).poly
 
 FMESHER_SCRIPT := Meshes/Test_fmesher/star.r
 
-# FLAGS                  
-CXXFLAGS := -std=c++20 -g -march=native -O2 -DFDAPDE_NO_DEBUG 
+# FLAGS      -O2            
+CXXFLAGS := -std=c++20 -g -march=x86-64-v3 -O2 -DFDAPDE_NO_DEBUG 
 #CXXFLAGS := g++ -fsanitize=address -g -O1
+LDFLAGS = -fsanitize=address,undefined
 INCLUDES := -I$(EIGEN_DIR) -I$(FDAPDE_DIR) -I$(SYS_INCLUDE_DIR) -I$(ARCH_INCLUDE_DIR) -I$(NLOHMANN_DIR)
 
 # Run all targets
 .PHONY: all
-all: delaunay conflict refinement triangle fmesher comparisons
+all: delaunay conflict refinement triangle fmesher solve_PDE
 
 # Plot a Delaunay mesh
 .PHONY: delaunay
@@ -31,6 +32,14 @@ delaunay:
 	g++ $(CXXFLAGS) $(INCLUDES) -o Meshes/Delaunay/main Meshes/Delaunay/main.cpp
 	Meshes/Delaunay/main
 	python3 Meshes/Delaunay/plot_mesh.py
+
+# Simulations of Delaunay refinement and adaptivity
+.PHONY: simulations
+simulations:
+	g++ $(CXXFLAGS) $(INCLUDES) -o Meshes/Delaunay/simulazioni Meshes/Delaunay/simulazioni.cpp
+	Meshes/Delaunay/simulazioni
+	python3 Meshes/Delaunay/plot_mesh.py
+	python3 Meshes/Delaunay/json_to_mesh.py
 
 # Efficiency of Delaunay conflict graph algorithm 
 .PHONY: conflict
@@ -45,6 +54,13 @@ refinement:
 	g++ $(CXXFLAGS) $(INCLUDES) -o Meshes/Delaunay/refinement Meshes/Delaunay/refinement_efficiency.cpp
 	./Meshes/Delaunay/refinement
 	python3 ./Meshes/Delaunay/plot_timing.py
+
+# Efficiency of adaptivity algorithm
+.PHONY: adaptivity
+adaptivity:
+	g++ $(CXXFLAGS) $(INCLUDES) -o Meshes/Delaunay/adaptivity Meshes/Delaunay/adaptivity_efficiency.cpp
+	./Meshes/Delaunay/adaptivity
+	python3 ./Meshes/Delaunay/plot_adaptivity.py
 
 
 # Plot a Triangle mesh, and calculate Triangle efficiency
@@ -64,10 +80,14 @@ fmesher:
 		Rscript /mnt/Meshes/Test_fmesher/rectangle_timing.r'	
 
 
-# Plot quality metrics of the 3 meshes 
-.PHONY: comparisons
-comparisons:
-	python3 Comparisons/Statistics/statistics_analysis.py
+#docker run --rm -v $(shell pwd):/root/progetto -ti aldoclemente/fdapde-docker /bin/bash -c '\
+#mkdir -p usr/include/nlohmann && \
+#curl -L https://github.com/nlohmann/json/releases/latest/download/json.hpp -o usr/include/nlohmann/json.hpp && \
+.PHONY: solve_PDE
+solve_PDE:
+		cd /root/progetto/workingdir/ && cpp=/root/progetto/workingdir/fdaPDE-cpp && core=$$cpp/fdaPDE/core && cd /root/progetto/workingdir/test && \
+		g++ -w -o script depde_fire.cpp -I"$$cpp" -I"$$core" -I/usr/include/eigen3 -I/usr/include/external -O2 -std=c++20 -march=native -s && \
+		./script
 
 # Cleaning directories
 .PHONY: clean

@@ -60,7 +60,7 @@ class Adaptivity {
             node_t* B = e->twin()->node();
             const coords_t AB = B->coords() - A->coords();
 
-            Eigen::Matrix<double,2,2> M = 0.5*metric_at_node(A) + 0.5*metric_at_node(B);
+            Eigen::Matrix<double,2,2> M = matrix_exp_(0.5 * (matrix_log_(metric_at_node(A)) + matrix_log_(metric_at_node(B)))); //0.5*metric_at_node(A) + 0.5*metric_at_node(B);
             double len2 = (AB * M * AB.transpose())(0, 0);
             double lenM = std::sqrt(std::max(0.0, len2));
             return lenM; 
@@ -120,7 +120,7 @@ class Adaptivity {
         double Lmin_ = 0.8;
         std::unordered_map<node_t*, Eigen::Matrix<double, embed_dim, embed_dim>> node_metrics_ = {};
 
-        Eigen::Matrix<double, embed_dim, embed_dim> matrix_log_(Eigen::Matrix<double, embed_dim, embed_dim> M){
+        Eigen::Matrix<double, embed_dim, embed_dim> matrix_log_(Eigen::Matrix<double, embed_dim, embed_dim> M) const{
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, embed_dim, embed_dim>> es(M);
             Eigen::Matrix<double, embed_dim, embed_dim> R = es.eigenvectors();
             Eigen::Matrix<double, embed_dim, 1> l = es.eigenvalues();
@@ -130,7 +130,7 @@ class Adaptivity {
             return R * L * R.transpose();
         }
 
-        Eigen::Matrix<double, embed_dim, embed_dim> matrix_exp_(Eigen::Matrix<double, embed_dim, embed_dim> M){
+        Eigen::Matrix<double, embed_dim, embed_dim> matrix_exp_(Eigen::Matrix<double, embed_dim, embed_dim> M) const{
             Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, embed_dim, embed_dim>> es(M);
             Eigen::Matrix<double, embed_dim, embed_dim> R = es.eigenvectors();
             Eigen::Matrix<double, embed_dim, 1> e = es.eigenvalues();

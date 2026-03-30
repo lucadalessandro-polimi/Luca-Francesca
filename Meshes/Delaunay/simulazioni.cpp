@@ -459,39 +459,39 @@ int main() {
 
 
     //auto data = sample_mix4_gauss_direct_matrix(1000,42,true);
-    auto data = read_locs_mtx("Meshes/Delaunay/locs.mtx");
+    auto data = read_locs_mtx("Meshes/Delaunay/locs_florida.mtx");  //locs_nord //2018.12.11_space_locs
     export_data_to_txt(data, "Meshes/Delaunay/data_points.txt");
+    auto norditalia = read_locs_mtx("Meshes/Delaunay/bd_norditalia.mtx");
+    auto florida = read_locs_mtx("Meshes/Delaunay/bd_florida.mtx");
 
-    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{rectangle}, 0);
-    del.refinement(20., del.domain_area()/100);
+    double min_angle = 20.0; 
+    double max_area = 0.112; //  0.025/2;  // 0.25/9;  //0.02
+
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{florida}, min_angle, max_area, 0);   //caso 2
+
+    //Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{rectangle_reduced}, 0);
+    //del.refinement(20., del.domain_area()/6000);
     del.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");
 
     Delaunay<2,2>& delaunay = del;
     double prev_diameter = delaunay.min_triangle_diameter();
     double tol = 5e-2;
 
-    for(int i=0; i< 0; ++i){
+    for(int i=0; i< 0; ++i){      
         std::cout << "Iter " << i+1 << " of adaptivity." << std::endl;
 
-        //auto node_metrics = normalize_metric_fun(make_Mraw_from_hessian_abs(hessian_mix4_gauss), delaunay.dcel(), 0.1, 2.5);
-        NodeMetric<2,2,AdaptiveStrategy::NodeDensity> node_metrics_obj(delaunay.dcel(), data, del.domain_area()/100);
+        NodeMetric<2,2,AdaptiveStrategy::NodeDensity> node_metrics_obj(delaunay.dcel(), data, max_area);
         auto node_metrics = node_metrics_obj.node_density_knn_geodesic(); 
-        node_metrics = normalize_matrix(node_metrics, delaunay.dcel(), 0.1022, 1. );
-        /*std::ofstream fm("Meshes/Delaunay/base_metric_500.dat");   // TANTO NON SERVE PIù
-        for (auto it = delaunay.dcel().nodes_begin(); it != delaunay.dcel().nodes_end(); ++it) {              
-            Eigen::Matrix2d M = node_metrics.at(&(*it));   // SPD
-            fm << M(0,0) << " " << M(0,1) << " " << M(1,1) << "\n";
-        }*/
+        node_metrics = normalize_matrix(node_metrics, delaunay.dcel(), 1.27, 1.);  // obiettivo: 750
 
         Adaptivity<2,2> adapt(delaunay, node_metrics);
-        adapt.adaptivity_cycle(20, del.domain_area());
-        adapt.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");  //()"Meshes/Delaunay/c_var/datapoints_" + std::to_string(c) + ".json");
+        adapt.adaptivity_cycle(min_angle, max_area*100);
+        adapt.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");  
         std::cout << adapt.dcel().n_cells() << " cells after adaptivity." << std::endl;
 
         // stopping criterion
         double curr_diameter = adapt.delaunay().min_triangle_diameter();
         std::cout << "curr: " << curr_diameter << "   prev: " << prev_diameter << std::endl;
-        // errore tra ultima iter di adapt e iter i+1-esima è perchè i valori interpolati dentro al ciclo sono diversi dai valori reali della funzione
         if(std::abs(curr_diameter - prev_diameter)/prev_diameter < tol){
             std::cout << "Converged: relative change in min triangle diameter is below threshold. Iter " << i+1 << std::endl;
             break;
@@ -506,3 +506,5 @@ int main() {
 
     return 0;
 }
+
+

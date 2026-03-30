@@ -294,11 +294,9 @@ int main() {
     export_data_to_txt(data, "Meshes/Delaunay/data_points.txt");
 
     
-    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{U}, 0);
-    del.refinement(30, del.domain_area()/100);
+    Delaunay<2, 2> del(std::vector<Eigen::Matrix<double, Eigen::Dynamic, 2>>{rectangle}, 0);
+    del.refinement(25, del.domain_area()/1000);
     del.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");
-
-    //Adaptivity<2,2, fdapde::AdaptiveStrategy::GradientMagnitude> adapt(del,data, 20, del.domain_area()/100, 1e-1);
 
     Delaunay<2,2>& delaunay = del;
     double prev_diameter = delaunay.min_triangle_diameter();
@@ -308,30 +306,28 @@ int main() {
         std::cout << "Iter " << i+1 << " of adaptivity." << std::endl;
         std::cout << "Current number of cells: " << delaunay.dcel().n_cells() << std::endl;
 
-        NodeMetric<2,2,AdaptiveStrategy::NodeDensity> node_metrics_obj(delaunay.dcel(), data, del.domain_area()/100);
-        auto node_metrics = node_metrics_obj.node_density_knn_geodesic(); 
-        node_metrics = normalize_matrix(node_metrics, delaunay.dcel(), 0.05, 0.1);  //hmax,c
+        //NodeMetric<2,2,AdaptiveStrategy::NodeDensity> node_metrics_obj(delaunay.dcel(), data, del.domain_area()/100);
+        //auto node_metrics = node_metrics_obj.node_density_knn_geodesic(); 
+        //node_metrics = normalize_matrix(node_metrics, delaunay.dcel(), 0.05, 0.1);  //hmax,c
 
-        //auto node_metrics = normalize_metric_fun(metric_fun, delaunay.dcel(), 0.075, 2.5, 2.5);
+        auto node_metrics = normalize_metric_fun(metric_fun, delaunay.dcel(), 0.075, 2.5, 2.5);
         //write_mesh_and_metric(delaunay.dcel(), node_metrics, "Meshes/Delaunay/mesh_init100.mesh", "Meshes/Delaunay/metric100.sol");
 
         Adaptivity<2,2> adapt(delaunay, node_metrics);
         adapt.adaptivity_cycle(20, del.domain_area());
-        adapt.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");  //()"Meshes/Delaunay/c_var/datapoints_" + std::to_string(c) + ".json");
+        adapt.dcel().export_to_json("Meshes/Delaunay/delaunay_output.json");  
         std::cout << adapt.dcel().n_cells() << " cells after adaptivity." << std::endl;
 
         // stopping criterion
         double curr_diameter = adapt.delaunay().min_triangle_diameter();
         std::cout << "curr: " << curr_diameter << "   prev: " << prev_diameter << std::endl;
-        // errore tra ultima iter di adapt e iter i+1-esima è perchè i valori interpolati dentro al ciclo sono diversi dai valori reali della funzione
         if(std::abs(curr_diameter - prev_diameter)/prev_diameter < tol){
             std::cout << "Converged: relative change in min triangle diameter is below threshold. Iter " << i+1 << std::endl;
             break;
         }
         
         prev_diameter = curr_diameter;
-        delaunay = adapt.delaunay();
-        
+        delaunay = adapt.delaunay(); 
     }
 
     
@@ -363,6 +359,8 @@ int main() {
     auto boundary = convex_offset(skyline, 2.0);
     DCEL<2, 2> dcel = DCEL<2, 2>::make_polygon(boundary);
     dcel.export_to_json("Meshes/Delaunay/dcel.json");*/
+
+
 
     return 0;
 }

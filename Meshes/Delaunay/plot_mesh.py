@@ -121,6 +121,7 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
 
         # Estrai i nodi
         nodes = {node["id"]: np.array(node["coords"]) for node in data["nodes"]}
+        #for nid, p in nodes.items():ax.text(p[0], p[1],str(nid),fontsize=7,color="blue",ha="center",va="center",zorder=5,path_effects=[pe.withStroke(linewidth=2, foreground="white")])
 
         # Pre-calcolo scala per l’offset delle etichette (dipende dalle dimensioni del dominio)
         all_pts = np.vstack(list(nodes.values()))
@@ -139,8 +140,10 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
             p1 = nodes[from_id]
             p2 = nodes[to_id]
 
-            color = color if len(filenames) > 1 else "red" if is_sub else "black"
-            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, linewidth=0.5, zorder=1)
+            #else "blue" if( str(edge.get("id", ""))=="135" )  else "deepskyblue" if (str(edge.get("id", ""))=="529" or str(edge.get("id", ""))=="525" or str(edge.get("id", ""))=="527" or str(edge.get("id", ""))=="155" or str(edge.get("id", ""))=="195" or str(edge.get("id", ""))=="131" or str(edge.get("id", ""))=="95" or str(edge.get("id", ""))=="115")
+            color = color if len(filenames) > 1 else "red" if is_sub  else "red"
+            linewidth = 0.5 if color!="blue" and color!="deepskyblue" else 1.5
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, linewidth=linewidth, zorder=1)
 
             if label_edges:
                 # punto medio e normale per posizionare l’etichetta "sopra" l’arco
@@ -151,8 +154,8 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
                 if n_norm > 0:
                     n /= n_norm
                 text_xy = mid + n * label_offset
-                #if str(edge.get("id", "")) == "60564" or str(edge.get("id", "")) == "35832" or str(edge.get("id", "")) == "59248" or str(edge.get("id", "")) == "57130":
-                ax.text(text_xy[0], text_xy[1], str(edge.get("id", "")),ha="center", va="center", fontsize=7, color=color, zorder=2,path_effects=[pe.withStroke(linewidth=2, foreground="white")])
+                if str(edge.get("id", "")) == "309" or str(edge.get("id", "")) == "236":
+                 ax.text(text_xy[0], text_xy[1], str(edge.get("id", "")),ha="center", va="center", fontsize=7, color=color, zorder=2,path_effects=[pe.withStroke(linewidth=2, foreground="white")])
 
         # Disegna triangoli (celle)
         halfedge_to_node = {edge["id"]: edge["from"] for edge in data["edges"]}
@@ -192,7 +195,13 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
 
         pts = _load_xy_txt("Meshes/Delaunay/data_points.txt")
         if pts is not None and pts.size > 0 and plot_pts:
-            ax.scatter(pts[:,0], pts[:,1], s=15, c="crimson", marker="o", edgecolors="white", linewidths=0.3, zorder=4, label="data")
+            ax.scatter(pts[:,0], pts[:,1], s=10, c="crimson", marker="o", edgecolors="white", linewidths=0.3, zorder=4, label="data")
+
+        #from scipy.io import mmread
+        #M = mmread("Meshes/Delaunay/locs.mtx")
+        #if hasattr(M, "toarray"): M = M.toarray()
+        #ax.scatter(M[:, 0], M[:, 1],s=15,c="black",marker="o",edgecolors="white",linewidths=0.3,zorder=3)
+
         '''
         pts = _load_xy_txt("Meshes/Delaunay/data_points2.txt")
         if pts is not None and pts.size > 0 and plot_pts:
@@ -224,6 +233,14 @@ def plot_dcel(filenames, out_png="Meshes/Delaunay/delaunay_output.png", colors=N
     plt.savefig(out_png, dpi=300, bbox_inches='tight', pad_inches=0, transparent=True)
     print(f"Plot salvato come '{out_png}'")
 
+
+
+
+
+
+
 if __name__ == "__main__":
-    plot_dcel("Meshes/Delaunay/delaunay_output.json",out_png="Meshes/Delaunay/delaunay_output.png", label_edges=False,draw_circumcircles=False, plot_pts=False)
-    #plot_dcel(["Meshes/Delaunay/dcel.json", "Meshes/Delaunay/dcel_2.json"],out_png="Meshes/Delaunay/dcel.png", label_edges=True,draw_circumcircles=False, plot_pts=False)
+    #plot_dcel("Meshes/Delaunay/delaunay_output.json",out_png="Meshes/Delaunay/Meshes new/50adapt_mix4_75_dati.png", label_edges=False,draw_circumcircles=False, plot_pts=True)
+    #plot_dcel("Meshes/Delaunay/delaunay_output.json",out_png="Meshes/Delaunay/Meshes new/50adapt_mix4_75.png", label_edges=False,draw_circumcircles=False, plot_pts=False)
+    plot_dcel("Meshes/Delaunay/delaunay_output.json",out_png="delaunay_output.png", label_edges=False,draw_circumcircles=False, plot_pts=False)
+
